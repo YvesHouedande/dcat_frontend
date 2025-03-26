@@ -30,19 +30,19 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <ReactKeycloakProvider
-      authClient={keycloak}
-      initOptions={{
-        onLoad: 'check-sso',
-        checkLoginIframe: false,
-        flow: 'standard',
-        pkceMethod: 'S256',
-      }}
-    >
+    // <ReactKeycloakProvider
+    //   authClient={keycloak}
+    //   initOptions={{
+    //     onLoad: 'check-sso',
+    //     checkLoginIframe: false,
+    //     flow: 'standard',
+    //     pkceMethod: 'S256',
+    //   }}
+    // >
       <Router>
         <AppContent />
       </Router>
-    </ReactKeycloakProvider>
+    // </ReactKeycloakProvider>
   );
 };
 
