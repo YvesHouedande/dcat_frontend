@@ -1,15 +1,21 @@
-import { MenuItem } from '@/types/Menu';
-import { HiArchiveBox } from "react-icons/hi2";
-
+import { MenuItem } from "@/types/Menu";
+import { LayoutDashboard } from "lucide-react";
 
 export const interventionsMenu: MenuItem[] = [
   {
-    title: 'Interventions',
-    path: '/interventions',
-    icon: HiArchiveBox , 
-    subMenu: [
-      { title: 'recette', path: '/interventions/recette', icon: HiArchiveBox  },
-      { title: 'Argent', path: '/interventions/argent', icon: HiArchiveBox  },
+    title: "Interventions",
+    url: "/interventions",
+    icon: LayoutDashboard,
+    isActive: true,
+    items: [
+      {
+        title: "recette",
+        url: "/accounting/recette",
+      },
+      {
+        title: "another",
+        url: "/dashboard/another",
+      },
     ],
   },
 ];

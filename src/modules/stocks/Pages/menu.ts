@@ -1,15 +1,23 @@
 import { MenuItem } from '@/types/Menu';
-import { HiArchiveBox } from "react-icons/hi2";
+import { SquareTerminal } from 'lucide-react';
 
 
 export const stocksMenu: MenuItem[] = [
   {
-    title: 'Stockage',
-    path: '/stock',
-    icon: HiArchiveBox , 
-    subMenu: [
-      { title: 'recette', path: '/stock/recette', icon: HiArchiveBox  },
-      { title: 'another', path: '/stock/another', icon: HiArchiveBox  },
+    title: "Stockage",
+    url: "/stock",
+    icon: SquareTerminal,
+    isActive: true,
+    items: [
+      {
+        title: "recette",
+        url: "/stock/recette",
+      },
+      {
+        title: "another",
+        url: "/stock/anothe",
+      },
     ],
   },
 ];
+

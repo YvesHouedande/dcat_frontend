@@ -1,13 +1,20 @@
-import { HiArchiveBox } from "react-icons/hi2";
 import { MenuItem } from "@/types/Menu";
-export const administrationMenu : MenuItem[]  = [
+import { LayoutDashboard } from "lucide-react";
+export const administrationMenu: MenuItem[] = [
   {
-    title: 'Administration',
-    path: '/administrations',
-    icon: HiArchiveBox ,  // Use as JSX element
-    subMenu: [
-      { title: 'personnel', path: '/personnel/example', icon: HiArchiveBox },
-      { title: 'conges', path: '/conges/example', icon: HiArchiveBox },
+    title: "Administration",
+    url: "/administrations",
+    icon: LayoutDashboard,
+    isActive: true,
+    items: [
+      {
+        title: "recette",
+        url: "/accounting/recette",
+      },
+      {
+        title: "another",
+        url: "/dashboard/another",
+      },
     ],
   },
-]; 
+];

@@ -1,8 +1,13 @@
-import React from "react";
+import { type LucideIcon } from "lucide-react";
 
 export interface MenuItem {
   title: string;
-  path: string;
-  icon?: React.ElementType;
-  subMenu?: MenuItem[];
+  url: string;
+  isActive?: true;
+  items: {
+    title: string;
+    url: string;
+  }[];
+
+  icon?: LucideIcon;
 }
