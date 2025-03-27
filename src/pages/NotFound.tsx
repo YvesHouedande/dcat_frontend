@@ -1,12 +1,21 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 const NotFound: React.FC = () => {
-    return (
-        <div className="container mx-auto p-4">
-            <h1 className="text-3xl font-bold mb-6">404 - Page Non Trouvée</h1>
-            <p>Désolé, la page que vous recherchez n'existe pas.</p>
-        </div>
-    );
+  return (
+    <div className="flex items-center justify-center min-h-screen ">
+      <div className="text-center">
+        <AlertTriangle 
+          className="mx-auto mb-6 animate-pulse text-yellow-500" 
+          size={80} 
+        />
+        <h1 className="text-4xl font-bold mb-4">404 - Page Non Trouvée</h1>
+        <p className="text-xl opacity-50">
+          Désolé, la page que vous recherchez n'existe pas.
+        </p>
+      </div>
+    </div>
+  );
 };
 
-export default NotFound; 
+export default NotFound;

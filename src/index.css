@@ -1,12 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
+
 @font-face {
-  font-family: "AdwaitaSans"; /* Le nom que vous souhaitez donner à la police */
-  src: url("fonts/AdwaitaSans-Regular.ttf") format("truetype");
+  font-family: 'AdwaitaSans';
+  src: url('fonts/AdwaitaSans.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
+  font-display: swap;
 }
+
 
 /* Utiliser la police */
 
