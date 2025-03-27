@@ -5,7 +5,7 @@ import ExampleAdministrationPage from './pages/ExampleAdministrationPage';
 const AdministrationRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/example" element={<ExampleAdministrationPage />} />
+      <Route path="/" element={<ExampleAdministrationPage />} />
     </Routes>
   );
 };

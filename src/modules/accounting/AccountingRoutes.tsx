@@ -6,8 +6,8 @@ import NotFound from '@/pages/NotFound';
 const AccountingRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/recette" element={<ExampleAccountingPage />} />
-      <Route path="/" element={<NotFound />} />
+      <Route path="/" element={<ExampleAccountingPage />} />
+      <Route path="/*" element={<NotFound />} />
     </Routes>
   );
 };

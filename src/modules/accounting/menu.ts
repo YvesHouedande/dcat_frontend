@@ -1,12 +1,12 @@
 import { MenuItem } from "@/types/Menu";
-import { LayoutDashboard } from "lucide-react";
+import { PiggyBank } from "lucide-react";
 
 export const accountingMenu: MenuItem[] = [
   {
     title: "Comptabilité",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-    isActive: true,
+    url: "/accounting",
+    icon: PiggyBank,
+    isActive: false,
     items: [
       {
         title: "recette",

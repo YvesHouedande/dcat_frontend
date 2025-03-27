@@ -1,6 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
+
+import { menuConfig } from "@/menuConfig";
+
+import { NavMain } from "@/components/nav-main";
+// import { NavProjects } from "@/components/nav-projects"
+import { NavUser } from "@/components/nav-user";
+// import { TeamSwitcher } from "@/components/team-switcher"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+} from "@/components/ui/sidebar";
+
 import {
   AudioWaveform,
   BookOpen,
@@ -12,23 +27,8 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
-} from "lucide-react"
+} from "lucide-react";
 
-import { menuConfig } from "@/menuConfig"
-
-import { NavMain } from "@/components/nav-main"
-// import { NavProjects } from "@/components/nav-projects"
-// import { NavUser } from "@/components/nav-user"
-// import { TeamSwitcher } from "@/components/team-switcher"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "@/components/ui/sidebar"
-
-// This is sample data.
 const data = {
   user: {
     name: "shadcn",
@@ -156,22 +156,25 @@ const data = {
       icon: Map,
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        {/* <TeamSwitcher teams={data.teams} /> */}
-      </SidebarHeader>
-      <SidebarContent>
+      <SidebarHeader>{/* <TeamSwitcher teams={data.teams} /> */}</SidebarHeader>
+      <SidebarContent className="items-center">
+        <img
+          src="https://dcat.ci/wp-content/uploads/2023/09/Logo-DCAT-2-300x239.png"
+          alt=""
+          width={100} height={100}
+        />
         <NavMain items={menuConfig} />
         {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
-        {/* <NavUser user={data.user} /> */}
+        <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

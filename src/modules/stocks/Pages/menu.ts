@@ -1,13 +1,13 @@
 import { MenuItem } from '@/types/Menu';
-import { SquareTerminal } from 'lucide-react';
+import { Package} from 'lucide-react';
 
 
 export const stocksMenu: MenuItem[] = [
   {
     title: "Stockage",
     url: "/stock",
-    icon: SquareTerminal,
-    isActive: true,
+    icon: Package,
+    isActive: false,
     items: [
       {
         title: "recette",

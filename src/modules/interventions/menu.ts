@@ -1,12 +1,12 @@
 import { MenuItem } from "@/types/Menu";
-import { LayoutDashboard } from "lucide-react";
+import { ScanText } from "lucide-react";
 
 export const interventionsMenu: MenuItem[] = [
   {
     title: "Interventions",
     url: "/interventions",
-    icon: LayoutDashboard,
-    isActive: true,
+    icon: ScanText,
+    isActive: false,
     items: [
       {
         title: "recette",

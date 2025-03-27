@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "AdwaitaSans"; /* Le nom que vous souhaitez donner à la police */
+  src: url("fonts/AdwaitaSans-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Utiliser la police */
+
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -116,5 +126,6 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "AdwaitaSans", sans-serif;
   }
 }

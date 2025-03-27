@@ -5,7 +5,7 @@ import ExampleInterventionsPage from './Pages/ExampleInterventionsPage';
 const InterventionsRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/interventions" element={<ExampleInterventionsPage />} />
+      <Route path="/" element={<ExampleInterventionsPage />} />
     </Routes>
   );
 };

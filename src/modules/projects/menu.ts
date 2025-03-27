@@ -1,12 +1,13 @@
 import { MenuItem } from "@/types/Menu";
-import { LayoutDashboard } from "lucide-react";
+import { Cog,} from "lucide-react";
+
 
 export const projetsMenu: MenuItem[] = [
   {
     title: "Projets",
-    url: "#",
-    icon: LayoutDashboard,
-    isActive: true,
+    url: "/projets",
+    icon: Cog,
+    isActive:false,
     items: [
       {
         title: "recette",

@@ -1,11 +1,13 @@
 import { MenuItem } from "@/types/Menu";
 import { LayoutDashboard } from "lucide-react";
+import { UserCog } from "lucide-react";
+
 export const administrationMenu: MenuItem[] = [
   {
     title: "Administration",
-    url: "/administrations",
-    icon: LayoutDashboard,
-    isActive: true,
+    url: "/administration",
+    icon: UserCog,
+    isActive: false,
     items: [
       {
         title: "recette",
