@@ -9,12 +9,12 @@ export const interventionsMenu: MenuItem[] = [
     isActive: false,
     items: [
       {
-        title: "recette",
-        url: "/accounting/recette",
+        title: "Nouvelle intervention",
+        url: "/interventions/nouvelle_intervention",
       },
       {
-        title: "another",
-        url: "/dashboard/another",
+        title: "historique",
+        url: "/interventions/historique",
       },
     ],
   },

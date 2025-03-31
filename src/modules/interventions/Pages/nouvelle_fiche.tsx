@@ -45,7 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // Ajout des imports pour Zod et React Hook Form
 import { useForm } from "react-hook-form";
@@ -132,10 +132,9 @@ export function Nouvelle_fiche() {
   // Initialisation de React Hook Form avec Zod
   const navigate = useNavigate();
 
-  // Données initiales du formulaire
-  const { id } = useParams();
-  const initialData = React.useMemo(
-    () => ({
+  const form = useForm<FicheInterventionFormValues>({
+    resolver: zodResolver(ficheInterventionSchema),
+    defaultValues: {
       date: undefined,
       client: "",
       intervenants: [],
@@ -148,13 +147,7 @@ export function Nouvelle_fiche() {
       duree: "",
       piecesRechange: [],
       superviseur: "",
-    }),
-    []
-  );
-
-  const form = useForm<FicheInterventionFormValues>({
-    resolver: zodResolver(ficheInterventionSchema),
-    defaultValues: initialData
+    },
   });
 
   // Gestion de la soumission du formulaire
@@ -375,44 +368,6 @@ export function Nouvelle_fiche() {
       description: "Veuillez corriger les erreurs dans le formulaire",
     });
   };
-
-    // Vérification des modifications
-    React.useEffect(() => {
-      const currentData = {
-        date,
-        client: value,
-        intervenants: selectedIntervenants,
-        typeMaintenance,
-        typeDefaillance,
-        causeDefaillance,
-        rapportIntervention,
-        duree,
-        problemeSignale,
-        descriptionCause,
-        produits: selectedProducts.map((id) => ({
-          id,
-          quantity: quantities[id] || 1,
-        })),
-        superviseur,
-      };
-  
-      setHasChanges(JSON.stringify(currentData) !== JSON.stringify(initialData));
-    }, [
-      date,
-      value,
-      selectedIntervenants,
-      rapportIntervention,
-      typeMaintenance,
-      typeDefaillance,
-      causeDefaillance,
-      causeLiee,
-      rapport,
-      duree,
-      selectedProducts,
-      quantities,
-      superviseur,
-      initialData,
-    ]);
   const NavComponent = () => {
     return (
       <div className="flex space-x-4">
