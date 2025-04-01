@@ -10,4 +10,4 @@ const ProjectsRoutes: React.FC = () => {
   );
 };
 
-export default ProjectsRoutes; 
+export default ProjectsRoutes;

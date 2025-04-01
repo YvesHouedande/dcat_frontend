@@ -22,7 +22,7 @@ const AppContent: React.FC = () => {
         <Route path="/accounting/*" element={<PrivateRoute element={<AccountingRoutes />} />} />
         <Route path="/administration/*" element={<PrivateRoute element={<AdministrationRoutes />} />} />
         <Route path="/interventions/*" element={<PrivateRoute element={<InterventionsRoutes />} />} />
-        <Route path="/projets/*" element={<PrivateRoute element={<ProjectsRoutes />} />} />
+        <Route path="/projects/*" element={<PrivateRoute element={<ProjectsRoutes />} />} />
         <Route path="*" element={<PrivateRoute element={<NotFound />} />} />
       </Routes>
   );
