@@ -1,5 +1,6 @@
 import { MenuItem } from "@/types/Menu";
-import { cog } from "lucide-react";
+import { Cog } from "lucide-react";
+
 
 export const projetsMenu: MenuItem[] = [
   {
