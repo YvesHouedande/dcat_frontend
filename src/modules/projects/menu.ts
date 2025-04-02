@@ -1,10 +1,10 @@
 import { MenuItem } from "@/types/Menu";
-import { Cog } from "lucide-react";
+import { cog } from "lucide-react";
 
 export const projetsMenu: MenuItem[] = [
   {
     title: "Gestion de projet",
-    url: "/projets",
+    url: "/projects",
     icon: Cog,
     isActive: false,
     items: [
