@@ -1,21 +1,36 @@
 import { MenuItem } from "@/types/Menu";
-import { Cog,} from "lucide-react";
-
+import { Cog } from "lucide-react";
 
 export const projetsMenu: MenuItem[] = [
   {
     title: "Gestion de projet",
     url: "/projets",
     icon: Cog,
-    isActive:false,
+    isActive: false,
     items: [
       {
-        title: "recette",
-        url: "/accounting/recette",
+        title: "projets",
+        url: "/projects/Projets",
       },
       {
-        title: "another",
-        url: "/dashboard/another",
+        title: "Missions",
+        url: "/projects/mission",
+      },
+      {
+        title: "Gestion des tâches",
+        url: "/projects/tache",
+      },
+      {
+        title: "Documents",
+        url: "/projects/documents",
+      },
+      {
+        title: "rapports et suivi",
+        url: "/projects/rapport",
+      },
+      {
+        title: "paramètre du module",
+        url: "/projects/parametre",
       },
     ],
   },
