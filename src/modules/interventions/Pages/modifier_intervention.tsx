@@ -47,7 +47,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 
-
 // Définition du schéma de validation avec Zod
 const ficheInterventionSchema = z
   .object({
@@ -122,7 +121,7 @@ const ficheInterventionSchema = z
       path: ["typeMaintenance"], // Le chemin où l'erreur apparaîtra
     }
   );
-  type FicheInterventionFormValues = z.infer<typeof ficheInterventionSchema>;
+type FicheInterventionFormValues = z.infer<typeof ficheInterventionSchema>;
 // Interface pour les données du formulaire
 interface FormData {
   date?: Date;
@@ -360,11 +359,13 @@ const Modifier_intervention = () => {
           </Link>
         </Button>
         <Button
-          className="cursor-pointer transition ease-in-out duration-300 active:scale-95"
+          className="cursor-pointer transition ease-in-out duration-300 active:scale-95 text-white bg-blue-600"
           variant={"outline"}
           disabled={!hasChanges}
         >
-          <Save /> Enregistrer la modification
+          <Save />
+          <div className="hidden lg:block">Enregistrer la modification</div>
+          <div className="lg:hidden">Enregistrer</div>
         </Button>
       </div>
     );
@@ -379,6 +380,10 @@ const Modifier_intervention = () => {
       <div className="flex w-full flex-col justify-center items-center uppercase font-semibold text-xl mt-4">
         FICHE D'INTERVENTION N° {id}
         <div className="w-32 h-1.5 bg-blue-600 mt-1 rounded-full"></div>
+      </div>
+
+      <div className="lg:hidden flex justify-end w-full my-4 ">
+        <NavComponent />
       </div>
 
       {/* Sections du formulaire */}

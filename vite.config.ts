@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    // host: '0.0.0.0', // Écouter sur toutes les interfaces réseau
+    host: '0.0.0.0', // Écouter sur toutes les interfaces réseau
     port: 3000,      // Port du serveur de développement
   },
   resolve: {

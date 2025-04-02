@@ -15,11 +15,11 @@ const InterventionsRoutes: React.FC = () => {
       <Route path="/" element={<Index />} />
       <Route path="/nouvelle_intervention" element={<Nouvelle_fiche />} />
       <Route
-        path="/information_intervention/:id"
+        path=":id"
         element={<Information_fiche />}
       />
       <Route
-        path="/modifier_intervention/:id"
+        path=":id/editer"
         element={<Modifier_intervention />}
       />
       {/* <Route path="/historique" element={<DataTable data={data} />} /> */}

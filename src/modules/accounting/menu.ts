@@ -3,7 +3,7 @@ import { PiggyBank } from "lucide-react";
 
 export const accountingMenu: MenuItem[] = [
   {
-    title: "Comptabilité",
+    title: "Finnance-Compta",
     url: "/accounting",
     icon: PiggyBank,
     isActive: false,

@@ -4,7 +4,7 @@ import { Cog,} from "lucide-react";
 
 export const projetsMenu: MenuItem[] = [
   {
-    title: "Projets",
+    title: "Gestion de projet",
     url: "/projets",
     icon: Cog,
     isActive:false,

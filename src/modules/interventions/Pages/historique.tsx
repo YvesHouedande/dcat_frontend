@@ -1114,12 +1114,12 @@ const InterventionsTable = () => {
 
   // Fonctions de gestion des actions
   const handleConsulter = (id: string | number) => {
-    navigate(`/interventions/information_intervention/${id}`);
+    navigate(`/interventions/${id}`);
     // Ajoutez ici la logique pour consulter l'intervention
   };
 
   const handleModifier = (id: string | number) => {
-    navigate(`/interventions/modifier_intervention/${id}`);
+    navigate(`/interventions/${id}/editer`);
     // Ajoutez ici la logique pour modifier l'intervention
   };
 
@@ -1132,7 +1132,7 @@ const InterventionsTable = () => {
   // Navigation vers la page de détails de l'intervention
   const navigateToDetail = (numero: string) => {
     // Adaptez le chemin selon votre structure de routes${numero}
-    navigate(`/interventions/information_intervention/${numero}`);
+    navigate(`/interventions/${numero}`);
     // Pour Next.js: router.push(`/interventions/${numero}`);
   };
 

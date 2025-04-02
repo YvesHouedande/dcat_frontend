@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { memo, useMemo } from "react";
 import {
   Popover,
   PopoverContent,
@@ -46,92 +47,32 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link, useNavigate } from "react-router-dom";
-
+import {
+  FicheInterventionFormValues,
+  ficheInterventionSchema,
+} from "../types/data";
 // Ajout des imports pour Zod et React Hook Form
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import {
+  useCreateIntervention,
+  useInterventions,
+  usePartenaires,
+  useProduits,
+} from "../lib/queries";
 
-// Définition du schéma de validation avec Zod
-const ficheInterventionSchema = z
-  .object({
-    date: z.date({
-      required_error: "La date est requise",
-    }),
-    client: z
-      .string({
-        required_error: "Le client est requis",
-      })
-      .min(1, "Le client est requis"),
-    intervenants: z
-      .array(z.string())
-      .min(1, "Au moins un intervenant est requis"),
-    problemeSignale: z
-      .string({
-        required_error: "La description du problème est requise",
-      })
-      .min(10, "La description doit contenir au moins 10 caractères"),
-    typeMaintenance: z.string({
-      required_error: "Le type de maintenance est requis",
-    }),
-    typeDefaillance: z.string({
-      required_error: "Le type de défaillance est requis",
-    }),
-    causeDefaillance: z.string({
-      required_error: "La cause de défaillance est requise",
-    }),
-    descriptionCause: z
-      .string({
-        required_error: "La description de la cause est requise",
-      })
-      .min(10, "La description doit contenir au moins 10 caractères"),
-    rapportIntervention: z
-      .string({
-        required_error: "Le rapport d'intervention est requis",
-      })
-      .min(10, "Le rapport doit contenir au moins 10 caractères"),
-    duree: z
-      .string({
-        required_error: "La durée est requise",
-      })
-      .min(1, "La durée est requise"),
-    piecesRechange: z
-      .array(
-        z.object({
-          id: z.string(),
-          quantity: z.number().int().positive(),
-        })
-      )
-      .optional(),
-    superviseur: z
-      .string({
-        required_error: "Le superviseur est requis",
-      })
-      .min(1, "Le superviseur est requis"),
-  })
-  .refine(
-    (data) => {
-      // Vérifier qu'au moins une option est sélectionnée parmi les trois
-      const optionsCount = [
-        !!data.typeMaintenance,
-        !!data.typeDefaillance,
-        !!data.causeDefaillance,
-      ].filter(Boolean).length;
-
-      return optionsCount >= 1;
-    },
-    {
-      message:
-        "Au moins un type de maintenance, défaillance ou cause doit être sélectionné",
-      path: ["typeMaintenance"], // Le chemin où l'erreur apparaîtra
-    }
-  );
-type FicheInterventionFormValues = z.infer<typeof ficheInterventionSchema>;
 export function Nouvelle_fiche() {
   // Initialisation de React Hook Form avec Zod
   const navigate = useNavigate();
 
+  const { mutate, isLoading, isSuccess } = useCreateIntervention();
+  const { data: interventions, isLoading: isLoadingInterventions } =
+    useInterventions();
+  const { data: partenaires, isLoading: isLoadingPartenaires } =
+    usePartenaires();
+  const { data: produits, isLoading: isLoadingProduits } = useProduits();
   const form = useForm<FicheInterventionFormValues>({
     resolver: zodResolver(ficheInterventionSchema),
     defaultValues: {
@@ -151,19 +92,10 @@ export function Nouvelle_fiche() {
   });
 
   // Gestion de la soumission du formulaire
-  // Fonction de soumission du formulaire
   const onSubmit = (data: FicheInterventionFormValues) => {
-    console.log("Données du formulaire:", JSON.stringify(data, null, 2)); // Afficher les données du formulaire data);
-
-    // Afficher le toast de succès
-    toast.success("Fiche d'intervention enregistrée avec succès", {
-      description: `Intervention pour le client ${
-        data.client
-      } enregistrée le ${data.date.toLocaleDateString()}`,
-      action: {
-        label: "Voir les détails",
-        // onClick: () => navigate("/interventions"),
-        onClick: () => {},
+    mutate(data, {
+      onSuccess: () => {
+        form.reset();
       },
     });
   };
@@ -362,8 +294,6 @@ export function Nouvelle_fiche() {
 
   // Fonction de gestion des erreurs lors de la soumission
   const onError = (errors: any) => {
-    console.error("Erreurs de validation:", errors);
-
     toast.error("Erreur lors de l'enregistrement", {
       description: "Veuillez corriger les erreurs dans le formulaire",
     });
@@ -376,9 +306,9 @@ export function Nouvelle_fiche() {
           variant="outline"
           aria-label="Enregistrer l'intervention"
           onClick={form.handleSubmit(onSubmit, onError)}
-          disabled={form.formState.isSubmitting}
+          disabled={isLoading}
         >
-          {form.formState.isSubmitting ? (
+          {isLoading ? (
             <>
               <span className="loader"></span>
               Enregistrement...
@@ -393,6 +323,38 @@ export function Nouvelle_fiche() {
       </div>
     );
   };
+
+  const BoutonAction = React.memo(() => (
+    <div className="flex justify-end gap-4 mt-6 lg:hidden">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2"
+      >
+        <X className="w-4 h-4" />
+        Annuler
+      </Button>
+      <Button
+        variant={"outline"}
+        type="submit"
+        className="flex items-center gap-2 text-white bg-blue-600"
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <>
+            <span className="loader"></span>
+            Enregistrement...
+          </>
+        ) : (
+          <>
+            <Save className="w-4 h-4" />
+            Enregistrer
+          </>
+        )}
+      </Button>
+    </div>
+  ));
 
   return (
     <Layout autre={NavComponent}>
@@ -971,34 +933,7 @@ export function Nouvelle_fiche() {
             </div>
           </div>
         </div>
-        <div className="flex justify-end gap-4 mt-6 lg:hidden">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2"
-          >
-            <X className="w-4 h-4" />
-            Annuler
-          </Button>
-          <Button
-            type="submit"
-            className="flex items-center gap-2"
-            disabled={form.formState.isSubmitting}
-          >
-            {form.formState.isSubmitting ? (
-              <>
-                <span className="loader"></span>
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Enregistrer
-              </>
-            )}
-          </Button>
-        </div>
+        <BoutonAction />
       </form>
     </Layout>
   );

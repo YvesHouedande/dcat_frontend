@@ -26,15 +26,16 @@ import {
   Clipboard,
   CheckSquare,
 } from "lucide-react";
+import { useInterventions } from "../lib/queries";
 
 const NavComponent = () => {
   const { id } = useParams();
-
+  const {data: intervention, isLoading, i} = useInterventions();
   return (
     <div className="flex space-x-4">
       <Link
         className="flex items-center space-x-2"
-        to={`/interventions/modifier_intervention/${id}`}
+        to={`/interventions/${id}/editer`}
         aria-label="Modify intervention"
       >
         <Button
@@ -61,6 +62,9 @@ function Information_fiche() {
   return (
     <Layout autre={NavComponent}>
       <div className="flex w-full flex-col justify-center items-center uppercase font-bold text-xl mt-4 text-blue-700">
+        <div className="lg:hidden flex justify-end w-full mb-2">
+          <NavComponent />
+        </div>
         <div className="flex items-center gap-2">
           <FileText className="w-6 h-6" />
           INFORMATION DE L'INTERVENTION N° {id}
