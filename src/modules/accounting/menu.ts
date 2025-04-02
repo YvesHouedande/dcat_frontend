@@ -3,18 +3,18 @@ import { PiggyBank } from "lucide-react";
 
 export const accountingMenu: MenuItem[] = [
   {
-    title: "Comptabilité",
+    title: "Finance-Compta...",
     url: "/accounting",
     icon: PiggyBank,
     isActive: false,
     items: [
       {
-        title: "recette",
+        title: "Finance",
         url: "/accounting/recette",
       },
       {
-        title: "another",
-        url: "/dashboard/another",
+        title: "Comptabilité",
+        url: "/accouting/comptabilite",
       },
     ],
   },
