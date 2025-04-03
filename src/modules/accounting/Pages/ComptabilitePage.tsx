@@ -35,19 +35,33 @@ export default function ComptabilitePage() {
       </div>
     );
   }
+function loadData(): void {
+    throw new Error("Function not implemented.");
+  }
 
   return (
-
     <Layout>
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-6">Documents Comptabilité</h1>
         
         {fichiers.length === 0 ? (
-          <p>Aucun document disponible.</p>
+          <div className="text-center py-8">
+            <p className="text-gray-500">Aucun document disponible</p>
+            <button 
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              onClick={() => loadData()} // Option de rechargement
+            >
+              Actualiser
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {fichiers.map((fichier) => (
-              <FichierThumbnail key={fichier.id} fichier={fichier} />
+              <FichierThumbnail 
+                key={fichier.id} 
+                fichier={fichier}
+                // onPreview={() => window.open(fichier.url, '_blank')} // Optionnel
+              />
             ))}
           </div>
         )}
