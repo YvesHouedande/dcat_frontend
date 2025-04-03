@@ -14,7 +14,7 @@ export default function ComptabilitePage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const { data } = await getFichiers("finance");
+        const { data } = await getFichiers("comptabilité");
         setFichiers(data);
       } finally {
         setLoading(false);

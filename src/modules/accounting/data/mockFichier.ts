@@ -8,7 +8,7 @@ export const mockFichiers: Fichier[] = [
     type: "comptabilité",
     date: new Date("2023-12-31"),
     url: "/documents/comptabilite/bilan-2023.pdf",
-    thumbnail: "/documents/comptabilite/12.jpg"
+    thumbnail: "/documents/comptabilite/23.jpg"
   },
   {
     id: "cpt-2",
