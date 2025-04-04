@@ -5,7 +5,6 @@ import FichierThumbnail from "../components/FichierThumbnail";
 import { Fichier } from "../data/type";
 import Layout from "@/components/Layout";
 import  boutonAdd  from '../components/bouton';
-
 export default function ComptabilitePage() {
   const [fichiers, setFichiers] = useState<Fichier[]>([]);
   const [loading, setLoading] = useState(true);
