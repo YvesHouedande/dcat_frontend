@@ -4,6 +4,7 @@ import AccountingPage from '@/modules/accounting/Pages/AccountingPage'
 // import NotFound from '@/pages/NotFound';
 import ComptabilitePage from './Pages/ComptabilitePage';
 import FinancePage from './Pages/FinancePage';
+import AddDocumentPage from './Pages/AddDocumentPage';
 
 const AccountingRoutes: React.FC = () => {
   return (
@@ -11,6 +12,7 @@ const AccountingRoutes: React.FC = () => {
       <Route path="/" element={<AccountingPage />} />
       <Route path="/finance" element={<FinancePage />} />
       <Route path="/comptabilite" element={<ComptabilitePage />} />
+      <Route path="/fichier" element={<AddDocumentPage />} />
       {/* <Route path="/*" element={<NotFound />} /> */}
     </Routes>
   );

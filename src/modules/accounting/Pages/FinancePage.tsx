@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {useAccounting} from "../hooks/useAccounting";
 import FichierThumbnail from "../components/FichierThumbnail";
 import Layout from '@/components/Layout';
+import  boutonAdd  from '../components/bouton';
 import { Fichier } from "../data/type";
 
 export default function FinancePage() {
@@ -25,14 +26,16 @@ export default function FinancePage() {
 
   if (loading) {
     return (
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-6">Documents Finance</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="animate-pulse bg-gray-100 rounded-lg h-64" />
-          ))}
+      <Layout>
+        <div className="p-4">
+          <h1 className="text-2xl font-bold mb-6">Documents Finance</h1>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="animate-pulse bg-gray-100 rounded-lg h-64" />
+            ))}
+          </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
@@ -41,7 +44,7 @@ export default function FinancePage() {
   }
 
   return (
-    <Layout>
+    <Layout autre={boutonAdd}>
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-6">Documents Finance</h1>
         
