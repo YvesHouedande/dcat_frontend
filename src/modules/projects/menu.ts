@@ -15,23 +15,23 @@ export const projetsMenu: MenuItem[] = [
       },
       {
         title: "Missions",
-        url: "/projects/mission",
+        url: "/projects/Missions",
       },
       {
         title: "Gestion des tâches",
-        url: "/projects/tache",
+        url: "/projects/Taches",
       },
       {
         title: "Documents",
-        url: "/projects/documents",
+        url: "/projects/Documents",
       },
       {
         title: "rapports et suivi",
-        url: "/projects/rapport",
+        url: "/projects/Rapports",
       },
       {
         title: "paramètre du module",
-        url: "/projects/parametre",
+        url: "/projects/Parametres",
       },
     ],
   },
