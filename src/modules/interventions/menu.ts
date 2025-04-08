@@ -3,7 +3,7 @@ import { ScanText } from "lucide-react";
 
 export const interventionsMenu: MenuItem[] = [
   {
-    title: "Interventions",
+    title: "maintenance",
     url: "/interventions",
     icon: ScanText,
     isActive: false,

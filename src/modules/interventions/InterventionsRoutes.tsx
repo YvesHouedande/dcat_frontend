@@ -8,6 +8,7 @@ import { DataTable } from "./test/test";
 import data from "./test/data.json";
 import Historique from "./Pages/historique";
 import NotFound from "@/pages/NotFound";
+import { ResizableHandleDemo } from "./Pages/histoire";
 
 const InterventionsRoutes: React.FC = () => {
   return (
@@ -23,7 +24,7 @@ const InterventionsRoutes: React.FC = () => {
         element={<Modifier_intervention />}
       />
       {/* <Route path="/historique" element={<DataTable data={data} />} /> */}
-      <Route path="/historique" element={<Historique />} />
+      <Route path="/historique" element={<ResizableHandleDemo />} />
 
       <Route path="/*" element={<NotFound />} />
     </Routes>

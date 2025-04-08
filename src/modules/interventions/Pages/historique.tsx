@@ -36,68 +36,40 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Search,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Plus,
-  Ellipsis,
-  TableOfContents,
   MoreHorizontal,
   Eye,
   Pencil,
   Trash,
-  AlertOctagon,
   UserCircle,
   Clock,
   MapPin,
-  Hash,
   Settings,
   ActivitySquare,
   AlertCircle,
   Trash2,
-  AlertTriangle,
   FileText,
   Calendar,
 } from "lucide-react";
 
-import Layout from "@/components/Layout";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 
-const NavComponent = () => {
-  return (
-    <div>
-      <Button
-        className="cursor-pointer transition ease-in-out duration-300 active:scale-95"
-        variant={"outline"}
-      >
-        <Link
-          className="flex items-center space-x-2"
-          to={"/interventions/nouvelle_intervention"}
-        >
-          Nouvelle intervention <Plus />
-        </Link>
-      </Button>
-    </div>
-  );
-};
+
 
 // Définition du type d'Intervention
 interface Intervention {
@@ -904,68 +876,42 @@ const InterventionsTable = () => {
         return <div>{date}</div>;
       },
     },
-    {
-      accessorKey: "cause_defaillance",
-      header: ({ column }) => (
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          <span>Cause défaillance</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "rapport_intervention",
-      header: ({ column }) => (
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <span>Rapport</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "type_maintenance",
-      header: ({ column }) => (
-        <div className="flex items-center gap-2">
-          <Settings className="h-4 w-4 text-muted-foreground" />
-          <span>Type maintenance</span>
-        </div>
-      ),
-      cell: ({ row }) => {
-        const type = row.getValue("type_maintenance") as string;
-        // Couleur conditionnelle selon le type de maintenance
-        const getTypeColor = (type: string) => {
-          switch (type.toLowerCase()) {
-            case "préventive":
-              return "bg-blue-100 text-blue-800";
-            case "corrective":
-              return "bg-amber-100 text-amber-800";
-            case "prédictive":
-              return "bg-green-100 text-green-800";
-            default:
-              return "bg-gray-100 text-gray-800";
-          }
-        };
+    // {
+    //   accessorKey: "type_maintenance",
+    //   header: ({ column }) => (
+    //     <div className="flex items-center gap-2">
+    //       <Settings className="h-4 w-4 text-muted-foreground" />
+    //       <span>Type maintenance</span>
+    //     </div>
+    //   ),
+    //   cell: ({ row }) => {
+    //     const type = row.getValue("type_maintenance") as string;
+    //     // Couleur conditionnelle selon le type de maintenance
+    //     const getTypeColor = (type: string) => {
+    //       switch (type.toLowerCase()) {
+    //         case "préventive":
+    //           return "bg-blue-100 text-blue-800";
+    //         case "corrective":
+    //           return "bg-amber-100 text-amber-800";
+    //         case "prédictive":
+    //           return "bg-green-100 text-green-800";
+    //         default:
+    //           return "bg-gray-100 text-gray-800";
+    //       }
+    //     };
 
-        return (
-          <div
-            className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${getTypeColor(
-              type
-            )}`}
-          >
-            {type}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "type_defaillance",
-      header: ({ column }) => (
-        <div className="flex items-center gap-2">
-          <AlertOctagon className="h-4 w-4 text-muted-foreground" />
-          <span>Type défaillance</span>
-        </div>
-      ),
-    },
+    //     return (
+    //       <div
+    //         className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${getTypeColor(
+    //           type
+    //         )}`}
+    //       >
+    //         {type}
+    //       </div>
+    //     );
+    //   },
+    // },
+
     {
       accessorKey: "superviseur",
       header: ({ column }) => (
@@ -992,25 +938,6 @@ const InterventionsTable = () => {
           <span>Lieu</span>
         </div>
       ),
-    },
-    {
-      accessorKey: "id_probleme",
-      header: ({ column }) => (
-        <div className="flex items-center gap-2">
-          <Hash className="h-4 w-4 text-muted-foreground" />
-          <span>ID problème</span>
-        </div>
-      ),
-      cell: ({ row }) => {
-        const id = row.getValue("id_probleme") as string | number;
-        return id ? (
-          <Badge variant="outline" className="font-mono">
-            {id}
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground text-sm">-</span>
-        );
-      },
     },
     {
       id: "actions",
@@ -1159,10 +1086,10 @@ const InterventionsTable = () => {
   });
 
   return (
-    <Layout autre={NavComponent}>
-      <div className="space-y-4 flex flex-col p-4 w-full">
-        {/* Contrôles de filtre et de colonnes */}
-        <div className="flex gap-4 justify-between items-center">
+    // <Layout autre={NavComponent}>
+    <div className="space-y-4 flex flex-col p-4 w-full">
+      {/* Contrôles de filtre et de colonnes */}
+      {/* <div className="flex gap-4 justify-between items-center">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-3 h-4 w-4 text-gray-500" />
             <Input
@@ -1199,140 +1126,140 @@ const InterventionsTable = () => {
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+        </div> */}
 
-        <div className="rounded-md border flex-1 overflow-hidden relative h-full max-h-[calc(100vh-300px)] flex flex-col  lg:max-w-[calc(100vw-320px)] ">
-          {/* Conteneur scrollable */}
-          <ScrollArea className="h-full w-full" type="always">
-            <div className=" h-[calc(100vh-300px)] ">
-              <Table className="min-w-full">
-                <TableHeader className="sticky top-0 bg-background z-10">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
+      <div className="rounded-md border flex-1 overflow-hidden relative h-full max-h-[calc(100vh-300px)] flex flex-col  lg:max-w-[calc(100vw-320px)] ">
+        {/* Conteneur scrollable */}
+        <ScrollArea className="h-full w-full" type="always">
+          <div className=" h-[calc(100vh-300px)] ">
+            <Table className="min-w-full">
+              <TableHeader className="sticky top-0 bg-background z-10">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
                       ))}
                     </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className="h-24 text-center"
-                      >
-                        Aucun résultat.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4">
-          <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} sur{" "}
-            {table.getFilteredRowModel().rows.length} ligne(s) sélectionnée(s).
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      Aucun résultat.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
-            <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Lignes par page
-              </Label>
-              <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value));
-                }}
-              >
-                <SelectTrigger className="w-20" id="rows-per-page">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[5, 10, 20, 30, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} sur{" "}
-              {table.getPageCount()}
-            </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Aller à la première page</span>
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <span className="sr-only">Aller à la page précédente</span>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Aller à la page suivante</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
-              >
-                <span className="sr-only">Aller à la dernière page</span>
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between px-4">
+        <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
+          {table.getFilteredSelectedRowModel().rows.length} sur{" "}
+          {table.getFilteredRowModel().rows.length} ligne(s) sélectionnée(s).
+        </div>
+        <div className="flex w-full items-center gap-8 lg:w-fit">
+          <div className="hidden items-center gap-2 lg:flex">
+            <Label htmlFor="rows-per-page" className="text-sm font-medium">
+              Lignes par page
+            </Label>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value));
+              }}
+            >
+              <SelectTrigger className="w-20" id="rows-per-page">
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[5, 10, 20, 30, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-fit items-center justify-center text-sm font-medium">
+            Page {table.getState().pagination.pageIndex + 1} sur{" "}
+            {table.getPageCount()}
+          </div>
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+            <Button
+              variant="outline"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Aller à la première page</span>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <span className="sr-only">Aller à la page précédente</span>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Aller à la page suivante</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <span className="sr-only">Aller à la dernière page</span>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
-    </Layout>
+    </div>
+    // </Layout>
   );
 };
 export default InterventionsTable;

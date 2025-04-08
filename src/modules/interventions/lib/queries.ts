@@ -30,14 +30,16 @@ export const useProduits = () => {
     queryKey: ["Produits"],
     queryFn: getProduits,
   });
-};
+};// Assurez-vous que cette fonction existe
 
-export const useInterventions = () => {
+export const useInterventions = (id?: string | number) => {
   return useQuery({
-    queryKey: ["interventions"],
-    queryFn: getInterventions,
+    queryKey: ["interventions", id],  // La clé inclut 'id', ce qui permet de refetcher les données lorsque l'id change
+    queryFn: () => getInterventions(id),  // Assurez-vous que getInterventions accepte un id si nécessaire
+    enabled: false,  // La requête sera effectuée uniquement si id est défini
   });
 };
+
 
 export const useCreateIntervention = () => {
   const queryClient = useQueryClient();

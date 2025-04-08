@@ -1,5 +1,4 @@
 import { MenuItem } from "@/types/Menu";
-import { LayoutDashboard } from "lucide-react";
 import { UserCog } from "lucide-react";
 
 export const administrationMenu: MenuItem[] = [
@@ -10,12 +9,25 @@ export const administrationMenu: MenuItem[] = [
     isActive: false,
     items: [
       {
-        title: "recette",
-        url: "/accounting/recette",
+        title: "employers",
+        url: "/administration/employers",
       },
       {
-        title: "another",
-        url: "/dashboard/another",
+        title: "partenaires",
+        url: "/administration/partenaires",
+      },
+      {
+        title: "demandes",
+        url: "/administration/demandes",
+      },
+      {
+        title: "documents",
+        url: "/administration/documents",
+      },
+      
+      {
+        title: "contrats",
+        url: "/administration/contrats",
       },
     ],
   },
