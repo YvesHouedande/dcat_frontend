@@ -1,4 +1,3 @@
-// app/task-display/page.tsx
 "use client";
 import { useState } from "react";
 import {
@@ -21,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout";
 import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { initialTasks } from "../data/mockData";
 
 export default function TaskDisplay() {
@@ -30,6 +29,10 @@ export default function TaskDisplay() {
   const [statusFilter, setStatusFilter] = useState("tous");
   const [priorityFilter, setPriorityFilter] = useState("tous");
   const [missionFilter, setMissionFilter] = useState("tous");
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
 
   // Extraire les missions uniques pour le filtre
   const uniqueMissions = Array.from(new Set(tasks.map(task => task.missionId)))
@@ -52,6 +55,18 @@ export default function TaskDisplay() {
     
     return matchesSearch && matchesStatus && matchesPriority && matchesMission;
   });
+
+  // Pagination des tâches filtrées
+  const totalPages = Math.ceil(filteredTasks.length / rowsPerPage);
+  const paginatedTasks = filteredTasks.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  // Navigation de pagination
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
 
   // Changer le statut
   const handleStatusChange = (id: number, newStatus: string) => {
@@ -94,9 +109,8 @@ export default function TaskDisplay() {
     ));
   };
 
-
   const boutonAdd = () => {
-  return (
+    return (
       <div>
         <Button
           className="cursor-pointer transition ease-in-out duration-300 active:scale-95"
@@ -195,7 +209,7 @@ export default function TaskDisplay() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTasks.map((task) => (
+              {paginatedTasks.map((task) => (
                 <TableRow key={task.id}>
                   <TableCell className="font-medium">
                     <div>{task.title}</div>
@@ -245,6 +259,68 @@ export default function TaskDisplay() {
               ))}
             </TableBody>
           </Table>
+        </div>
+        
+        {/* Navigation de pagination */}
+        <div className="mt-6 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span>Lignes par page</span>
+            <Select value={rowsPerPage.toString()} onValueChange={(value) => {
+              setRowsPerPage(Number(value));
+              setCurrentPage(1); // Retour à la première page lors du changement de lignes par page
+            }}>
+              <SelectTrigger className="w-16">
+                <SelectValue>{rowsPerPage}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center space-x-1">
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} sur {totalPages || 1}
+            </span>
+            <div className="flex items-center space-x-1 ml-4">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
         
         {/* Stats */}

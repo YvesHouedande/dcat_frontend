@@ -56,115 +56,24 @@ export const mockKPIs = [
   // ... autres données
 ];
 
-// export const missions = [
-//   {
-//     id: "1",
-//     title: "Refonte de l'application web client",
-//     reference: "MISSION-2025-042",
-//     client: "Entreprise XYZ",
-//     startDate: "2025-04-15",
-//     endDate: "2025-07-30",
-//     responsable: "Sophie Martin",
-//     status: "in-progress",
-//     budget: "45000",
-//     priority: "medium",
-//     teamMembers: [
-//       "Thomas Dubois",
-//       "Julie Leroy",
-//       "Alexandre Bernard"
-//     ],
-//     description: "Cette mission consiste à moderniser l'application web client existante en la refondant entièrement avec les technologies actuelles pour améliorer l'expérience utilisateur et la performance.",
-//     objectives: "1. Améliorer la vitesse de chargement de 50%\n2. Augmenter le taux de conversion de 20%\n3. Réduire les abandons de panier de 15%\n4. Mettre en place un système de paiement sécurisé",
-//     createdAt: "2025-03-20",
-//     updatedAt: "2025-04-05",
-//   },
-//   {
-//     id: "2",
-//     title: "Audit sécurité infrastructure",
-//     reference: "MISSION-2025-043",
-//     client: "Société ABC",
-//     startDate: "2025-04-10",
-//     endDate: null,
-//     responsable: "Alexandre Bernard",
-//     status: "not-started",
-//     budget: "25000",
-//     priority: "high",
-//     teamMembers: [
-//       "Marie Petit",
-//       "Nicolas Richard"
-//     ],
-//     description: "Réalisation d'un audit complet de l'infrastructure de sécurité du client avec identification des vulnérabilités et recommandations d'amélioration.",
-//     objectives: "1. Identifier toutes les vulnérabilités critiques\n2. Proposer un plan de remédiation\n3. Former l'équipe technique du client",
-//     createdAt: "2025-03-25",
-//     updatedAt: "2025-03-25",
-//   },
-//   {
-//     id: "3",
-//     title: "Formation React avancé",
-//     reference: "MISSION-2025-044",
-//     client: "StartupTech",
-//     startDate: "2025-05-05",
-//     endDate: "2025-05-10",
-//     responsable: "Julie Leroy",
-//     status: "on-hold",
-//     budget: "8500",
-//     priority: "low",
-//     teamMembers: [
-//       "Thomas Dubois"
-//     ],
-//     description: "Organisation et animation d'une formation de 5 jours sur React avancé pour l'équipe de développement de StartupTech.",
-//     objectives: "1. Maîtrise des hooks\n2. Architecture d'applications complexes\n3. Performance et optimisation\n4. Tests unitaires et d'intégration",
-//     createdAt: "2025-04-01",
-//     updatedAt: "2025-04-03",
-//   }
-// ];
+// app/data/mockMissions.ts
+export interface Mission {
+  id: number;
+  title: string;
+  project: string;
+  responsible: string;
+  priority: "low" | "medium" | "high";
+  status: "à faire" | "en cours" | "terminée";
+  startTime: string;
+  endTime: string;
+}
 
-// export const missionData = {
-//   id: "1",
-//   title: "Refonte de l'application web client",
-//   reference: "MISSION-2025-042",
-//   client: "Entreprise XYZ",
-//   startDate: new Date(2025, 3, 15),
-//   endDate: new Date(2025, 6, 30),
-//   responsable: "Sophie Martin",
-//   status: "in-progress",
-//   budget: "45000",
-//   priority: "medium",
-//   teamMembers: [
-//     "Thomas Dubois",
-//     "Julie Leroy",
-//     "Alexandre Bernard"
-//   ],
-//   description: "Cette mission consiste à moderniser l'application web client existante en la refondant entièrement avec les technologies actuelles pour améliorer l'expérience utilisateur et la performance.",
-//   objectives: "1. Améliorer la vitesse de chargement de 50%\n2. Augmenter le taux de conversion de 20%\n3. Réduire les abandons de panier de 15%\n4. Mettre en place un système de paiement sécurisé",
-//   createdAt: new Date(2025, 2, 20),
-//   updatedAt: new Date(2025, 3, 5),
-// };
-
-// export const statusDisplay = {
-//   "not-started": { label: "Non démarré", color: "bg-slate-200 text-slate-800" },
-//   "in-progress": { label: "En cours", color: "bg-blue-200 text-blue-800" },
-//   "on-hold": { label: "En attente", color: "bg-yellow-200 text-yellow-800" },
-//   "completed": { label: "Terminé", color: "bg-green-200 text-green-800" },
-//   "cancelled": { label: "Annulé", color: "bg-red-200 text-red-800" },
-// };
-
-// export const priorityDisplay = {
-//   "low": { label: "Basse", color: "bg-green-100 text-green-800 border-green-300" },
-//   "medium": { label: "Moyenne", color: "bg-orange-100 text-orange-800 border-orange-300" },
-//   "high": { label: "Haute", color: "bg-red-100 text-red-800 border-red-300" },
-// };
-
-
-
-
-// mockData.ts
-
-export const initialMissions = [
-    {
+export const initialMissions: Mission[] = [
+  {
     id: 1,
     title: "Nettoyage de la salle 101",
-    description: "Nettoyer la salle après le cours de physique",
+    project: "Entretien des locaux",
+    responsible: "Jean Dupont",
     priority: "medium",
     status: "à faire",
     startTime: "2025-04-07T08:00:00",
@@ -173,7 +82,8 @@ export const initialMissions = [
   {
     id: 2,
     title: "Réparation du plafond",
-    description: "Réparer une fissure dans le plafond du hall",
+    project: "Maintenance du bâtiment",
+    responsible: "Marie Martin",
     priority: "high",
     status: "en cours",
     startTime: "2025-04-07T09:00:00",
@@ -182,7 +92,8 @@ export const initialMissions = [
   {
     id: 3,
     title: "Inspection des systèmes électriques",
-    description: "Vérification du câblage et des circuits électriques",
+    project: "Sécurité des installations",
+    responsible: "Pierre Durand",
     priority: "low",
     status: "terminée",
     startTime: "2025-04-06T14:00:00",
@@ -191,7 +102,8 @@ export const initialMissions = [
   {
     id: 4,
     title: "Entretien des ordinateurs",
-    description: "Mettre à jour les logiciels et nettoyer les PC",
+    project: "Maintenance informatique",
+    responsible: "Sophie Lambert",
     priority: "medium",
     status: "à faire",
     startTime: "2025-04-07T10:30:00",
@@ -200,7 +112,8 @@ export const initialMissions = [
   {
     id: 5,
     title: "Désinfection des toilettes",
-    description: "Nettoyer et désinfecter toutes les toilettes du bâtiment",
+    project: "Hygiène des espaces communs",
+    responsible: "Lucie Petit",
     priority: "high",
     status: "en cours",
     startTime: "2025-04-07T11:30:00",
@@ -209,7 +122,8 @@ export const initialMissions = [
   {
     id: 6,
     title: "Contrôle de la température dans les laboratoires",
-    description: "Vérification des systèmes de climatisation et chauffage",
+    project: "Maintenance des équipements",
+    responsible: "Thomas Moreau",
     priority: "medium",
     status: "à faire",
     startTime: "2025-04-07T13:00:00",
@@ -218,7 +132,8 @@ export const initialMissions = [
   {
     id: 7,
     title: "Réparation du système de son",
-    description: "Réparer le système audio dans la salle de conférence",
+    project: "Audiovisuel",
+    responsible: "Nicolas Leroy",
     priority: "high",
     status: "terminée",
     startTime: "2025-04-06T15:00:00",
@@ -227,209 +142,12 @@ export const initialMissions = [
   {
     id: 8,
     title: "Vérification de la sécurité des issues de secours",
-    description: "Assurer que toutes les issues de secours sont accessibles",
+    project: "Sécurité incendie",
+    responsible: "Émilie Rousseau",
     priority: "low",
     status: "à faire",
     startTime: "2025-04-07T16:00:00",
     endTime: "2025-04-07T18:00:00",
-  },
-  {
-    id: 9,
-    title: "Installation de nouveaux équipements",
-    description: "Installer des équipements dans la salle informatique",
-    priority: "medium",
-    status: "en cours",
-    startTime: "2025-04-07T18:00:00",
-    endTime: "2025-04-07T20:00:00",
-  },
-  {
-    id: 10,
-    title: "Révision des détecteurs de fumée",
-    description: "Vérifier le bon fonctionnement des détecteurs de fumée",
-    priority: "high",
-    status: "terminée",
-    startTime: "2025-04-06T17:30:00",
-    endTime: "2025-04-06T19:00:00",
-  },
-  {
-    id: 11,
-    title: "Nettoyage de la piscine",
-    description: "Vider et nettoyer la piscine extérieure",
-    priority: "medium",
-    status: "à faire",
-    startTime: "2025-04-08T08:00:00",
-    endTime: "2025-04-08T10:00:00",
-  },
-  {
-    id: 12,
-    title: "Rénovation des toilettes",
-    description: "Rénover les toilettes du rez-de-chaussée",
-    priority: "low",
-    status: "en cours",
-    startTime: "2025-04-08T10:00:00",
-    endTime: "2025-04-08T12:00:00",
-  },
-  {
-    id: 13,
-    title: "Réparation du chauffage central",
-    description: "Réparer le chauffage dans les bureaux",
-    priority: "high",
-    status: "terminée",
-    startTime: "2025-04-07T14:00:00",
-    endTime: "2025-04-07T16:00:00",
-  },
-  {
-    id: 14,
-    title: "Vérification des extincteurs",
-    description: "Assurer que tous les extincteurs sont en bon état",
-    priority: "medium",
-    status: "à faire",
-    startTime: "2025-04-08T12:30:00",
-    endTime: "2025-04-08T14:30:00",
-  },
-  {
-    id: 15,
-    title: "Contrôle des ascenseurs",
-    description: "Vérifier le bon fonctionnement des ascenseurs",
-    priority: "low",
-    status: "en cours",
-    startTime: "2025-04-08T14:00:00",
-    endTime: "2025-04-08T16:00:00",
-  },
-  {
-    id: 16,
-    title: "Réparation du toit",
-    description: "Réparer une fuite sur le toit du bâtiment C",
-    priority: "high",
-    status: "terminée",
-    startTime: "2025-04-07T16:00:00",
-    endTime: "2025-04-07T18:00:00",
-  },
-  {
-    id: 17,
-    title: "Mise à jour des ordinateurs",
-    description: "Mettre à jour le système d'exploitation des PC du labo",
-    priority: "medium",
-    status: "à faire",
-    startTime: "2025-04-08T15:00:00",
-    endTime: "2025-04-08T17:00:00",
-  },
-  {
-    id: 18,
-    title: "Installation d'un nouveau réseau Wi-Fi",
-    description: "Installer des bornes Wi-Fi dans la bibliothèque",
-    priority: "high",
-    status: "en cours",
-    startTime: "2025-04-08T17:30:00",
-    endTime: "2025-04-08T19:30:00",
-  },
-  {
-    id: 19,
-    title: "Vérification du système de vidéosurveillance",
-    description: "Tester les caméras et enregistreurs de vidéosurveillance",
-    priority: "low",
-    status: "terminée",
-    startTime: "2025-04-07T18:30:00",
-    endTime: "2025-04-07T20:00:00",
-  },
-  {
-    id: 20,
-    title: "Réparation des fenêtres",
-    description: "Réparer les fenêtres cassées dans le bâtiment B",
-    priority: "medium",
-    status: "à faire",
-    startTime: "2025-04-08T20:00:00",
-    endTime: "2025-04-08T22:00:00",
-  },
-  {
-    id: 21,
-    title: "Mise en place d'un système de gestion des déchets",
-    description: "Installer des poubelles de recyclage et de compostage",
-    priority: "low",
-    status: "en cours",
-    startTime: "2025-04-09T08:00:00",
-    endTime: "2025-04-09T10:00:00",
-  },
-  {
-    id: 22,
-    title: "Entretien des ascenseurs",
-    description: "Entretien des ascenseurs dans tous les bâtiments",
-    priority: "high",
-    status: "terminée",
-    startTime: "2025-04-08T08:30:00",
-    endTime: "2025-04-08T10:00:00",
-  },
-  {
-    id: 23,
-    title: "Amélioration de l'éclairage",
-    description: "Installer des lumières supplémentaires dans les parkings",
-    priority: "medium",
-    status: "à faire",
-    startTime: "2025-04-09T10:30:00",
-    endTime: "2025-04-09T12:30:00",
-  },
-  {
-    id: 24,
-    title: "Entretien des espaces verts",
-    description: "Tondre la pelouse et tailler les haies autour du campus",
-    priority: "low",
-    status: "en cours",
-    startTime: "2025-04-09T12:00:00",
-    endTime: "2025-04-09T14:00:00",
-  },
-  {
-    id: 25,
-    title: "Réparation du système de chauffage",
-    description: "Réparer les radiateurs dans le bâtiment A",
-    priority: "high",
-    status: "terminée",
-    startTime: "2025-04-08T14:30:00",
-    endTime: "2025-04-08T16:30:00",
-  },
-  {
-    id: 26,
-    title: "Installation de nouveaux éclairages",
-    description: "Ajouter des éclairages LED dans les couloirs",
-    priority: "medium",
-    status: "à faire",
-    startTime: "2025-04-09T16:30:00",
-    endTime: "2025-04-09T18:30:00",
-  },
-  {
-    id: 27,
-    title: "Réparation des portes automatiques",
-    description: "Réparer les portes automatiques de l'entrée principale",
-    priority: "high",
-    status: "en cours",
-    startTime: "2025-04-09T18:00:00",
-    endTime: "2025-04-09T20:00:00",
-  },
-  {
-    id: 28,
-    title: "Installation de bornes de recharge pour véhicules électriques",
-    description: "Installer des bornes de recharge dans le parking",
-    priority: "medium",
-    status: "terminée",
-    startTime: "2025-04-08T20:30:00",
-    endTime: "2025-04-08T22:30:00",
-  },
-  {
-    id: 29,
-    title: "Entretien des chaudières",
-    description: "Vérifier le bon fonctionnement des chaudières dans le bâtiment C",
-    priority: "low",
-    status: "à faire",
-    startTime: "2025-04-09T22:00:00",
-    endTime: "2025-04-10T00:00:00",
-  },
-  {
-    id: 30,
-    title: "Réparation de la climatisation",
-    description: "Réparer les systèmes de climatisation dans les salles de réunion",
-    priority: "high",
-    status: "en cours",
-    startTime: "2025-04-10T08:00:00",
-    endTime: "2025-04-10T10:00:00",
   },
 ];
 
@@ -586,4 +304,170 @@ export const familleProjetOptions = [
 export const partenaireOptions = [
   { value: "p1", label: "Partenaire 1" },
   { value: "p2", label: "Partenaire 2" }
+];
+
+
+
+// Données mock pour les membres de l'équipe
+// export const teamMembersData = [
+//   { id: "1", name: "Marie Lambert", role: "Développeuse principale", initials: "ML", bgColor: "bg-blue-500" },
+//   { id: "2", name: "Pierre Martin", role: "Développeur backend", initials: "PM", bgColor: "bg-blue-500" },
+//   { id: "3", name: "Sophie Chen", role: "QA Engineer", initials: "SC", bgColor: "bg-blue-500" },
+//   { id: "4", name: "Jean Dupont", role: "Chef de projet", initials: "JD", bgColor: "bg-blue-500" }
+// ];
+
+// Données mock pour les fichiers du projet
+export const filesData = [
+  { id: "1", name: "Spécifications.pdf", type: "pdf", size: "2.4 MB", date: "15/06/2023" },
+  { id: "2", name: "schéma_db.sql", type: "sql", size: "1.1 MB", date: "18/06/2023" },
+  { id: "3", name: "Tests.xlsx", type: "xlsx", size: "3.7 MB", date: "20/06/2023" }
+];
+
+// // Données mock pour les tâches
+// export const tasksData = [
+//   { 
+//     id: "1", 
+//     title: "Conception de la base de données", 
+//     assigneeId: "1", // Référence à Marie Lambert
+//     status: "completed", 
+//     dateRange: "15/06 - 20/06" 
+//   },
+//   { 
+//     id: "2", 
+//     title: "Développement de l'interface admin", 
+//     assigneeId: "2", // Référence à Pierre Martin
+//     status: "in-progress", 
+//     dateRange: "20/06 - 30/06" 
+//   }
+// ];
+
+// Données mock pour les dates clés
+export const keyDatesData = [
+  { id: "1", name: "Démarrage", date: "15/06/2023" },
+  { id: "2", name: "Revue de conception", date: "05/07/2023" },
+  { id: "3", name: "Tests d'intégration", date: "15/08/2023" },
+  { id: "4", name: "Échéance finale", date: "30/09/2023" }
+];
+
+
+// app/data/mockData.js
+
+// Données mock pour un projet spécifique
+// app/data/mockData.js
+
+// Données mock pour une mission spécifique
+export const missionData = {
+  id: "1",
+  title: "Refonte site e-commerce",
+  description: "Refonte complète du site e-commerce avec intégration d'un nouveau système de paiement et amélioration de l'expérience utilisateur. Optimisation pour mobile et tablette.",
+  objectives: [
+    "Améliorer la navigation et l'expérience utilisateur",
+    "Intégrer un nouveau système de paiement sécurisé",
+    "Optimiser les performances du site",
+    "Refonte visuelle complète"
+  ],
+  type: "Informatique",
+  projectId: "101",
+  projectName: "Transformation Digitale Entreprise X",
+  partnerId: "1", // Référence au partenaire "Partenaire 1"
+  status: "En cours",
+  startDate: "15/03/2025",
+  endDate: "30/06/2025",
+  startDateRaw: "2025-03-15",
+  endDateRaw: "2025-06-30",
+  duration: "3 mois et 15 jours",
+  budget: 25000,
+  actualCost: 15000, // Coût actuel engagé
+  budgetVariance: "-10%", // Écart budgétaire
+  lastUpdate: "05/04/2025",
+  resources: [
+    { name: "Cahier des charges", url: "/documents/cdc-ecommerce.pdf" },
+    { name: "Maquettes UI/UX", url: "/documents/maquettes-ecommerce.pdf" },
+    { name: "Planning détaillé", url: "/documents/planning-ecommerce.pdf" }
+  ]
+};
+
+// Données mock pour les partenaires
+export const partnersData = [
+  { 
+    id: "1", 
+    name: "Partenaire 1", 
+    contactName: "Jean Martin",
+    email: "jean.martin@partenaire1.com",
+    phone: "01 23 45 67 89",
+    location: "Paris, France"
+  },
+  { 
+    id: "2", 
+    name: "Partenaire 2", 
+    contactName: "Marie Dubois",
+    email: "marie.dubois@partenaire2.com",
+    phone: "01 98 76 54 32",
+    location: "Lyon, France"
+  }
+];
+
+// Données mock pour les projets
+export const projectsData = [
+  {
+    id: "101",
+    name: "Transformation Digitale Entreprise X",
+    description: "Projet global de transformation digitale incluant plusieurs missions",
+    status: "En cours",
+    startDate: "01/01/2025",
+    endDate: "31/12/2025"
+  },
+  {
+    id: "102",
+    name: "Refonte des Systèmes Internes",
+    description: "Modernisation des systèmes d'information internes",
+    status: "En attente",
+    startDate: "01/07/2025",
+    endDate: "31/12/2025"
+  }
+];
+
+// Données mock pour les membres de l'équipe
+export const teamMembersData = [
+  { id: "1", name: "Marie Lambert", role: "Développeuse principale", initials: "ML", bgColor: "bg-blue-500" },
+  { id: "2", name: "Pierre Martin", role: "Développeur backend", initials: "PM", bgColor: "bg-blue-500" },
+  { id: "3", name: "Sophie Chen", role: "QA Engineer", initials: "SC", bgColor: "bg-blue-500" },
+  { id: "4", name: "Jean Dupont", role: "Chef de projet", initials: "JD", bgColor: "bg-blue-500" }
+];
+
+// Données mock pour les tâches
+export const tasksData = [
+  { 
+    id: "1", 
+    title: "Conception de la base de données", 
+    missionId: "1",
+    assigneeId: "1", // Référence à Marie Lambert
+    status: "terminée", 
+    priority: "high",
+    startTime: "2023-06-15T08:00:00",
+    endTime: "2023-06-20T17:00:00",
+    dateRange: "15/06 - 20/06" 
+  },
+  { 
+    id: "2", 
+    title: "Développement de l'interface admin", 
+    missionId: "1",
+    assigneeId: "2", // Référence à Pierre Martin
+    status: "en cours", 
+    priority: "medium",
+    startTime: "2023-06-20T08:00:00",
+    endTime: "2023-06-30T17:00:00",
+    dateRange: "20/06 - 30/06" 
+  },
+  { 
+    id: "3", 
+    title: "Tests d'intégration", 
+    missionId: "1",
+    assigneeId: "3", // Référence à Sophie Chen
+    status: "à faire", 
+    priority: "medium",
+    startTime: "2023-07-01T08:00:00",
+    endTime: "2023-07-15T17:00:00",
+    dateRange: "01/07 - 15/07" 
+  }
 ];

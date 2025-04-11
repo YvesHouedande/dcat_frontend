@@ -20,7 +20,6 @@ const ProjectsRoutes: React.FC = () => {
       <Route path="/Taches" element={<TaskDisplay />} />
       <Route path="/Documents" element={<VueGlobalPage />} />
       <Route path="/Rapports" element={<VueGlobalPage />} />
-      <Route path="/Parametres" element={<VueGlobalPage />} />
 
       {/* Les routes pour les formulaires et autres vues */}
 
@@ -29,7 +28,6 @@ const ProjectsRoutes: React.FC = () => {
       <Route path="/Taches/tache" element={<TaskForm />} />
       {/* <Route path="/documents" element={<VueGlobalPage />} /> */}
       {/* <Route path="/rapport" element={<VueGlobalPage />} /> */}
-      {/* <Route path="/parametre" element={<VueGlobalPage />} /> */}
 
     </Routes>
   );

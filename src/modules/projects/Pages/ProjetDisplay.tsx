@@ -23,7 +23,7 @@ import {
   CardContent 
 } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import Layout from "@/components/Layout";
 import { 
@@ -41,6 +41,9 @@ export default function ProjectDisplay() {
   const [etatFilter, setEtatFilter] = useState("tous");
   const [partenaireFilter, setPartenaireFilter] = useState("tous");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+
   // Filtrer les projets
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.nom.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -51,6 +54,18 @@ export default function ProjectDisplay() {
     
     return matchesSearch && matchesType && matchesEtat && matchesPartenaire;
   });
+
+  // Pagination des tâches filtrées
+  const totalPages = Math.ceil(filteredProjects.length / rowsPerPage);
+  const paginatedProjects = filteredProjects.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  // Navigation de pagination
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
 
   // Changer l'état
   const handleStatusChange = (id: number, newStatus: string) => {
@@ -227,7 +242,7 @@ export default function ProjectDisplay() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProjects.map((project) => (
+              {paginatedProjects.map((project) => (
                 <TableRow key={project.id}>
                   <TableCell className="font-medium">
                     <div>{project.nom}</div>
@@ -272,6 +287,67 @@ export default function ProjectDisplay() {
               ))}
             </TableBody>
           </Table>
+        </div>
+
+        <div className="mt-6 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span>Lignes par page</span>
+            <Select value={rowsPerPage.toString()} onValueChange={(value) => {
+              setRowsPerPage(Number(value));
+              setCurrentPage(1); // Retour à la première page lors du changement de lignes par page
+            }}>
+              <SelectTrigger className="w-16">
+                <SelectValue>{rowsPerPage}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center space-x-1">
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} sur {totalPages || 1}
+            </span>
+            <div className="flex items-center space-x-1 ml-4">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
         
         {/* Stats */}

@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardFooter } from "@/components/ui/card";
 import { CalendarIcon, Cog } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -390,8 +390,8 @@ export default function TaskForm() {
                 )}
               />
               
-              <CardFooter className="flex justify-center gap-4 pt-6 pb-0">
-                <Button type="submit" className="w-32">Enregistrer</Button>
+              <CardFooter className="flex justify-center  gap-4 pt-6 pb-0">
+                <Button type="submit" className="w-32 hover:bg-gray-600 ">Enregistrer</Button>
                 <Button 
                   type="button" 
                   variant="outline" 

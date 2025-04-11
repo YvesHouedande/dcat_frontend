@@ -29,10 +29,6 @@ export const projetsMenu: MenuItem[] = [
         title: "rapports et suivi",
         url: "/projects/Rapports",
       },
-      {
-        title: "paramètre du module",
-        url: "/projects/Parametres",
-      },
     ],
   },
 ];
