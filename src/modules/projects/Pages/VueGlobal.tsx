@@ -6,7 +6,7 @@ const VueGlobalPage: React.FC = () => {
   return (
     <Layout>
       <div className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Vue Globale</h1>
+        <h1 className="text-3xl font-bold mb-6">vue Globale</h1>
         <Dashboard />
       </div>
     </Layout>
