@@ -30,7 +30,6 @@ export const useProduits = () => {
     queryKey: ["Produits"],
     queryFn: getProduits,
   });
-<<<<<<< HEAD
 };// Assurez-vous que cette fonction existe
 
 export const useInterventions = (id?: string | number) => {
@@ -41,16 +40,6 @@ export const useInterventions = (id?: string | number) => {
   });
 };
 
-=======
-};
-
-export const useInterventions = () => {
-  return useQuery({
-    queryKey: ["interventions"],
-    queryFn: getInterventions,
-  });
-};
->>>>>>> 9ef29a9 (jjk)
 
 export const useCreateIntervention = () => {
   const queryClient = useQueryClient();

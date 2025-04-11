@@ -16,8 +16,4 @@ export function useIsMobile() {
   }, [])
 
   return !!isMobile
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 9ef29a9 (jjk)

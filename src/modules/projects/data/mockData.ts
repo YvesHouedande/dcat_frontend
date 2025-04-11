@@ -54,8 +54,6 @@ export const mockKPIs = [
     description: "Visitors for the last 6 months"
   },
   // ... autres données
-<<<<<<< HEAD
-=======
 ];
 
 // app/data/mockMissions.ts
@@ -472,5 +470,4 @@ export const tasksData = [
     endTime: "2023-07-15T17:00:00",
     dateRange: "01/07 - 15/07" 
   }
->>>>>>> 9ef29a9 (jjk)
 ];

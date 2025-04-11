@@ -564,11 +564,6 @@ export function Nouvelle_fiche() {
             </div>
           </div>
         </div>
-<<<<<<< HEAD
-
-=======
-        {/* Section du problème à signaler */}
->>>>>>> 9ef29a9 (jjk)
         <div className="w-full mt-6 p-4 border border-dotted rounded-md shadow-sm">
           <p className="w-full text-center mb-4 uppercase font-semibold flex items-center justify-center gap-2">
             <AlertTriangle className="w-5 h-5" />
@@ -584,12 +579,6 @@ export function Nouvelle_fiche() {
             </p>
           )}
         </div>
-<<<<<<< HEAD
-
-=======
-        
-        {/* Renseignement sur la maintenance*/}
->>>>>>> 9ef29a9 (jjk)
         <div className="w-full mt-6 p-4 border border-dotted rounded-md">
           <div className="w-full flex items-start justify-between max-lg:flex-col max-lg:space-y-4">
             <div className="grid w-full max-w-sm items-center gap-1.5 p-3 rounded-md shadow-sm">
@@ -728,11 +717,6 @@ export function Nouvelle_fiche() {
             </div>
           </div>
         </div>
-<<<<<<< HEAD
-
-=======
-        {/* Cause lié à la maintenance */}
->>>>>>> 9ef29a9 (jjk)
         <div className="w-full mt-6 p-4 border border-dotted rounded-md">
           <p className="w-full text-center mb-4 uppercase font-semibold flex items-center justify-center gap-2">
             <Activity className="w-5 h-5" />
@@ -748,11 +732,6 @@ export function Nouvelle_fiche() {
             </p>
           )}
         </div>
-<<<<<<< HEAD
-
-=======
-        {/* Cause lié à la maintenance */}
->>>>>>> 9ef29a9 (jjk)
         <div className="w-full mt-6 p-4 border border-dotted rounded-md shadow-sm">
           <p className="w-full text-center mb-4 uppercase font-semibold flex items-center justify-center gap-2">
             <FileText className="w-5 h-5" />

@@ -10,8 +10,8 @@ export const stocksMenu: MenuItem[] = [
     isActive: false,
     items: [
       {
-        title: "recette",
-        url: "/stock/recette",
+        title: "produits",
+        url: "/stock/produits",
       },
       {
         title: "another",

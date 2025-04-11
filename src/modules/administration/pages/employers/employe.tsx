@@ -249,7 +249,9 @@ const ModernProfileGrid: React.FC = () => {
                       <AvatarFallback>{profile.initials}</AvatarFallback>
                     </Avatar>
                     <div className="ml-3">
-                      <h3 className="font-semibold text-gray-800">
+                      <h3  onClick={() =>
+                          handleClickVoirProfile(profile.id)
+                        } className="font-semibold text-gray-800 cursor-pointer hover:underline">
                         {profile.name}
                       </h3>
                       <p className="text-sm text-gray-500">{profile.role}</p>
