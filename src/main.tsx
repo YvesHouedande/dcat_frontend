@@ -7,4 +7,8 @@ createRoot(document.getElementById('root')!).render(
   // <StrictMode>
     <App />
   // {/* </StrictMode>, */}
+<<<<<<< HEAD
 )
+=======
+)
+>>>>>>> 9ef29a9 (jjk)

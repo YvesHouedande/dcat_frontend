@@ -1,4 +1,8 @@
 import { MenuItem } from "@/types/Menu";
+<<<<<<< HEAD
+=======
+import { LayoutDashboard } from "lucide-react";
+>>>>>>> 9ef29a9 (jjk)
 import { UserCog } from "lucide-react";
 
 export const administrationMenu: MenuItem[] = [
@@ -9,6 +13,7 @@ export const administrationMenu: MenuItem[] = [
     isActive: false,
     items: [
       {
+<<<<<<< HEAD
         title: "employers",
         url: "/administration/employers",
       },
@@ -28,6 +33,14 @@ export const administrationMenu: MenuItem[] = [
       {
         title: "contrats",
         url: "/administration/contrats",
+=======
+        title: "recette",
+        url: "/accounting/recette",
+      },
+      {
+        title: "another",
+        url: "/dashboard/another",
+>>>>>>> 9ef29a9 (jjk)
       },
     ],
   },

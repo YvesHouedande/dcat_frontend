@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import ExampleAdministrationPage from "./pages/ExampleAdministrationPage";
@@ -22,10 +23,17 @@ import DemandesAnnuaire from "./pages/demandes/demandes";
 import DemandesPage from "./pages/demandes/info_demandes";
 import NouvelleDemandePage from "./pages/demandes/nouveau";
 import ModifierDemandePage from "./pages/demandes/modifier_demande";
+=======
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import ExampleAdministrationPage from './pages/ExampleAdministrationPage';
+
+>>>>>>> 9ef29a9 (jjk)
 const AdministrationRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<ExampleAdministrationPage />} />
+<<<<<<< HEAD
       {/* Routes /employers */}
       <Route path="/employers" element={<AdministrationLayout />}>
         <Route index element={<Employer />} />
@@ -58,8 +66,14 @@ const AdministrationRoutes: React.FC = () => {
         <Route path="nouveau" element={<AddDocumentPage />} />
       </Route>
       <Route path="/*" element={<NotFound />} />
+=======
+>>>>>>> 9ef29a9 (jjk)
     </Routes>
   );
 };
 
+<<<<<<< HEAD
 export default AdministrationRoutes;
+=======
+export default AdministrationRoutes; 
+>>>>>>> 9ef29a9 (jjk)

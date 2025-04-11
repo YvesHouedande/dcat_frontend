@@ -30,7 +30,8 @@ const AppContent: React.FC = () => {
           element={<PrivateRoute element={<StocksRoutes />} />}
         />
         <Route
-          path="/accounting/*"
+
+          path="/COMPTABILITE/*"
           element={<PrivateRoute element={<AccountingRoutes />} />}
         />
         <Route

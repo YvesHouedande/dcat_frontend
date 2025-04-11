@@ -46,7 +46,11 @@ const Dashboard = () => {
       
       {/* Onglets */}
       <Tabs defaultValue="apercu" className="mb-6">
+<<<<<<< HEAD
         <TabsList className="grid w-full grid-cols-3">
+=======
+        <TabsList>
+>>>>>>> 9ef29a9 (jjk)
           <TabsTrigger value="apercu">Aperçu</TabsTrigger>
           <TabsTrigger value="activite">Activité</TabsTrigger>
           <TabsTrigger value="parametres">Paramètres</TabsTrigger>

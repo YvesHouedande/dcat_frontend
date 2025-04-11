@@ -8,7 +8,10 @@ import { DataTable } from "./test/test";
 import data from "./test/data.json";
 import Historique from "./Pages/historique";
 import NotFound from "@/pages/NotFound";
+<<<<<<< HEAD
 import { ResizableHandleDemo } from "./Pages/histoire";
+=======
+>>>>>>> 9ef29a9 (jjk)
 
 const InterventionsRoutes: React.FC = () => {
   return (
@@ -24,7 +27,11 @@ const InterventionsRoutes: React.FC = () => {
         element={<Modifier_intervention />}
       />
       {/* <Route path="/historique" element={<DataTable data={data} />} /> */}
+<<<<<<< HEAD
       <Route path="/historique" element={<ResizableHandleDemo />} />
+=======
+      <Route path="/historique" element={<Historique />} />
+>>>>>>> 9ef29a9 (jjk)
 
       <Route path="/*" element={<NotFound />} />
     </Routes>
