@@ -1,6 +1,6 @@
 import React from "react";
-import Layout from "../../../components/Layout";
-import Dashboard from "../../projects/components/dashboards/dashboards";
+import Layout from "../../../../components/Layout";
+import Dashboard from "../components/dashboards/dashboards";
 
 const VueGlobalPage: React.FC = () => {
   return (

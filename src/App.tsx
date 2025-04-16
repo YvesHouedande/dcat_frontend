@@ -5,11 +5,11 @@ import NotFound from "./pages/NotFound";
 import PrivateRoute from "./helpers/PrivateRoute";
 import keycloak from "../KeycloakService";
 import DashboardRoutes from "./modules/dashboard/DashboardRoutes";
-import AccountingRoutes from "./modules/accounting/AccountingRoutes";
-import AdministrationRoutes from "./modules/administration/AdministrationRoutes";
-import InterventionsRoutes from "./modules/interventions/InterventionsRoutes";
+import AccountingRoutes from "./modules/administration-Finnance/finnance/AccountingRoutes";
+import AdministrationRoutes from "./modules/administration-Finnance/administration/AdministrationRoutes";
+import InterventionsRoutes from "./modules/techniques/interventions/InterventionsRoutes";
 import StocksRoutes from "./modules/stocks/StocksRoutes";
-import ProjectsRoutes from "./modules/projects/ProjectsRoutes";
+import ProjectsRoutes from "./modules/techniques/projects/ProjectsRoutes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient();
@@ -30,7 +30,6 @@ const AppContent: React.FC = () => {
           element={<PrivateRoute element={<StocksRoutes />} />}
         />
         <Route
-
           path="/COMPTABILITE/*"
           element={<PrivateRoute element={<AccountingRoutes />} />}
         />

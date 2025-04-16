@@ -1,15 +1,19 @@
-import { accountingMenu } from './modules/accounting/menu';
-import { administrationMenu } from './modules/administration/menu';
-import { interventionsMenu } from './modules/interventions/menu';
-import { dashboardMenu } from './modules/dashboard/menu';
-import { projetsMenu } from './modules/projects/menu';
-import { stocksMenu } from './modules/stocks/Pages/menu';
+
+import { administrationFinanceMenu } from "./modules/administration-Finnance/menu";
+import { dashboardMenu } from "./modules/dashboard/menu";
+import { TechniqueMenu } from "./modules/techniques/menu";
+import { stocksMenu } from "./modules/stocks/Pages/menu";
+import { MoyensGenerauxMenu } from "./modules/MoyensGeneraux/menu";
+import { EspacePersonnelMenu } from "./modules/EpacePersonnel/menu";
+import { MarketingCommercialMenu } from "./modules/MarketingCommercial/menu";
 
 export const menuConfig = [
   ...dashboardMenu,
-    ...stocksMenu,
-  ...accountingMenu,
-  ...administrationMenu,
-  ...interventionsMenu,
-  ...projetsMenu,
-]; 
+  ...administrationFinanceMenu,
+  ...stocksMenu,
+  ...MoyensGenerauxMenu,
+  ...TechniqueMenu,
+  ...MarketingCommercialMenu,
+  ...EspacePersonnelMenu,
+
+];

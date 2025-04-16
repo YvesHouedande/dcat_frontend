@@ -2,7 +2,9 @@
 
 import * as React from "react";
 
-import { menuConfig } from "@/menuConfig";
+import {
+  menuConfig
+} from "@/menuConfig";
 
 import { NavMain } from "@/components/nav-main";
 // import { NavProjects } from "@/components/nav-projects"
@@ -166,9 +168,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <img
           src="https://dcat.ci/wp-content/uploads/2023/09/Logo-DCAT-2-300x239.png"
           alt=""
-          width={100} height={100}
+          width={100}
+          height={100}
         />
-        <NavMain items={menuConfig} />
+        <NavMain items={menuConfig} title="Administration" />
+
         {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>

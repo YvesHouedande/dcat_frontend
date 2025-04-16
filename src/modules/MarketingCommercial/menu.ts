@@ -2,26 +2,21 @@ import { MenuItem } from '@/types/Menu';
 import { Package} from 'lucide-react';
 
 
-export const stocksMenu: MenuItem[] = [
+export const MarketingCommercialMenu: MenuItem[] = [
   {
-    title: "Gestion ds stocks",
-    url: "/stock",
+    title: "Marketing & Commercial",
+    url: "/marketing",
     icon: Package,
     isActive: false,
     items: [
       {
-        title: "produits",
+        title: "marketing",
         url: "/stock/produits",
       },
       {
-        title: "examplaires",
+        title: "commercial",
         url: "/stock/examplaires",
-      },
-      
-      {
-        title: "sorties",
-        url: "/stock/sorties",
-      },
+      }
     ],
   },
 ];

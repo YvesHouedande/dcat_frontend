@@ -1,10 +1,10 @@
 import { MenuItem } from "@/types/Menu";
 import { PiggyBank } from "lucide-react";
 
-export const accountingMenu: MenuItem[] = [
+export const EspacePersonnelMenu: MenuItem[] = [
   {
-    title: "Finance-Compta...",
-    url: "/COMPTABILITE",
+    title: "Espace Personnel",
+    url: "/Espace-Personnel",
     icon: PiggyBank,
     isActive: false,
     items: [

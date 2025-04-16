@@ -21,8 +21,10 @@ import { NavLink } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar"; // Assurez-vous d'importer useSidebar
 
 export function NavMain({
+  title,
   items,
 }: {
+  title: string;
   items: {
     title: string;
     url: string;
@@ -39,7 +41,7 @@ export function NavMain({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>ERP/CRM</SidebarGroupLabel>
+      <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const isActive = !!useMatch(item.url + "/*"); // Vérifie si l'URL correspond
@@ -67,9 +69,11 @@ export function NavMain({
                           {item.title}
                         </span>
                       </NavLink>
-                      <ChevronRight
-                        className={`ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90`}
-                      />
+                      {item.items?.length ? (
+                        <ChevronRight
+                          className={`ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90`}
+                        />
+                      ):""}
                     </div>
                   ) : (
                     <SidebarMenuButton tooltip={item.title}>
@@ -92,8 +96,7 @@ export function NavMain({
                           >
                             {({ isActive }) => (
                               <span className={isActive ? "active" : ""}>
-                                {isActive ? "👉" : ""}{" "}
-                                {subItem.title}
+                                {isActive ? "👉" : ""} {subItem.title}
                               </span>
                             )}
                           </NavLink>

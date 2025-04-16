@@ -2,19 +2,19 @@ import { MenuItem } from "@/types/Menu";
 import { Cog } from "lucide-react";
 
 
-export const projetsMenu: MenuItem[] = [
+export const TechniqueMenu: MenuItem[] = [
   {
-    title: "Gestion de projet",
-    url: "/projects",
+    title: "Technique",
+    url: "/technique",
     icon: Cog,
     isActive: false,
     items: [
       {
-        title: "projets",
+        title: "Gestion des projets",
         url: "/projects/Projets",
       },
       {
-        title: "Missions",
+        title: "Gestion des interventions",
         url: "/projects/Missions",
       },
       {
