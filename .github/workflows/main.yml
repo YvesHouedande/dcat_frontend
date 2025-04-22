@@ -19,7 +19,6 @@ jobs:
       - name: Update .env for the current environment
         working-directory: ./dcat_frontend
         run: |
-          # Ta logique .env ici :
           if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "# Keycloak settings" > .env
             echo "VITE_KEYCLOAK_URL=${{ secrets.KEYCLOAK_URL || 'http://localhost:8080/' }}" >> .env
