@@ -1,3 +1,66 @@
+# # name: Frontend CI/CD Pipeline
+
+# # on:
+# #   push:
+# #     branches: [dev]
+# #   workflow_dispatch:
+
+# # jobs:
+# #   build-and-deploy:
+# #     runs-on: self-hosted
+
+# #     steps:
+# #       - name: Checkout code
+# #         uses: actions/checkout@v3
+
+# #       - name: Debug - Affiche racine
+# #         run: ls -la
+
+# #       - name: Update .env for the current environment
+# #         working-directory: .
+# #         run: |
+# #           if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+# #             echo "# Keycloak settings" > .env
+# #             echo "VITE_KEYCLOAK_URL=${{ secrets.KEYCLOAK_URL || 'http://localhost:8080/' }}" >> .env
+# #             echo "VITE_KEYCLOAK_REALM=${{ secrets.KEYCLOAK_REALM || 'dcat_realm' }}" >> .env
+# #             echo "VITE_KEYCLOAK_CLIENTID=${{ secrets.KEYCLOAK_CLIENTID || 'frontend_cli_id' }}" >> .env
+# #             echo "" >> .env
+# #             echo "# API URLs" >> .env
+# #             echo "VITE_API_URL=${{ secrets.API_URL || 'http://localhost:3000/api' }}" >> .env
+# #             echo "VITE_ENV=development" >> .env
+# #           fi
+
+# #       - name: Install dependencies and run tests
+# #         working-directory: ./dcat_frontend
+# #         run: |
+# #           npm ci
+# #           npm run lint || true
+# #           npm run typecheck || echo "Type checking skipped"
+
+# #       - name: Build Docker image
+# #         working-directory: .
+# #         run: docker build -t dcat-frontend:${{ github.sha }} .
+
+# #       - name: Stop existing container
+# #         run: |
+# #           docker stop dcat-frontend || true
+# #           docker rm dcat-frontend || true
+# #         continue-on-error: true
+
+# #       - name: Start new container
+# #         run: |
+# #           docker run -d --name dcat-frontend \
+# #             -p 3000:80 \
+# #             --restart unless-stopped \
+# #             dcat-frontend:${{ github.sha }}
+
+# #       - name: Clean up old images
+# #         run: |
+# #           docker image prune -af --filter "until=24h"
+# #         continue-on-error: true
+
+
+
 # name: Frontend CI/CD Pipeline
 
 # on:
@@ -13,11 +76,12 @@
 #       - name: Checkout code
 #         uses: actions/checkout@v3
 
-#       - name: Debug - Affiche racine
-#         run: ls -la
+#       - name: Debug - Où suis-je et que contient le dossier ?
+#         run: |
+#           pwd
+#           ls -la
 
 #       - name: Update .env for the current environment
-#         working-directory: .
 #         run: |
 #           if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
 #             echo "# Keycloak settings" > .env
@@ -31,14 +95,12 @@
 #           fi
 
 #       - name: Install dependencies and run tests
-#         working-directory: ./dcat_frontend
 #         run: |
 #           npm ci
 #           npm run lint || true
 #           npm run typecheck || echo "Type checking skipped"
 
 #       - name: Build Docker image
-#         working-directory: .
 #         run: docker build -t dcat-frontend:${{ github.sha }} .
 
 #       - name: Stop existing container
@@ -61,6 +123,7 @@
 
 
 
+  
 name: Frontend CI/CD Pipeline
 
 on:
@@ -76,7 +139,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Debug - Où suis-je et que contient le dossier ?
+      - name: Debug - Affiche le chemin et le contenu du workspace
         run: |
           pwd
           ls -la
@@ -94,11 +157,17 @@ jobs:
             echo "VITE_ENV=development" >> .env
           fi
 
-      - name: Install dependencies and run tests
+      - name: Install pnpm if not installed
         run: |
-          npm ci
-          npm run lint || true
-          npm run typecheck || echo "Type checking skipped"
+          if ! command -v pnpm &> /dev/null; then
+            npm install -g pnpm
+          fi
+
+      - name: Install dependencies, lint and typecheck
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run lint || true
+          pnpm run typecheck || echo "Type checking skipped"
 
       - name: Build Docker image
         run: docker build -t dcat-frontend:${{ github.sha }} .
@@ -120,7 +189,3 @@ jobs:
         run: |
           docker image prune -af --filter "until=24h"
         continue-on-error: true
-
-
-
-  
