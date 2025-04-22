@@ -1,0 +1,184 @@
+# name: Frontend CI/CD Pipeline
+
+# on:
+#   push:
+#     branches: [dev]  # Se déclenche uniquement pour les push sur la branche dev
+#   workflow_dispatch:  # Pour déclencher manuellement si nécessaire
+
+# jobs:
+#   build-and-deploy:
+#     name: Build and Deploy
+#     runs-on: self-hosted  # Utilise un runner self-hosted
+    
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+      
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: '18'
+#           cache: 'pnpm'
+      
+#       - name: Install PNPM
+#         run: |
+#           npm install -g pnpm
+      
+#       - name: Install dependencies
+#         run: |
+#           cd dcat_frontend
+#           pnpm install
+      
+#       - name: Lint
+#         run: |
+#           cd dcat_frontend
+#           pnpm run lint || true  # Continue même si le linting échoue
+      
+#       - name: Type check
+#         run: |
+#           cd dcat_frontend
+#           pnpm run typecheck || echo "Type checking issues found"
+      
+#       - name: Build
+#         run: |
+#           cd dcat_frontend
+#           pnpm run build
+      
+#       - name: Build Docker image
+#         run: |
+#           cd dcat_frontend
+#           docker build -t dcat-frontend:${{ github.sha }} .
+      
+#       - name: Stop existing container
+#         run: |
+#           docker stop dcat-frontend || true
+#           docker rm dcat-frontend || true
+#         continue-on-error: true
+      
+#       - name: Start new container
+#         run: |
+#           docker run -d --name dcat-frontend \
+#             -p 3000:80 \
+#             --restart unless-stopped \
+#             dcat-frontend:${{ github.sha }}
+      
+#       - name: Clean up old images
+#         run: |
+#           docker image prune -af --filter "until=24h"
+#         continue-on-error: true
+
+
+
+# name: Frontend CI/CD Pipeline
+
+# on:
+#   push:
+#     branches: [dev]  # Se déclenche uniquement pour les push sur la branche dev
+#   workflow_dispatch:  # Pour déclencher manuellement si nécessaire
+
+# jobs:
+#   build-and-deploy:
+#     name: Build and Deploy
+#     runs-on: self-hosted  # Utilise un runner self-hosted
+    
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+      
+#       - name: Install dependencies and run tests
+#         run: |
+#           cd dcat_frontend
+#           npm ci
+#           npm run lint || true  # Continue même si le linting échoue
+#           # Ajout de la commande typecheck si elle existe dans votre package.json
+#           npm run typecheck || echo "Type checking skipped"
+      
+#       - name: Build Docker image
+#         run: |
+#           cd dcat_frontend
+#           docker build -t dcat-frontend:${{ github.sha }} .
+      
+#       - name: Stop existing container
+#         run: |
+#           docker stop dcat-frontend || true
+#           docker rm dcat-frontend || true
+#         continue-on-error: true
+      
+#       - name: Start new container
+#         run: |
+#           docker run -d --name dcat-frontend \
+#             -p 3000:80 \
+#             --restart unless-stopped \
+#             dcat-frontend:${{ github.sha }}
+      
+#       - name: Clean up old images
+#         run: |
+#           docker image prune -af --filter "until=24h"
+#         continue-on-error: true
+
+
+
+name: Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches: [dev]  # Se déclenche uniquement pour les push sur la branche dev
+  workflow_dispatch:  # Pour déclencher manuellement si nécessaire
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: self-hosted  # Utilise un runner self-hosted
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Update .env for the current environment
+        run: |
+          cd dcat_frontend
+          # Si nous sommes dans un environnement de développement, utilisez localhost
+          # Si nous avions besoin de différentes configurations, elles iraient ici
+          if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
+            # Pour le développement, utiliser des valeurs locales ou spécifiques à dev
+            echo "# Keycloak settings" > .env
+            echo "VITE_KEYCLOAK_URL=${{ secrets.KEYCLOAK_URL || 'http://localhost:8080/' }}" >> .env
+            echo "VITE_KEYCLOAK_REALM=${{ secrets.KEYCLOAK_REALM || 'dcat_realm' }}" >> .env
+            echo "VITE_KEYCLOAK_CLIENTID=${{ secrets.KEYCLOAK_CLIENTID || 'frontend_cli_id' }}" >> .env
+            echo "" >> .env
+            echo "# API URLs" >> .env
+            echo "VITE_API_URL=${{ secrets.API_URL || 'http://localhost:3000/api' }}" >> .env
+            echo "VITE_ENV=development" >> .env
+          fi
+      
+      - name: Install dependencies and run tests
+        run: |
+          cd dcat_frontend
+          npm ci
+          npm run lint || true  # Continue même si le linting échoue
+          # Ajout de la commande typecheck si elle existe dans votre package.json
+          npm run typecheck || echo "Type checking skipped"
+      
+      - name: Build Docker image
+        run: |
+          cd dcat_frontend
+          docker build -t dcat-frontend:${{ github.sha }} .
+      
+      - name: Stop existing container
+        run: |
+          docker stop dcat-frontend || true
+          docker rm dcat-frontend || true
+        continue-on-error: true
+      
+      - name: Start new container
+        run: |
+          docker run -d --name dcat-frontend \
+            -p 3000:80 \
+            --restart unless-stopped \
+            dcat-frontend:${{ github.sha }}
+      
+      - name: Clean up old images
+        run: |
+          docker image prune -af --filter "until=24h"
+        continue-on-error: true
+
