@@ -1,0 +1,108 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Custom Font Imports */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --color-primary: 15 23 42; /* slate-900 */
+    --color-primary-light: 30 41 59; /* slate-800 */
+    --color-secondary: 245 158 11; /* amber-500 */
+    --color-secondary-light: 251 191 36; /* amber-400 */
+    --color-accent: 239 68 68; /* red-500 */
+    --color-background: 255 255 255;
+    --color-text: 15 23 42; /* slate-900 */
+    --color-text-light: 71 85 105; /* slate-600 */
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-white text-slate-900 font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-semibold;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  p {
+    @apply text-slate-700 leading-relaxed;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-900;
+  }
+
+  .btn-secondary {
+    @apply btn bg-amber-500 text-white hover:bg-amber-400 focus:ring-amber-500;
+  }
+
+  .btn-outline {
+    @apply btn border border-slate-800 text-slate-800 hover:bg-slate-50 focus:ring-slate-800;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .input {
+    @apply block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring focus:ring-amber-500 focus:ring-opacity-50;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-slate-100 text-slate-800;
+  }
+
+  .badge-secondary {
+    @apply badge bg-amber-100 text-amber-800;
+  }
+  
+  .container {
+    @apply px-4 mx-auto max-w-7xl;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes slideInFromBottom {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-in {
+  animation: slideInFromBottom 0.5s ease-out;
+}
