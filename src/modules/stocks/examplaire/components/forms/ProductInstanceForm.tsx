@@ -117,7 +117,7 @@ export function ProductInstanceForm({
           name="date_entree"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Date d'entrée</FormLabel>
+              <FormLabel>Date d'entrées</FormLabel>
               <FormControl>
                 <Input type="date" {...field} />
               </FormControl>
