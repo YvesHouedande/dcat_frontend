@@ -12,6 +12,8 @@ import ProjectsRoutes from "./modules/techniques/projects/ProjectsRoutes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import MoyenGenerauxgRoutes from "./modules/MoyensGeneraux/MoyensGenerauxRoutes";
 
+
+
 const queryClient = new QueryClient();
 const AppContent: React.FC = () => {
   return (
