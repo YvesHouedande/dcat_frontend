@@ -1,5 +1,5 @@
 
-import { apiClient } from "@/api/api";
+import { api as apiClient } from "@/api/api";
 import { FicheInterventionFormValues } from "../types/data";
 export const getUsers = async () => {
   const response = await apiClient.get("/users");

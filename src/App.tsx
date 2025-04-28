@@ -5,12 +5,12 @@ import NotFound from "./pages/NotFound";
 import PrivateRoute from "./helpers/PrivateRoute";
 import keycloak from "../KeycloakService";
 import DashboardRoutes from "./modules/dashboard/DashboardRoutes";
-import AccountingRoutes from "./modules/administration-Finnance/finnance/AccountingRoutes";
 import AdministrationRoutes from "./modules/administration-Finnance/administration/AdministrationRoutes";
 import InterventionsRoutes from "./modules/techniques/interventions/InterventionsRoutes";
 import StocksRoutes from "./modules/stocks/StocksRoutes";
 import ProjectsRoutes from "./modules/techniques/projects/ProjectsRoutes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import MoyenGenerauxgRoutes from "./modules/MoyensGeneraux/MoyensGenerauxRoutes";
 
 const queryClient = new QueryClient();
 const AppContent: React.FC = () => {
@@ -26,12 +26,8 @@ const AppContent: React.FC = () => {
           element={<PrivateRoute element={<DashboardRoutes />} />}
         />
         <Route
-          path="/stock/*"
+          path="/stocks/*"
           element={<PrivateRoute element={<StocksRoutes />} />}
-        />
-        <Route
-          path="/COMPTABILITE/*"
-          element={<PrivateRoute element={<AccountingRoutes />} />}
         />
         <Route
           path="/administration/*"
@@ -40,6 +36,10 @@ const AppContent: React.FC = () => {
         <Route
           path="/interventions/*"
           element={<PrivateRoute element={<InterventionsRoutes />} />}
+        />
+        <Route
+          path="/moyens-generaux/*"
+          element={<PrivateRoute element={<MoyenGenerauxgRoutes />} />}
         />
         <Route
           path="/projects/*"

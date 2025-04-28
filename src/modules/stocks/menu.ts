@@ -5,22 +5,26 @@ import { Package} from 'lucide-react';
 export const stocksMenu: MenuItem[] = [
   {
     title: "Gestion ds stocks",
-    url: "/stock",
+    url: "/stocks",
     icon: Package,
     isActive: false,
     items: [
       {
         title: "produits",
-        url: "/stock/produits",
+        url: "/stocks/references",
       },
       {
         title: "examplaires",
-        url: "/stock/examplaires",
+        url: "/stocks/examplaires",
+      },
+      {
+        title: "achats",
+        url: "/stocks/achats",
       },
       
       {
         title: "sorties",
-        url: "/stock/sorties",
+        url: "/stocks/sorties",
       },
     ],
   },

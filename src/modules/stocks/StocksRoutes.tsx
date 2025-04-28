@@ -1,18 +1,30 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import ExampleStocksPage from "./Pages/ExampleStocksPage";
+// import ExemplairesManager from "./pages/ExemplairesPage";
 import NotFound from "@/pages/NotFound";
-import StockLayout from "./Pages/stockLayout";
-import AnnuaireProduits from "./Pages/produits";
-import AjoutProduit from "./Pages/ajout_produit";
+import StockLayout from "./pages/stockLayout";
+import CataloguePage from "./reference/pages/cataloguePage";
+import ReferencePage from "./reference/pages/referencePage";
+import ReferenceRegistrationForm from "./reference/pages/referenceRegistration";
+import ReferenceEditForm from "./reference/pages/referenceEdit";
+import LivraisonPage from "./livraison/pages/LivraisonPage";
+import { ExemplaireApp } from "./examplaire";
 
 const StocksRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/" element={<ExampleStocksPage />} />
-      <Route path="/produits" element={<StockLayout />}>
-        <Route index element={<AnnuaireProduits />} />
-        <Route path="nouveau" element={<AjoutProduit />} />
+      <Route path="/" element={<StockLayout />} />
+      <Route path="/references" element={<StockLayout />}>
+        <Route index element={<CataloguePage />} />
+        <Route path="nouveau" element={<ReferenceRegistrationForm />} />
+        <Route path=":id" element={<ReferencePage />} />
+        <Route path=":id/edit" element={<ReferenceEditForm />} />
+      </Route>
+      <Route path="/achats" element={<StockLayout />}>
+        <Route index element={<LivraisonPage />} />{" "}
+      </Route>
+      <Route path="/examplaires" element={<StockLayout />}>
+        <Route index element={<ExemplaireApp/>} />
       </Route>
       <Route path="/*" element={<NotFound />} />
     </Routes>

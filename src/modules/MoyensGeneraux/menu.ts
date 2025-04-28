@@ -10,11 +10,20 @@ export const MoyensGenerauxMenu: MenuItem[] = [
     items: [
       {
         title: "Equipement et outils",
-        url: "/COMPTABILITE/finance",
+        url: "/moyens-generaux/equipement-outils",
+      },
+      {
+        title: "Gestion exemplaires",
+        url: "/moyens-generaux/equipement-outils/examplaires",
       },
       {
         title: "Maitenance et entretients",
-        url: "/COMPTABILITE/comptabilite",
+        url: "/moyens-generaux/maitenance-entretients",
+      },
+      
+      {
+        title: "Historique",
+        url: "/moyens-generaux/historique",
       },
     ],
   },
