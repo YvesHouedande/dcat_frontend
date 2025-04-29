@@ -48,7 +48,6 @@ export function ProductInstanceTable({
   onAdd,
   currentPage,
   totalPages,
-  pageSize,
   total,
   loading,
 }: ProductInstanceTableProps) {
