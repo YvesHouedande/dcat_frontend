@@ -14,14 +14,13 @@ export const stocksMenu: MenuItem[] = [
         url: "/stocks/references",
       },
       {
-        title: "examplaires",
-        url: "/stocks/examplaires",
-      },
-      {
         title: "achats",
         url: "/stocks/achats",
       },
-      
+      {
+        title: "examplaires",
+        url: "/stocks/examplaires",
+      },
       {
         title: "sorties",
         url: "/stocks/sorties",

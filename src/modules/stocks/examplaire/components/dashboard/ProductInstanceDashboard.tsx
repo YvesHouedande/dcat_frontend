@@ -1,15 +1,11 @@
 // src/components/dashboard/ProductInstanceDashboard.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ProductInstanceTable } from "../tables/ProductInstanceTable";
 import { ProductInstanceForm } from "../forms/ProductInstanceForm";
 import { useProductInstances } from "../../hooks/useProductInstances";
 import { useDeliveries } from "../../hooks/useDeliveries";
 import { useProducts } from "../../hooks/useProducts";
 import { ProductInstance, PaginationParams } from "../../types";
-import {
-  ProductInstanceFormValues,
-  ProductInstanceFromEdit,
-} from "../../schemas/productInstanceSchema";
 import {
   Dialog,
   DialogContent,
@@ -36,20 +32,18 @@ export function ProductInstanceDashboard() {
     useState<ProductInstance | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  // const [searchTerm, setSearchTerm] = useState("");
   const [paginationParams, setPaginationParams] = useState<PaginationParams>({
     page: 1,
-    pageSize: 10,
+    pageSize: 30,
   });
 
   const {
     productInstances = [],
-    pagination = { page: 1, totalPages: 1, pageSize: 10, total: 0 },
+    pagination = { page: 1, totalPages: 1, pageSize: 30, total: 0 },
     loading,
     error,
     fetchProductInstances,
-    createProductInstance,
-    updateProductInstance,
     deleteProductInstance,
   } = useProductInstances();
 
@@ -61,7 +55,7 @@ export function ProductInstanceDashboard() {
   };
 
   const handleSearch = (term: string) => {
-    setSearchTerm(term);
+    // setSearchTerm(term);
     setPaginationParams((prev) => ({ ...prev, page: 1, search: term }));
   };
 
@@ -92,33 +86,16 @@ export function ProductInstanceDashboard() {
     setDeleteId(null);
   };
 
-  const handleSubmit = async (
-    data: ProductInstanceFormValues | ProductInstanceFromEdit
-  ) => {
-    if (isEditMode && currentInstance) {
-      await updateProductInstance(currentInstance.id_exemplaire, {
-        ...data,
-        id_exemplaire: currentInstance.id_exemplaire, // Utilise l'ID existant pour garantir une valeur
-      });
-    } else {
-      await createProductInstance({
-        ...data,
-      });
-    }
+  const handleFormSuccess = () => {
+    fetchProductInstances(paginationParams);
     closeForm();
-    if (error) {
-      fetchProductInstances(paginationParams);
-    }
   };
 
   const handleDelete = async () => {
     if (deleteId) {
       await deleteProductInstance(deleteId);
       closeDeleteDialog();
-      if (error) {
-        fetchProductInstances(paginationParams);
-      }
-      //   fetchProductInstances(paginationParams);
+      fetchProductInstances(paginationParams);
     }
   };
 
@@ -134,15 +111,6 @@ export function ProductInstanceDashboard() {
     ? productInstances.filter((item) => item.etat_vente === "invendu").length
     : 0;
   const totalProducts = Array.isArray(products) ? products.length : 0;
-
-  //     // Calcul des statistiques pour le tableau de bord
-  //   const soldCount = productInstances.filter(
-  //     (item) => item.etat_vente === "vendu"
-  //   ).length;
-  //   const unsoldCount = productInstances.filter(
-  //     (item) => item.etat_vente === "invendu"
-  //   ).length;
-  //   const totalProducts = products.length;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -239,9 +207,8 @@ export function ProductInstanceDashboard() {
           </DialogHeader>
           <ProductInstanceForm
             initialData={currentInstance || undefined}
-            onSubmit={handleSubmit}
+            onSuccess={handleFormSuccess}
             onCancel={closeForm}
-            isLoading={loading}
             isEditMode={isEditMode}
           />
         </DialogContent>

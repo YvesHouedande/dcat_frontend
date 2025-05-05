@@ -1,25 +1,25 @@
-// src/hooks/useProductInstances.ts
+// src/hooks/useExemplaireSorties.ts
 import { useState, useCallback } from "react";
-import { ProductInstance, PaginationParams, PaginatedResponse } from "../types";
-import { productInstanceService } from "../services/productInstance.service";
+import { ExemplaireSortie, PaginationParams, PaginatedResponse } from "../types";
+import { exemplaireSortieService } from "../services/exemplaireSortie.service";
 
-export const useProductInstances = () => {
+export const useExemplaireSorties = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [productInstances, setProductInstances] = useState<ProductInstance[]>([]);
-  const [pagination, setPagination] = useState<Omit<PaginatedResponse<ProductInstance>, "data">>({
+  const [exemplaireSorties, setExemplaireSorties] = useState<ExemplaireSortie[]>([]);
+  const [pagination, setPagination] = useState<Omit<PaginatedResponse<ExemplaireSortie>, "data">>({
     total: 0,
     page: 1,
     pageSize: 10,
     totalPages: 0,
   });
 
-  const fetchProductInstances = useCallback(async (params: PaginationParams) => {
+  const fetchExemplaireSorties = useCallback(async (params: PaginationParams) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await productInstanceService.getAll(params);
-      setProductInstances(response.data);
+      const response = await exemplaireSortieService.getAll(params);
+      setExemplaireSorties(response.data);
       setPagination({
         total: response.total,
         page: response.page,
@@ -35,13 +35,12 @@ export const useProductInstances = () => {
     }
   }, []);
 
-  const createProductInstance = useCallback(async (data: Omit<ProductInstance, "id_exemplaire" | "prix_exemplaire">) => {
+  const createExemplaireSortie = useCallback(async (data: Omit<ExemplaireSortie, "id_sortie_exemplaire">) => {
     setLoading(true);
     setError(null);
     try {
-      const newInstance = await productInstanceService.create(data);
-      console.log("New instance created:", newInstance);
-      return newInstance;
+      const newSortie = await exemplaireSortieService.create(data);
+      return newSortie;
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Erreur lors de la création"));
       return null;
@@ -50,12 +49,12 @@ export const useProductInstances = () => {
     }
   }, []);
 
-  const updateProductInstance = useCallback(async (id: string |number, data: Omit<ProductInstance, "prix_exemplaire">) => {
+  const updateExemplaireSortie = useCallback(async (id: number, data: Omit<ExemplaireSortie, "id_sortie_exemplaire">) => {
     setLoading(true);
     setError(null);
     try {
-      const updatedInstance = await productInstanceService.update(id, data);
-      return updatedInstance;
+      const updatedSortie = await exemplaireSortieService.update(id, data);
+      return updatedSortie;
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Erreur lors de la mise à jour"));
       return null;
@@ -64,11 +63,11 @@ export const useProductInstances = () => {
     }
   }, []);
 
-  const deleteProductInstance = useCallback(async (id: string | number) => {
+  const deleteExemplaireSortie = useCallback(async (id: number) => {
     setLoading(true);
     setError(null);
     try {
-      await productInstanceService.delete(id);
+      await exemplaireSortieService.delete(id);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Erreur lors de la suppression"));
@@ -79,13 +78,13 @@ export const useProductInstances = () => {
   }, []);
 
   return {
-    productInstances,
+    exemplaireSorties,
     pagination,
     loading,
     error,
-    fetchProductInstances,
-    createProductInstance,
-    updateProductInstance,
-    deleteProductInstance,
+    fetchExemplaireSorties,
+    createExemplaireSortie,
+    updateExemplaireSortie,
+    deleteExemplaireSortie,
   };
 };
