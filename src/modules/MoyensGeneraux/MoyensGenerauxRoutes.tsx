@@ -7,7 +7,6 @@ import ProductRegistrationForm from "./Outils/pages/referenceRegistration.tsx";
 import ReferencePage from "./Outils/pages/referencePage.tsx";
 import CataloguePage from "./Outils/pages/cataloguePage.tsx";
 import ReferenceEditForm from "./Outils/pages/referenceRegistration.tsx";
-// import { MoyensDeTravailPage } from "./Outils/Equipements/pages/MoyensDeTravailPage.tsx";
 import EntreeSortie from "./Outils/pages/EntreeSortie.tsx";
 import { MoyensDesTravailPage } from "./Outils/moyens_de_travail/pages/MoyensDesTravailPage.tsx";
 const MoyenGenerauxgRoutes: React.FC = () => {
