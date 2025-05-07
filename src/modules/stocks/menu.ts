@@ -18,8 +18,8 @@ export const stocksMenu: MenuItem[] = [
         url: "/stocks/achats",
       },
       {
-        title: "examplaires",
-        url: "/stocks/examplaires",
+        title: "exemplaires",
+        url: "/stocks/exemplaires",
       },
       {
         title: "sorties",

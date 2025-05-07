@@ -7,10 +7,8 @@ export const exemplaireSortieSchema = z.object({
   type_sortie: z.enum(TYPE_SORTIE_OPTIONS as [string, ...string[]]),
   reference_id: z.string().min(1, "La référence est requise"),
   date_sortie: z.string().min(1, "La date de sortie est requise"),
-  id_exemplaire: z.number({
-    required_error: "L'exemplaire est requis",
-    invalid_type_error: "L'exemplaire doit être un nombre"
-  })
+  id_produit: z.number().min(1,"L'identifiant du produit est requis"),
+  quantite: z.number().min(1, "La quantité doit être d'au moins 1").default(1)
 });
 
 export type ExemplaireSortieFormValues = z.infer<typeof exemplaireSortieSchema>;

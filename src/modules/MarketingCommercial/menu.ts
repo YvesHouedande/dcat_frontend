@@ -15,7 +15,7 @@ export const MarketingCommercialMenu: MenuItem[] = [
       },
       {
         title: "commercial",
-        url: "/stock/examplaires",
+        url: "/stock/exemplaires",
       }
     ],
   },
