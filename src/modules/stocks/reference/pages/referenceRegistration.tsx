@@ -24,14 +24,15 @@ import { CheckCircle, AlertCircle } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   FormValues,
-  ReferenceSelect,
+  ReferenceSelectCategorie,
+  ReferenceSelectFamille,
+  ReferenceSelectMarque,
+  ReferenceSelectModele,
   formSchema,
 } from "../components/ui/ReferenceSelect";
 import { ImageDropzone } from "../utils/ImageDropzone";
 import { generateProductCode } from "../../utils/generateProductCode";
 import { useReferenceOptions } from "../../hooks/useReferenceOptions";
-
-
 
 // Composant principal
 export default function ProductRegistrationForm() {
@@ -52,7 +53,7 @@ export default function ProductRegistrationForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      Code_produit: "",
+      code_produit: "",
       desi_produit: "",
       desc_produit: "",
       image_produit: "",
@@ -81,7 +82,7 @@ export default function ProductRegistrationForm() {
       familles
     );
     if (code) {
-      form.setValue("Code_produit", code);
+      form.setValue("code_produit", code);
     }
   }, [selectedReferences, form, marques, modeles, categories, familles]);
 
@@ -164,7 +165,7 @@ export default function ProductRegistrationForm() {
               <div className=" p-4 rounded-md mb-4">
                 <h3 className="font-medium mb-2">Classification du produit</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ReferenceSelect
+                  <ReferenceSelectMarque
                     items={marques}
                     label="Marque"
                     name="id_marque"
@@ -174,7 +175,7 @@ export default function ProductRegistrationForm() {
                       handleReferenceChange("id_marque", Number.parseInt(value))
                     }
                   />
-                  <ReferenceSelect
+                  <ReferenceSelectModele
                     items={modeles}
                     label="Modèle"
                     name="id_modele"
@@ -184,29 +185,35 @@ export default function ProductRegistrationForm() {
                       handleReferenceChange("id_modele", Number.parseInt(value))
                     }
                   />
-                  <ReferenceSelect
+                  <ReferenceSelectCategorie
                     items={categories}
                     label="Catégorie"
                     name="id_categorie"
                     control={form.control}
                     isRequired={true}
                     onChange={(value) =>
-                      handleReferenceChange("id_categorie", Number.parseInt(value))
+                      handleReferenceChange(
+                        "id_categorie",
+                        Number.parseInt(value)
+                      )
                     }
                   />
-                  <ReferenceSelect
+                  <ReferenceSelectFamille
                     items={familles}
                     label="Famille"
                     name="id_famille"
                     control={form.control}
                     isRequired={true}
                     onChange={(value) =>
-                      handleReferenceChange("id_famille", Number.parseInt(value))
+                      handleReferenceChange(
+                        "id_famille",
+                        Number.parseInt(value)
+                      )
                     }
                   />
                   <FormField
                     control={form.control}
-                    name="Code_produit"
+                    name="code_produit"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Code produit</FormLabel>

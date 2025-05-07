@@ -25,7 +25,10 @@ import { CheckCircle, AlertCircle } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   FormValues,
-  ReferenceSelect,
+  ReferenceSelectMarque,
+  ReferenceSelectCategorie,
+  ReferenceSelectFamille,
+  ReferenceSelectModele,
   formSchema,
 } from "../components/ui/ReferenceSelect";
 import { ImageDropzone } from "../utils/ImageDropzone";
@@ -55,7 +58,7 @@ export default function ReferenceEditForm() {
     const fetchProduct = async () => {
       // Exemple de données récupérées
       const product = {
-        Code_produit: "SAM-MDA-ELC-FAX",
+        code_produit: "SAM-MDA-ELC-FAX",
         desi_produit: "Moniteur Samsung",
         desc_produit: "Un super écran",
         image_produit: "",
@@ -83,7 +86,7 @@ export default function ReferenceEditForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       id_produit: Number(id),
-      Code_produit: "",
+      code_produit: "",
       desi_produit: "",
       desc_produit: "",
       image_produit: "",
@@ -111,7 +114,7 @@ export default function ReferenceEditForm() {
       familles
     );
     if (code) {
-      form.setValue("Code_produit", code);
+      form.setValue("code_produit", code);
     }
   }, [selectedReferences, form, marques, modeles, categories, familles]);
 
@@ -185,7 +188,7 @@ export default function ReferenceEditForm() {
               <div className=" p-4 rounded-md mb-4">
                 <h3 className="font-medium mb-2">Classification du produit</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ReferenceSelect
+                  <ReferenceSelectMarque
                     items={marques}
                     label="Marque"
                     name="id_marque"
@@ -195,7 +198,7 @@ export default function ReferenceEditForm() {
                       handleReferenceChange("id_marque", Number.parseInt(value))
                     }
                   />
-                  <ReferenceSelect
+                  <ReferenceSelectModele
                     items={modeles}
                     label="Modèle"
                     name="id_modele"
@@ -205,7 +208,7 @@ export default function ReferenceEditForm() {
                       handleReferenceChange("id_modele", Number.parseInt(value))
                     }
                   />
-                  <ReferenceSelect
+                  <ReferenceSelectCategorie
                     items={categories}
                     label="Catégorie"
                     name="id_categorie"
@@ -218,7 +221,7 @@ export default function ReferenceEditForm() {
                       )
                     }
                   />
-                  <ReferenceSelect
+                  <ReferenceSelectFamille
                     items={familles}
                     label="Famille"
                     name="id_famille"
@@ -233,7 +236,7 @@ export default function ReferenceEditForm() {
                   />
                   <FormField
                     control={form.control}
-                    name="Code_produit"
+                    name="code_produit"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Code produit</FormLabel>

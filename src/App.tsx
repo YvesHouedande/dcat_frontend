@@ -1,27 +1,28 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ReactKeycloakProvider } from "@react-keycloak/web";
+// import { ReactKeycloakProvider } from "@react-keycloak/web";
 import NotFound from "./pages/NotFound";
 import PrivateRoute from "./helpers/PrivateRoute";
-import keycloak from "../KeycloakService";
+// import keycloak from "../KeycloakService";
 import DashboardRoutes from "./modules/dashboard/DashboardRoutes";
 import AdministrationRoutes from "./modules/administration-Finnance/administration/AdministrationRoutes";
 import InterventionsRoutes from "./modules/techniques/interventions/InterventionsRoutes";
 import StocksRoutes from "./modules/stocks/StocksRoutes";
 import ProjectsRoutes from "./modules/techniques/projects/ProjectsRoutes";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {QueryClientProvider } from "@tanstack/react-query";
 import MoyenGenerauxgRoutes from "./modules/MoyensGeneraux/MoyensGenerauxRoutes";
+import DCATInterface from "./modules/dashboard/pages/AnotherDashboardPage";
+import { queryClient } from "./lib/queryClient";
 
 
 
-const queryClient = new QueryClient();
 const AppContent: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route
           path="/"
-          element={<PrivateRoute element={<DashboardRoutes />} />}
+          element={<PrivateRoute element={<DCATInterface />} />}
         />
         <Route
           path="/dashboard/*"

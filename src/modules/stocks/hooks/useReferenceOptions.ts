@@ -1,33 +1,31 @@
-export interface ReferenceItem {
-  id: number;
-  nom: string;
-  code: string;
-}
+import { marqueTypes, modeleTypes, categorieTypes, familleTypes } from "../types/reference";
 
 export function useReferenceOptions() {
-  const categories: ReferenceItem[] = [
-    { id: 1, nom: "Électronique", code: "ELC" },
-    { id: 2, nom: "Informatique", code: "INF" },
-    { id: 3, nom: "Mobilier", code: "MOB" },
+  const categories: categorieTypes[] = [
+    { id: 1, libelle_categorie: "Électronique" },
+    { id: 2, libelle_categorie: "Informatique" },
+    { id: 3, libelle_categorie: "Mobilier" },
   ];
 
-  const modeles: ReferenceItem[] = [
-    { id: 3, nom: "Modèle A", code: "MDA" },
-    { id: 4, nom: "Modèle B", code: "MDB" },
-    { id: 5, nom: "Modèle C", code: "MDC" },
+  const modeles: modeleTypes[] = [
+    { id: 3, libelle_modele: "Modèle A" },
+    { id: 4, libelle_modele: "Modèle B" },
+    { id: 5, libelle_modele: "Modèle C" },
   ];
 
-  const familles: ReferenceItem[] = [
-    { id: 6, nom: "Famille X", code: "FAX" },
-    { id: 7, nom: "Famille Y", code: "FAY" },
-    { id: 8, nom: "Famille Z", code: "FAZ" },
+  const familles: familleTypes[] = [
+    { id: 6, libelle_famille: "Famille X" },
+    { id: 7, libelle_famille: "Famille Y" },
+    { id: 8, libelle_famille: "Famille Z" },
   ];
 
-  const marques: ReferenceItem[] = [
-    { id: 9, nom: "Samsung", code: "SAM" },
-    { id: 10, nom: "Apple", code: "APP" },
-    { id: 11, nom: "Dell", code: "DEL" },
+  const marques: marqueTypes [] = [
+    { id: 9, libelle_marque: "Samsung" },
+    { id: 10, libelle_marque: "Apple" },
+    { id: 11, libelle_marque: "Dell" },
   ];
+
+
 
   return { categories, modeles, familles, marques };
 }

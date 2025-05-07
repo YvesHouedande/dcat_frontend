@@ -4,7 +4,7 @@ import { LayoutDashboard } from "lucide-react";
 export const dashboardMenu: MenuItem[] = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
     isActive: false,
     items: [],

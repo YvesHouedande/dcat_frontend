@@ -43,7 +43,7 @@ function AlertDeleteDialog({
           <AlertDialogDescription>
             {message || (
               <span className="text-sm text-gray-500">
-                Êtes-vous sûr de vouloir supprimer la référence avec l'ID {id} ?
+                Êtes-vous sûr de vouloir supprimer l'element avec 'l'ID {id} ?
                 Cette action est irréversible et supprimera définitivement
                 toutes les données sous-jacentes associées.
               </span>

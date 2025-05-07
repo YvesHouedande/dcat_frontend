@@ -63,7 +63,7 @@ const Layout = ({
           <ScrollArea className="h-full w-full">
             <div className="flex-col gap-4 p-4 pt-0">
               {children}
-              <Toaster />
+              <Toaster richColors />
             </div>
           </ScrollArea>
         </div>

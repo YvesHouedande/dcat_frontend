@@ -9,12 +9,16 @@ export const MoyensGenerauxMenu: MenuItem[] = [
     isActive: false,
     items: [
       {
-        title: "Equipement et outils",
-        url: "/moyens-generaux/equipement-outils",
+        title: "outils",
+        url: "/moyens-generaux/outils",
       },
       {
-        title: "Gestion exemplaires",
-        url: "/moyens-generaux/equipement-outils/examplaires",
+        title: "soties/retour outils",
+        url: "/moyens-generaux/outils/sorties",
+      },
+      {
+        title: "Equipements et moyens de travail",
+        url: "/moyens-generaux/Equipements-moyens-travail",
       },
       {
         title: "Maitenance et entretients",

@@ -1,15 +1,16 @@
 import * as z from "zod";
 
 export const referenceSchema = z.object({
-  desi_produit: z.string().min(1, "La désignation est requise"),
+  id_produit: z.union([z.number(), z.string()]).optional(),
+  code_produit: z.string().optional(),
+  desi_produit: z.string().min(1, "La désignation est obligatoire"),
   desc_produit: z.string().optional(),
   image_produit: z.string().optional(),
-  qte_produit: z.number().min(0),
-  emplacement: z.string().min(1, "L'emplacement est requis"),
+  emplacement: z.string().min(1, "L'emplacement est obligatoire"),
   caracteristiques: z.string().optional(),
-  categorie: z.string().min(1, "La catégorie est requise"),
-  type_produit: z.string().min(1, "Le type est requis"),
-  modele: z.string().min(1, "Le modèle est requis"),
-  famille: z.string().min(1, "La famille est requise"),
-  marque: z.string().min(1, "La marque est requise"),
+  id_categorie: z.number().min(1, "La catégorie est obligatoire"),
+  id_type_produit: z.number().min(1, "Le type est obligatoire"),
+  id_modele: z.number().min(1, "Le modèle est obligatoire"),
+  id_famille: z.number().min(1, "La famille est obligatoire"),
+  id_marque: z.number().min(1, "La marque est obligatoire"),
 });

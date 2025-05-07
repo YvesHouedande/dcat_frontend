@@ -31,7 +31,7 @@ export default function ReferencePage() {
   // Exemple de données avec l'interface ReferenceProduit
   const product: ReferenceProduit = {
     id_produit: "REF001",
-    Code_produit: "CP123456",
+    code_produit: "CP123456",
     desi_produit: "Écran LCD 24 pouces",
     desc_produit: "Écran LCD haute résolution 1080p avec ports HDMI et VGA",
     image_produit: "/images/products/lcd_screen.jpg",
@@ -84,7 +84,7 @@ export default function ReferencePage() {
           <div>
             <h1 className="text-2xl font-bold">{product.desi_produit}</h1>
             <p className="text-sm text-muted-foreground">
-              Référence: {product.Code_produit}
+              Référence: {product.code_produit}
             </p>
           </div>
         </div>

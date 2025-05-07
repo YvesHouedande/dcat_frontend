@@ -18,9 +18,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, Search, Edit, Trash2, Plus } from "lucide-react";
-import { ExemplaireSortie, PaginationParams, ProductInstance } from "../types";
+import {
+  MoreHorizontal,
+  Search,
+  Edit,
+  Trash2,
+  Plus,
+  ChevronRight,
+} from "lucide-react";
+import { ExemplaireSortie } from "../types";
 import { formatDateTime } from "../../utils/helpers";
+import { useNavigate } from "react-router-dom";
+import { useProducts } from "../../exemplaire";
 
 interface ExemplaireSortieTableProps {
   exemplaireSorties: ExemplaireSortie[];
@@ -55,11 +64,36 @@ export function ExemplaireSortieTable({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalSearchTerm(e.target.value);
   };
-
+  const navigate = useNavigate();
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch(localSearchTerm);
   };
+
+  function getTypeSortieColor(type: string) {
+    switch (type) {
+      case "Vente en ligne":
+        return "bg-green-100 text-green-800";
+      case "Vente directe":
+        return "bg-red-100 text-red-800";
+      case "Projet":
+        return "bg-yellow-100 text-yellow-800";
+      case "Intervention":
+        return "bg-orange-100 text-orange-800";
+      default:
+        return "bg-blue-100 text-blue-800";
+    }
+  }
+
+  const handlePartenaireClick = (id: number) => {
+    navigate(`/stocks/references/${id}`);
+  };
+
+  function getCodeProduit(id_produit: number | string): React.ReactNode {
+    const { product } = useProducts(id_produit);
+    // If found, return its code or name, otherwise fallback to the id
+    return product.data?.code_produit || id_produit;
+  }
 
   return (
     <div className="space-y-4">
@@ -73,7 +107,7 @@ export function ExemplaireSortieTable({
             className="pl-8"
           />
         </form>
-        <Button onClick={onAdd} className="w-full sm:w-auto">
+        <Button onClick={onAdd} variant={"blue"} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Ajouter une sortie
         </Button>
       </div>
@@ -86,7 +120,7 @@ export function ExemplaireSortieTable({
               <TableHead>Type</TableHead>
               <TableHead>Référence</TableHead>
               <TableHead>Date de sortie</TableHead>
-              <TableHead>Exemplaire</TableHead>
+              <TableHead>Produit</TableHead>
               <TableHead className="w-[80px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -108,13 +142,25 @@ export function ExemplaireSortieTable({
                 <TableRow key={sortie.id_sortie_exemplaire}>
                   <TableCell>{sortie.id_sortie_exemplaire}</TableCell>
                   <TableCell>
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeSortieColor(
+                        sortie.type_sortie
+                      )}`}
+                    >
                       {sortie.type_sortie}
                     </span>
                   </TableCell>
                   <TableCell>{sortie.reference_id}</TableCell>
                   <TableCell>{formatDateTime(sortie.date_sortie)}</TableCell>
-                  <TableCell>{sortie.id_exemplaire}</TableCell>
+                  <TableCell>
+                    <button
+                      onClick={() => handlePartenaireClick(sortie.id_produit)}
+                      className="text-blue-600 hover:underline cursor-pointer hover:text-blue-800 flex items-center gap-1"
+                    >
+                      {getCodeProduit(sortie.id_produit)}
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -129,7 +175,9 @@ export function ExemplaireSortieTable({
                         <DropdownMenuItem onClick={() => onEdit(sortie)}>
                           <Edit className="mr-2 h-4 w-4" /> Modifier
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onDelete(sortie.id_sortie_exemplaire)}>
+                        <DropdownMenuItem
+                          onClick={() => onDelete(sortie.id_sortie_exemplaire)}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                         </DropdownMenuItem>
                       </DropdownMenuContent>

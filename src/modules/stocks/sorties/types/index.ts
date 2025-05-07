@@ -2,15 +2,15 @@
 
 // Types existants
 export interface ProductInstance {
-    id_exemplaire: number;
+    id_exemplaire: number | string;
     num_serie: string;
     prix_exemplaire: string;
     date_entree: string;
     etat_vente: "vendu" | "invendu";
     caracteristiques: string;
-    id_livraison: string;
-    id_produit: string;
-  }
+    id_livraison: string | number;
+    id_produit: string | number;
+}
   
   // Nouveau type pour les sorties d'exemplaires
   export interface ExemplaireSortie {
@@ -18,7 +18,8 @@ export interface ProductInstance {
     type_sortie: string;
     reference_id: string;
     date_sortie: string;
-    id_exemplaire: number;
+    id_produit: number;
+    quantite: number; // Nouveau champ
   }
   
   // Types pour les options de type de sortie
