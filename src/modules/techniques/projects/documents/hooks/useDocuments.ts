@@ -1,6 +1,7 @@
 // src/techniques/projects/documents/hooks/useDocuments.ts
 import { useState, useEffect, useCallback } from "react";
 import { Document, DocumentStats } from "../../types/types";
+import { DocumentFormValues } from "../../components/forms/DocumentForm";
 
 // Données mockées basées sur votre interface Document
 const mockDocuments: Document[] = [
@@ -103,16 +104,32 @@ export const useDocuments = (projectId?: string) => {
     }
   }, [projectId]);
 
-  const createDocument = async (document: Omit<Document, 'Id_documents'>) => {
+  const createDocument = async (document: Omit<DocumentFormValues, 'Id_documents'>) => {
     try {
       // Simuler un délai
       await new Promise(resolve => setTimeout(resolve, 300));
       
       const newDocument: Document = {
-        ...document,
-        Id_documents: Math.max(0, ...mockDocuments.map(d => d.Id_documents || 0)) + 1,
+        Id_documents: Math.max(
+          0,
+          ...mockDocuments
+            .map(d => d.Id_documents)
+            .filter((id): id is number => typeof id === "number")
+        ) + 1,
+        nom_document: document.libele_document,
+        libele_document: document.libele_document,
+        description_document: document.description,
+        classification_document: document.classification_document,
+        etat_document: document.etat_document,
+        lien_document: document.lien_document,
         date_creation: new Date().toISOString(),
-        version: document.version || "1.0"
+        date_modification: new Date().toISOString(),
+        id_projet: document.id_projet,
+        createur: document.createur ?? "",
+        chemin_fichier: document.lien_document ?? "",
+        taille_fichier: "",
+        version: document.version || "1.0",
+        description: document.description ?? ""
       };
       
       mockDocuments.push(newDocument);

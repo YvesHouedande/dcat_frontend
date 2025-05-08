@@ -30,35 +30,50 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import FileUpload  from "@/components/ui/file-upload";
-import { fr } from "date-fns/locale";
+import FileUpload from "@/components/ui/file-upload";
+import { fr} from "date-fns/locale";
 
 export const documentFormSchema = z.object({
+  id_document: z.string().optional(),
   libele_document: z.string().min(1, "Le nom du document est requis"),
-  classification_document: z.enum(['contrat', 'facture', 'rapport', 'plan', 'autre']),
+  classification_document: z.enum([
+    "contrat",
+    "facture",
+    "rapport",
+    "plan",
+    "autre",
+  ]),
   lien_document: z.string().min(1, "Le fichier est requis"),
-  etat_document: z.enum(['brouillon', 'validé', 'archivé', 'obsolète']),
+  etat_document: z.enum(["brouillon", "validé", "archivé", "obsolète"]),
   id_projet: z.string(),
   date_creation: z.date(),
-  createur: z.string().min(2, "Le créateur doit contenir au moins 2 caractères"),
+  createur: z
+    .string()
+    .min(2, "Le créateur doit contenir au moins 2 caractères"),
   version: z.string().min(1, "La version est requise"),
-  description: z.string().min(1, "La description est requise")
+  description: z.string().min(1, "La description est requise"),
 });
-
-
 
 export type DocumentFormValues = z.infer<typeof documentFormSchema>;
 
- // Map Document to DocumentFormDefaultValues
- export const mapDocumentToFormValues = (document: Partial<Record<keyof DocumentFormValues, unknown>>): DocumentFormValues => ({
+// Map Document to DocumentFormDefaultValues
+export const mapDocumentToFormValues = (
+  document: Partial<Record<keyof DocumentFormValues, unknown>>
+): DocumentFormValues => ({
   id_projet: String(document.id_projet ?? ""),
   libele_document: String(document.libele_document ?? ""),
   description: String(document.description ?? ""),
   version: String(document.version ?? ""),
   lien_document: String(document.lien_document ?? ""),
-  classification_document: document.classification_document as DocumentFormValues["classification_document"] ?? "autre",
-  etat_document: document.etat_document as DocumentFormValues["etat_document"] ?? "brouillon",
-  date_creation: document.date_creation ? new Date(document.date_creation as string) : new Date(),
+  classification_document:
+    (document.classification_document as DocumentFormValues["classification_document"]) ??
+    "autre",
+  etat_document:
+    (document.etat_document as DocumentFormValues["etat_document"]) ??
+    "brouillon",
+  date_creation: document.date_creation
+    ? new Date(document.date_creation as string)
+    : new Date(),
   createur: String(document.createur ?? ""),
 });
 
@@ -75,15 +90,15 @@ type DocumentFormProps = {
   isLoading?: boolean;
 };
 
-export const DocumentForm = ({ 
-  document, 
-  projects, 
-  onSubmit, 
-  onCancel, 
-  isLoading = false 
+export const DocumentForm = ({
+  document,
+  projects,
+  onSubmit,
+  onCancel,
+  isLoading = false,
 }: DocumentFormProps) => {
   const [file, setFile] = useState<File | null>(null);
-  
+
   const form = useForm<DocumentFormValues>({
     resolver: zodResolver(documentFormSchema),
     defaultValues: {
@@ -96,14 +111,14 @@ export const DocumentForm = ({
       createur: "",
       version: "",
       description: "",
-      ...document
-    } as DocumentFormValues
+      ...document,
+    } as DocumentFormValues,
   });
 
   const handleSubmit = async (values: DocumentFormValues) => {
     await onSubmit({
       ...values,
-      file: file || undefined
+      file: file || undefined,
     });
   };
 
@@ -130,7 +145,10 @@ export const DocumentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Type de document</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner un type" />
@@ -154,7 +172,10 @@ export const DocumentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Statut</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner un statut" />
@@ -177,7 +198,10 @@ export const DocumentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Projet (optionnel)</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner un projet" />
@@ -185,8 +209,11 @@ export const DocumentForm = ({
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="">Aucun projet</SelectItem>
-                    {projects.map(project => (
-                      <SelectItem key={project.id_projet} value={project.id_projet}>
+                    {projects.map((project) => (
+                      <SelectItem
+                        key={project.id_projet}
+                        value={project.id_projet}
+                      >
                         {project.nom_projet}
                       </SelectItem>
                     ))}
@@ -270,11 +297,11 @@ export const DocumentForm = ({
             <FormItem>
               <FormLabel>Fichier</FormLabel>
               <FormControl>
-                <FileUpload 
+                <FileUpload
                   onChange={(file: File | null) => {
                     setFile(file);
                     field.onChange(file?.name || "");
-                  }} 
+                  }}
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
                 />
               </FormControl>
@@ -299,15 +326,14 @@ export const DocumentForm = ({
 
         <div className="flex justify-end gap-2">
           {onCancel && (
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onCancel}
-            >
+            <Button type="button" variant="outline" onClick={onCancel}>
               Annuler
             </Button>
           )}
-          <Button type="submit" disabled={isLoading || !form.watch('lien_document')}>
+          <Button
+            type="submit"
+            disabled={isLoading || !form.watch("lien_document")}
+          >
             {isLoading ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </div>

@@ -1,11 +1,11 @@
 // src/techniques/projects/documents/components/DocumentList.tsx
-import { Document } from "../../types/types";
+
 import { DocumentItem } from "../../components/gestions/DocumentItem";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { useDocuments } from "../hooks/useDocuments";
 import { useProjects } from "../../projet/hooks/useProjects";
-import { DocumentForm } from "../../components/forms/DocumentForm";
+import { DocumentForm, DocumentFormValues } from "../../components/forms/DocumentForm";
 import {
   Dialog,
   DialogContent,
@@ -25,13 +25,13 @@ export const DocumentList = ({ projectId }: DocumentListProps) => {
   const { projects } = useProjects();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleCreateDocument = async (values: any) => {
+  const handleCreateDocument = async (values: DocumentFormValues & { file?: File }) => {
     try {
       // Map form values to Document fields
-      const documentToCreate: Omit<Document, 'Id_documents'> = {
+      const documentToCreate: Omit<DocumentFormValues, 'Id_documents'> = {
         ...values,
-        nom_document: values.libele_document, // or adjust mapping as needed
-        description_document: values.description, // or adjust mapping as needed
+        libele_document: values.libele_document, // or adjust mapping as needed
+        description: values.description, // or adjust mapping as needed
       };
       await createDocument(documentToCreate);
       setIsDialogOpen(false);

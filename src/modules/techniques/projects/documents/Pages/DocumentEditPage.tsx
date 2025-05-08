@@ -72,13 +72,16 @@ export const DocumentEditPage = () => {
         await updateDocument(documentId, documentData);
       } else {
         // Création d'un nouveau document
-        const newDocument = {
+        const newDocument: DocumentFormValues = {
           ...documentData,
           libele_document: documentData.libele_document || "",
-          classification_document: documentData.classification_document || "",
-          etat_document: documentData.etat_document || "",
+          classification_document: documentData.classification_document as "contrat" | "facture" | "rapport" | "plan" | "autre",
+          etat_document: documentData.etat_document as "brouillon" | "validé" | "archivé",
           lien_document: documentData.lien_document || "",
-          description: documentData.description_document || "", // Add this line to satisfy the type
+          description: documentData.description_document || "",
+          date_creation: documentData.date_creation
+            ? new Date(documentData.date_creation)
+            : new Date(), // Ensure this is a Date object
         };
 
         const createdId = await createDocument(newDocument);

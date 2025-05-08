@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "../../components/gestions/StatusBadge";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import { DocumentForm } from "../../components/forms/DocumentForm";
+import { DocumentForm, DocumentFormValues } from "../../components/forms/DocumentForm";
 import {
   Dialog,
   DialogContent,
@@ -87,13 +87,16 @@ export const DocumentsPage = () => {
     try {
       const formValues = omit(values, ["file"]);
       // Map form values to your Document model
-      const documentToCreate = {
+      const documentToCreate: DocumentFormValues = {
         ...formValues,
-        nom_document: formValues.libele_document, // or another mapping if needed
-        description_document: formValues.description, // or another mapping if needed
-        date_creation: formValues.date_creation instanceof Date
-          ? formValues.date_creation.toISOString()
-          : formValues.date_creation,
+        libele_document: formValues.libele_document || "",
+        classification_document: formValues.classification_document as "contrat" | "facture" | "rapport" | "plan" | "autre",
+        etat_document: formValues.etat_document as "brouillon" | "validé" | "archivé",
+        lien_document: formValues.lien_document || "",
+        description: formValues.description || "",
+        date_creation: formValues.date_creation
+          ? new Date(formValues.date_creation)
+          : new Date(), // Ensure this is a Date object
       };
 
       // Remove fields not expected by your API if necessary
