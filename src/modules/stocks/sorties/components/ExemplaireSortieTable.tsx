@@ -31,6 +31,9 @@ import { formatDateTime } from "../../utils/helpers";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "../../exemplaire";
 
+interface Props {
+  id_produit: string | number;
+}
 interface ExemplaireSortieTableProps {
   exemplaireSorties: ExemplaireSortie[];
   searchTerm: string;
@@ -89,11 +92,13 @@ export function ExemplaireSortieTable({
     navigate(`/stocks/references/${id}`);
   };
 
-  function getCodeProduit(id_produit: number | string): React.ReactNode {
+  const GetCodeProduit: React.FC<Props> = ({ id_produit }) => {
     const { product } = useProducts(id_produit);
-    // If found, return its code or name, otherwise fallback to the id
-    return product.data?.code_produit || id_produit;
-  }
+
+    if (product.isLoading) return <span>Chargement...</span>;
+
+    return <span>{product.data?.code_produit || id_produit}</span>;
+  };
 
   return (
     <div className="space-y-4">
@@ -157,7 +162,7 @@ export function ExemplaireSortieTable({
                       onClick={() => handlePartenaireClick(sortie.id_produit)}
                       className="text-blue-600 hover:underline cursor-pointer hover:text-blue-800 flex items-center gap-1"
                     >
-                      {getCodeProduit(sortie.id_produit)}
+                      <GetCodeProduit id_produit={sortie.id_produit} />
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </TableCell>

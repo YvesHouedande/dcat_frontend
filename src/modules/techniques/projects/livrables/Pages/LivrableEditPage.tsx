@@ -16,9 +16,14 @@ export const LivrableEditPage = () => {
   const { projects } = useProjects();
   const navigate = useNavigate();
 
-  const livrable = id ? livrables.find((l: { Id_Livrable: { toString: () => string; }; }) => l.Id_Livrable.toString() === id) : undefined;
+  const livrable = id
+    ? livrables.find(
+        (l: { Id_Livrable: { toString: () => string } }) =>
+          l.Id_Livrable.toString() === id
+      )
+    : undefined;
 
-  const handleSubmit = async (values: Omit<Livrable, 'Id_Livrable'>) => {
+  const handleSubmit = async (values: Omit<Livrable, "Id_Livrable">) => {
     try {
       if (id) {
         await updateLivrable(Number(id), values);
@@ -40,17 +45,19 @@ export const LivrableEditPage = () => {
             Retour
           </Button>
         </div>
-        
+
         <Card className="p-6">
           <h1 className="text-2xl font-bold mb-6">
             {id ? "Modifier le livrable" : "Créer un nouveau livrable"}
           </h1>
-          <LivrableForm 
+          <LivrableForm
             livrable={livrable}
-            projects={projects.map((p: { id_projet: any; nom_projet: any; }) => ({ 
-              id_projet: p.id_projet, 
-              nom_projet: p.nom_projet 
-            }))}
+            projects={projects.map(
+              (p: { id_projet: string; nom_projet: string }) => ({
+                id_projet: p.id_projet,
+                nom_projet: p.nom_projet,
+              })
+            )}
             onSubmit={handleSubmit}
             onCancel={() => navigate(-1)}
           />

@@ -25,9 +25,15 @@ export const DocumentList = ({ projectId }: DocumentListProps) => {
   const { projects } = useProjects();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleCreateDocument = async (document: Omit<Document, 'Id_documents'>) => {
+  const handleCreateDocument = async (values: any) => {
     try {
-      await createDocument(document);
+      // Map form values to Document fields
+      const documentToCreate: Omit<Document, 'Id_documents'> = {
+        ...values,
+        nom_document: values.libele_document, // or adjust mapping as needed
+        description_document: values.description, // or adjust mapping as needed
+      };
+      await createDocument(documentToCreate);
       setIsDialogOpen(false);
     } catch (err) {
       console.error(err);

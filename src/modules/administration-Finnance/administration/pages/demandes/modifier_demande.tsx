@@ -108,7 +108,7 @@ const ModifierDemandePage: React.FC = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid, isDirty },
+    formState: { errors },
     reset,
     setValue,
     watch,

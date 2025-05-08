@@ -16,8 +16,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { EmployeProfile } from "@/modules/administration-Finnance/administration/pages/employers/employe";
 // import { PartenaireProfile } from '@/modules/administration-Finance/administration/pages/partenaires/partenaire';
-import { EmployeProfile } from "@/modules/administration-Finance/administration/pages/employers/employe";
 
 export interface MultiSelectProfileProps {
   profiles: EmployeProfile[];
@@ -58,10 +58,12 @@ export const MultiSelectProfile: React.FC<MultiSelectProfileProps> = ({
         >
           <div className="flex flex-wrap gap-1 ">
             {selectedProfiles.length === 0 ? (
-              <span className="text-muted-foreground">Sélectionner un responsable</span>
+              <span className="text-muted-foreground">
+                Sélectionner un responsable
+              </span>
             ) : (
               selectedProfiles.map((id) => {
-                const profile = profiles.find((p) => p.id_profile === id);
+                const profile = profiles.find((p) => Number(p.id) === id);
                 return profile ? (
                   <Badge variant="secondary" key={id} className="mr-1 mb-1">
                     {profile.name || `Responsable ${id}`}
@@ -88,22 +90,22 @@ export const MultiSelectProfile: React.FC<MultiSelectProfileProps> = ({
           <CommandGroup className="max-h-64 overflow-auto">
             {profiles.map((profile) => (
               <CommandItem
-                key={profile.id_profile}
+                key={profile.id}
                 value={profile.name || `Partenaire ${profile.name}`}
                 onSelect={() => {
-                  handleSelect(profile.id_profile);
+                  handleSelect(Number(profile.id));
                   setOpen(false);
                 }}
               >
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    selectedProfiles.includes(profile.id_profile)
+                    selectedProfiles.includes(Number(profile.id))
                       ? "opacity-100"
                       : "opacity-0"
                   )}
                 />
-                {profile.name || `Partenaire ${profile.id_profile}`}
+                {profile.name || `Partenaire ${Number(profile.id)}`}
               </CommandItem>
             ))}
           </CommandGroup>

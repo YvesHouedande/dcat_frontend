@@ -16,7 +16,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { PartenaireProfile } from '@/modules/administration-Finance/administration/pages/partenaires/partenaire';
+import { PartenaireProfile } from "@/modules/administration-Finnance/administration/pages/partenaires/partenaire";
+
 
 export interface MultiSelectPartenaireProps {
   partenaires: PartenaireProfile[];

@@ -61,7 +61,7 @@ const Layout = ({
         </header>
         <div className="flex-1 h-[calc(100vh-7rem)] lg:h-[calc(100vh-7rem)]">
           <ScrollArea className="h-full w-full">
-            <div className="flex-col gap-4 p-4 pt-0">
+            <div className="flex-col gap-4 p-4 pt-0 h-[calc(100vh-7rem)]">
               {children}
               <Toaster richColors />
             </div>

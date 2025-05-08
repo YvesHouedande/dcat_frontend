@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, type LucideIcon } from "lucide-react";
-import { useMatch } from "react-router-dom";
+import { useLocation} from "react-router-dom";
 import {
   Collapsible,
   CollapsibleContent,
@@ -18,7 +18,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { NavLink } from "react-router-dom";
-import { useSidebar } from "@/components/ui/sidebar"; // Assurez-vous d'importer useSidebar
+import { useSidebar } from "@/components/ui/sidebar";
 
 export function NavMain({
   title,
@@ -36,15 +36,24 @@ export function NavMain({
     }[];
   }[];
 }) {
-  // Utilisez le hook useSidebar pour obtenir l'état de la sidebar
   const { state } = useSidebar();
+
+  // Move all useMatch calls to the top level of the component
+  const location = useLocation();
+  const activeRoutes = items.map(item => ({
+    url: item.url,
+    isActive: location.pathname.startsWith(item.url)
+  }));
+  
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => {
-          const isActive = !!useMatch(item.url + "/*"); // Vérifie si l'URL correspond
+        {items.map((item, index) => {
+          // Use the pre-computed active state from activeRoutes
+          const isActive = activeRoutes[index].isActive;
+
           return (
             <Collapsible
               key={item.title}
@@ -62,7 +71,7 @@ export function NavMain({
                   }
                 >
                   {state === "expanded" ? (
-                    <div className="flex flex-1 h-12 items-center px-4 rounded-sm ">
+                    <div className="flex flex-1 h-12 items-center px-4 rounded-sm">
                       <NavLink to={item.url} className="flex w-full rounded-md">
                         {item.icon && <item.icon />}
                         <span className="text-base font-semibold ml-2">
@@ -70,10 +79,8 @@ export function NavMain({
                         </span>
                       </NavLink>
                       {item.items?.length ? (
-                        <ChevronRight
-                          className={`ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90`}
-                        />
-                      ):""}
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      ) : null}
                     </div>
                   ) : (
                     <SidebarMenuButton tooltip={item.title}>

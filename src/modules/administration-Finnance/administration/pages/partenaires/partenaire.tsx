@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 
-interface PartenaireProfile {
+export interface PartenaireProfile {
   id_partenaire: number;
   nom_partenaire: string;
   telephone_partenaire: string;
@@ -35,100 +35,103 @@ interface PartenaireProfile {
   initials: string;
 }
 
+const partenaires: PartenaireProfile[] = [
+  {
+    id_partenaire: 1,
+    nom_partenaire: "Tech Solutions",
+    telephone_partenaire: "01 23 45 67 89",
+    email_partenaire: "contact@techsolutions.fr",
+    specialite: "Développement Web",
+    localisation: "Paris",
+    type_partenaire: "Technique",
+    entite: "SARL",
+    initials: "TS",
+  },
+  {
+    id_partenaire: 2,
+    nom_partenaire: "Marketing Pro",
+    telephone_partenaire: "01 98 76 54 32",
+    email_partenaire: "info@marketingpro.fr",
+    specialite: "Marketing Digital",
+    localisation: "Lyon",
+    type_partenaire: "Marketing",
+    entite: "SAS",
+    initials: "MP",
+  },
+  {
+    id_partenaire: 3,
+    nom_partenaire: "Design Studio",
+    telephone_partenaire: "03 45 67 89 01",
+    email_partenaire: "hello@designstudio.fr",
+    specialite: "UI/UX Design",
+    localisation: "Bordeaux",
+    type_partenaire: "Créatif",
+    entite: "EURL",
+    initials: "DS",
+  },
+  {
+    id_partenaire: 4,
+    nom_partenaire: "Logistique Express",
+    telephone_partenaire: "04 56 78 90 12",
+    email_partenaire: "contact@logistique-express.fr",
+    specialite: "Logistique",
+    localisation: "Marseille",
+    type_partenaire: "Logistique",
+    entite: "SA",
+    initials: "LE",
+  },
+  {
+    id_partenaire: 5,
+    nom_partenaire: "Finance Conseil",
+    telephone_partenaire: "05 67 89 01 23",
+    email_partenaire: "info@finance-conseil.fr",
+    specialite: "Comptabilité",
+    localisation: "Lille",
+    type_partenaire: "Finance",
+    entite: "SAS",
+    initials: "FC",
+  },
+  {
+    id_partenaire: 6,
+    nom_partenaire: "Formation Plus",
+    telephone_partenaire: "06 78 90 12 34",
+    email_partenaire: "contact@formation-plus.fr",
+    specialite: "Formation Professionnelle",
+    localisation: "Toulouse",
+    type_partenaire: "Formation",
+    entite: "Association",
+    initials: "FP",
+  },
+  {
+    id_partenaire: 7,
+    nom_partenaire: "Conseil RH",
+    telephone_partenaire: "07 89 01 23 45",
+    email_partenaire: "contact@conseil-rh.fr",
+    specialite: "Ressources Humaines",
+    localisation: "Nantes",
+    type_partenaire: "Conseil",
+    entite: "SARL",
+    initials: "CR",
+  },
+  {
+    id_partenaire: 8,
+    nom_partenaire: "Promo Events",
+    telephone_partenaire: "08 90 12 34 56",
+    email_partenaire: "info@promo-events.fr",
+    specialite: "Événementiel",
+    localisation: "Strasbourg",
+    type_partenaire: "Événementiel",
+    entite: "SAS",
+    initials: "PE",
+  },
+];
+export const partenairesList = partenaires
+
 const ModernPartenaireGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   // Données d'exemple pour les partenaires
-  const partenaires: PartenaireProfile[] = [
-    {
-      id_partenaire: 1,
-      nom_partenaire: "Tech Solutions",
-      telephone_partenaire: "01 23 45 67 89",
-      email_partenaire: "contact@techsolutions.fr",
-      specialite: "Développement Web",
-      localisation: "Paris",
-      type_partenaire: "Technique",
-      entite: "SARL",
-      initials: "TS",
-    },
-    {
-      id_partenaire: 2,
-      nom_partenaire: "Marketing Pro",
-      telephone_partenaire: "01 98 76 54 32",
-      email_partenaire: "info@marketingpro.fr",
-      specialite: "Marketing Digital",
-      localisation: "Lyon",
-      type_partenaire: "Marketing",
-      entite: "SAS",
-      initials: "MP",
-    },
-    {
-      id_partenaire: 3,
-      nom_partenaire: "Design Studio",
-      telephone_partenaire: "03 45 67 89 01",
-      email_partenaire: "hello@designstudio.fr",
-      specialite: "UI/UX Design",
-      localisation: "Bordeaux",
-      type_partenaire: "Créatif",
-      entite: "EURL",
-      initials: "DS",
-    },
-    {
-      id_partenaire: 4,
-      nom_partenaire: "Logistique Express",
-      telephone_partenaire: "04 56 78 90 12",
-      email_partenaire: "contact@logistique-express.fr",
-      specialite: "Logistique",
-      localisation: "Marseille",
-      type_partenaire: "Logistique",
-      entite: "SA",
-      initials: "LE",
-    },
-    {
-      id_partenaire: 5,
-      nom_partenaire: "Finance Conseil",
-      telephone_partenaire: "05 67 89 01 23",
-      email_partenaire: "info@finance-conseil.fr",
-      specialite: "Comptabilité",
-      localisation: "Lille",
-      type_partenaire: "Finance",
-      entite: "SAS",
-      initials: "FC",
-    },
-    {
-      id_partenaire: 6,
-      nom_partenaire: "Formation Plus",
-      telephone_partenaire: "06 78 90 12 34",
-      email_partenaire: "contact@formation-plus.fr",
-      specialite: "Formation Professionnelle",
-      localisation: "Toulouse",
-      type_partenaire: "Formation",
-      entite: "Association",
-      initials: "FP",
-    },
-    {
-      id_partenaire: 7,
-      nom_partenaire: "Conseil RH",
-      telephone_partenaire: "07 89 01 23 45",
-      email_partenaire: "contact@conseil-rh.fr",
-      specialite: "Ressources Humaines",
-      localisation: "Nantes",
-      type_partenaire: "Conseil",
-      entite: "SARL",
-      initials: "CR",
-    },
-    {
-      id_partenaire: 8,
-      nom_partenaire: "Promo Events",
-      telephone_partenaire: "08 90 12 34 56",
-      email_partenaire: "info@promo-events.fr",
-      specialite: "Événementiel",
-      localisation: "Strasbourg",
-      type_partenaire: "Événementiel",
-      entite: "SAS",
-      initials: "PE",
-    },
-  ];
+
 
   // Filtrage des partenaires basé sur la recherche
   const filteredPartenaires = searchQuery

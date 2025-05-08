@@ -31,7 +31,10 @@ export function FournisseurCombobox({
   const [searchTerm, setSearchTerm] = React.useState("");
   const { livraisons: deliveries, isLoading } = useLivraisonData();
 
-  const deliveriesArray = Array.isArray(deliveries) ? deliveries : [];
+  const deliveriesArray = React.useMemo(
+    () => (Array.isArray(deliveries) ? deliveries : []),
+    [deliveries]
+  );
 
   const filteredDeliveries = React.useMemo(() => {
     if (!searchTerm) return deliveriesArray;

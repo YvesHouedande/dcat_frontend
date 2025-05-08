@@ -206,11 +206,6 @@ const DemandesAnnuaire: React.FC = () => {
     navigate(`/administration/demandes/${id}`);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return format(date, "dd MMM yyyy", { locale: fr });
-  };
-
   const formatShortDate = (dateString: string) => {
     const date = new Date(dateString);
     return format(date, "dd MMM", { locale: fr });

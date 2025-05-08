@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { ProductInstanceTable } from "../tables/ProductInstanceTable";
 import { ProductInstanceForm } from "../forms/ProductInstanceForm";
 import { useProductInstances } from "../../hooks/useProductInstances";
-import { ProductInstance, PaginationParams } from "../../types";
+import {PaginationParams } from "../../types";
 import {
   Dialog,
   DialogContent,
@@ -24,13 +24,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShoppingBag, Package, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
+import { UseFormReturn } from "react-hook-form";
+import { ProductInstanceFormValues } from "../../schemas/productInstanceSchema";
 
 export function ProductInstanceDashboard() {
-  const formRef = useRef<any>(null);
+  const formRef = useRef<UseFormReturn<ProductInstanceFormValues> | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentInstance, setCurrentInstance] =
-    useState<ProductInstance | null>(null);
+    useState<ProductInstanceFormValues | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
   // const [searchTerm, setSearchTerm] = useState("");
@@ -63,7 +65,7 @@ export function ProductInstanceDashboard() {
     setIsFormOpen(true);
   };
 
-  const openEditForm = (instance: ProductInstance) => {
+  const openEditForm = (instance: ProductInstanceFormValues) => {
     setCurrentInstance(instance);
     setIsEditMode(true);
     setIsFormOpen(true);
@@ -85,21 +87,23 @@ export function ProductInstanceDashboard() {
   };
 
   const handleFormSuccess = () => {
+    const numSerie = formRef.current?.getValues("num_serie");
+
     toast.success(
       isEditMode
         ? "Exemplaire modifié avec succès"
-        : `Exemplaire "${formRef.current.getValues(
-            "num_serie"
-          )}" ajouté avec succès`,
+        : `Exemplaire "${numSerie ?? ""}" ajouté avec succès`,
       {
         duration: 2000,
       }
     );
+
     if (!isEditMode && formRef.current) {
       formRef.current.setValue("num_serie", "");
     } else {
       closeForm();
     }
+
     fetchProductInstances(paginationParams);
   };
 
@@ -137,7 +141,9 @@ export function ProductInstanceDashboard() {
   const unsoldCount = Array.isArray(productInstances)
     ? productInstances.filter((item) => item.etat_vente === "invendu").length
     : 0;
-  const totalProducts = Array.isArray(productInstances) ? productInstances.length : 0;
+  const totalProducts = Array.isArray(productInstances)
+    ? productInstances.length
+    : 0;
 
   return (
     <div className="container mx-auto py-6 space-y-6">

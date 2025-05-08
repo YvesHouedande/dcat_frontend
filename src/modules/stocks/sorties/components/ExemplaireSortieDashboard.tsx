@@ -184,7 +184,7 @@ export function ExemplaireSortieDashboard() {
 
       <div className="grid gap-4 md:grid-cols-4">
         <CarteStatitique
-          exemplaireSorties={exemplaireSorties}
+          nombrexemplaire={exemplaireSorties.length}
           stats={stats}
           totalSorties={totalSorties}
         />

@@ -1,4 +1,5 @@
-import { categorieTypes, familleTypes, marqueTypes, modeleTypes } from "../../types/reference";
+import { categorieTypes, familleTypes, marqueTypes, modeleTypes } from "@/modules/stocks/types/reference";
+
 
 
 export const productBrands = {

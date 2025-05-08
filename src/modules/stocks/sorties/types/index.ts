@@ -30,12 +30,13 @@ export interface ProductInstance {
     "Intervention"
   ];
   
-  export interface PaginationParams {
+  export interface PaginationParams<TFilter extends Record<string, unknown> = Record<string, unknown>> {
     page: number;
     pageSize: number;
     search?: string;
-    filter?: Record<string, any>;
+    filter?: TFilter;
   }
+  
   
   export interface PaginatedResponse<T> {
     data: T[];

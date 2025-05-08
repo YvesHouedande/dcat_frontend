@@ -30,7 +30,7 @@ export const TaskEditPage = () => {
           </h1>
           <TaskForm 
             task={task} 
-            projects={projects.map((p: { id_projet: any; nom_projet: any; }) => ({ 
+            projects={projects.map((p: { id_projet: string; nom_projet: string; }) => ({ 
               id_projet: p.id_projet, 
               nom_projet: p.nom_projet 
             }))}

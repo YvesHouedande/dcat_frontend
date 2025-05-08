@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { ExemplaireSortieForm } from "../../sorties/components/ExemplaireSortieForm";
 import { ExemplaireSortieFormValues } from "../../sorties/types";
 import { useExemplaireSorties } from "../../sorties/hooks/useExemplaireSorties";
+import { UseFormReturn } from "react-hook-form";
+import { ProductInstanceFormValues } from "../../exemplaire/schemas/productInstanceSchema";
 interface ReferenceCarteProps {
   product: ReferenceProduit;
 }
@@ -28,17 +30,20 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
   const closeSortieForm = () => {
     setIsSortieFormOpen(false);
   };
-  const formRef = useRef<any>(null);
+  // Update the ref type to match ProductInstanceForm's ref type
+  const formRef = useRef<UseFormReturn<ProductInstanceFormValues>>(null);
   const handleFormSuccess = () => {
-    toast.success(
-      `Exemplaire "${formRef.current.getValues(
-        "num_serie"
-      )}" ajouté avec succès`,
-      {
-        duration: 2000,
-      }
-    );
-    formRef.current.setValue("num_serie", "");
+    if (formRef.current) {
+      toast.success(
+        `Exemplaire "${formRef.current.getValues(
+          "num_serie"
+        )}" ajouté avec succès`,
+        {
+          duration: 2000,
+        }
+      );
+      formRef.current.setValue("num_serie", "");
+    }
   };
   const { createExemplaireSortie } = useExemplaireSorties();
   const handleSubmit = async (data: ExemplaireSortieFormValues) => {

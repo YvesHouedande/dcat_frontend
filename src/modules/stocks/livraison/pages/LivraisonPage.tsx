@@ -68,7 +68,7 @@ const LivraisonPage: React.FC = () => {
       await removeLivraison(idDelete);
       resetDeleteState();
     } catch (error) {
-      setDeleteError("La suppression a échoué. Veuillez réessayer.");
+      setDeleteError("La suppression a échoué. Veuillez réessayer." + error);
     }
   };
 

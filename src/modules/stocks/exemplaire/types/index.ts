@@ -1,16 +1,6 @@
 // src/types/index.ts
 
-export interface ProductInstance {
-    id_exemplaire:number | string;
-    num_serie: string;
-    prix_exemplaire: string;
-    date_entree: string;
-    etat_vente: "vendu" | "invendu" | "bon" | "endommage";
-    commentaire:string,
-    id_livraison: string | number;
-    id_produit: string | number;
 
-  }
   
   export interface Delivery {
     id_livraison: number | string;
@@ -25,11 +15,11 @@ export interface ProductInstance {
     // Autres propriétés si nécessaire
   }
   
-  export interface PaginationParams {
-    page: number ;
+  export interface PaginationParams<TFilter extends Record<string, unknown> = Record<string, unknown>> {
+    page: number;
     pageSize: number;
     search?: string;
-    filter?: Record<string, any>;
+    filter?: TFilter;
   }
   
   export interface PaginatedResponse<T> {

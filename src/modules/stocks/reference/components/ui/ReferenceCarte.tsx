@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ReferenceProduit } from "@/modules/stocks/types/reference";
 import { useNavigate } from "react-router-dom";
-import { ProductInstanceForm } from "@/modules/stocks/exemplaire";
+import { ProductInstanceForm, ProductInstanceFormValues } from "@/modules/stocks/exemplaire";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { ExemplaireSortieForm } from "@/modules/stocks/sorties/components/ExemplaireSortieForm";
 import { ExemplaireSortieFormValues } from "@/modules/stocks/sorties/schemas/exemplaireSortieSchema";
 import { useExemplaireSorties } from "@/modules/stocks/sorties/hooks/useExemplaireSorties";
+import { UseFormReturn } from "react-hook-form";
 interface ReferenceCarteProps {
   product: ReferenceProduit;
 }
@@ -28,17 +29,19 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
   const closeSortieForm = () => {
     setIsSortieFormOpen(false);
   };
-  const formRef = useRef<any>(null);
+  const formRef = useRef<UseFormReturn<ProductInstanceFormValues>>(null);
   const handleFormSuccess = () => {
-    toast.success(
-      `Exemplaire "${formRef.current.getValues(
-        "num_serie"
-      )}" ajouté avec succès`,
-      {
-        duration: 2000,
-      }
-    );
-    formRef.current.setValue("num_serie", "");
+    if (formRef.current) {
+      toast.success(
+        `Exemplaire "${formRef.current.getValues(
+          "num_serie"
+        )}" ajouté avec succès`,
+        {
+          duration: 2000,
+        }
+      );
+      formRef.current.setValue("num_serie", "");
+    }
   };
   const { createExemplaireSortie } = useExemplaireSorties();
   const handleSubmit = async (data: ExemplaireSortieFormValues) => {

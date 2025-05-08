@@ -23,24 +23,20 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  FormValues,
-  ReferenceSelectMarque,
-  ReferenceSelectCategorie,
-  ReferenceSelectFamille,
-  ReferenceSelectModele,
-} from "../components/ui/ReferenceSelect";
+import { ReferenceSelect } from "../components/ui/ReferenceSelect";
 import { referenceSchema } from "@/modules/stocks/reference/schemas/referenceSchema";
 import { ImageDropzone } from "../utils/ImageDropzone";
 import { generateProductCode } from "@/modules/stocks/utils/generateProductCode";
 import { useReferenceOptions } from "@/modules/stocks/hooks/useReferenceOptions";
 import { ReferenceProduit } from "@/modules/stocks/types/reference";
+import { z } from "zod";
 
+export type FormValues = z.infer<typeof referenceSchema>;
 export default function ReferenceForm() {
   const { categories, modeles, familles, marques } = useReferenceOptions();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState({
     success: false,
@@ -83,7 +79,7 @@ export default function ReferenceForm() {
           // En production, remplacer par un vrai appel API
           // const response = await fetch(`/api/produits/${id}`);
           // const product = await response.json();
-          
+
           // Simulation de données récupérées pour la démonstration
           const product: ReferenceProduit = {
             id_produit: Number(id),
@@ -100,7 +96,7 @@ export default function ReferenceForm() {
             id_famille: 5,
             id_marque: 6,
           };
-          
+
           form.reset(product);
           setSelectedReferences({
             id_marque: product.id_marque,
@@ -118,7 +114,7 @@ export default function ReferenceForm() {
         }
       }
     };
-    
+
     fetchProduct();
   }, [id, isEditMode, form]);
 
@@ -159,10 +155,10 @@ export default function ReferenceForm() {
     try {
       // Assurer que id_type_produit est bien défini à 2
       data.id_type_produit = 2;
-      
+
       // Simulation d'un appel API - À remplacer par un vrai appel en production
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+
       if (isEditMode) {
         // Pour la modification d'un produit existant
         // await fetch(`/api/produits/${id}`, {
@@ -202,9 +198,9 @@ export default function ReferenceForm() {
     } catch (error) {
       setSubmitResult({
         success: false,
-        message: isEditMode 
-          ? "Erreur lors de la modification du produit." 
-          : "Erreur lors de l'ajout du produit.",
+        message: isEditMode
+          ? "Erreur lors de la modification du produit." + error
+          : "Erreur lors de l'ajout du produit." + error,
       });
     } finally {
       setIsSubmitting(false);
@@ -219,8 +215,8 @@ export default function ReferenceForm() {
             {isEditMode ? "Modification" : "Ajout"} d'un produit
           </CardTitle>
           <CardDescription>
-            {isEditMode 
-              ? "Modifiez les informations du produit sélectionné" 
+            {isEditMode
+              ? "Modifiez les informations du produit sélectionné"
               : "Ajoutez un nouveau produit à votre catalogue"}
           </CardDescription>
         </CardHeader>
@@ -248,31 +244,34 @@ export default function ReferenceForm() {
               <div className="p-4 rounded-md mb-4">
                 <h3 className="font-medium mb-2">Classification du produit</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ReferenceSelectMarque
+                  <ReferenceSelect
                     items={marques}
                     label="Marque"
                     name="id_marque"
+                    getLabel={(item) => item.libelle_marque}
                     control={form.control}
                     isRequired={true}
                     onChange={(value) =>
                       handleReferenceChange("id_marque", Number.parseInt(value))
                     }
                   />
-                  <ReferenceSelectModele
+                  <ReferenceSelect
                     items={modeles}
                     label="Modèle"
                     name="id_modele"
                     control={form.control}
+                    getLabel={(item) => item.libelle_modele}
                     isRequired={true}
                     onChange={(value) =>
                       handleReferenceChange("id_modele", Number.parseInt(value))
                     }
                   />
-                  <ReferenceSelectCategorie
+                  <ReferenceSelect
                     items={categories}
                     label="Catégorie"
                     name="id_categorie"
                     control={form.control}
+                    getLabel={(item) => item.libelle_categorie}
                     isRequired={true}
                     onChange={(value) =>
                       handleReferenceChange(
@@ -281,12 +280,13 @@ export default function ReferenceForm() {
                       )
                     }
                   />
-                  <ReferenceSelectFamille
+                  <ReferenceSelect
                     items={familles}
                     label="Famille"
                     name="id_famille"
                     control={form.control}
                     isRequired={true}
+                    getLabel={(item) => item.libelle_famille}
                     onChange={(value) =>
                       handleReferenceChange(
                         "id_famille",
@@ -444,8 +444,8 @@ export default function ReferenceForm() {
                     {isSubmitting
                       ? "Enregistrement en cours..."
                       : isEditMode
-                        ? "Enregistrer les modifications"
-                        : "Ajouter le produit"}
+                      ? "Enregistrer les modifications"
+                      : "Ajouter le produit"}
                   </Button>
                 </div>
               </div>

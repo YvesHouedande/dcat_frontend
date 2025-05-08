@@ -6,9 +6,9 @@ import Information_fiche from "./Pages/information_fiche";
 import Modifier_intervention from "./Pages/modifier_intervention";
 import { DataTable } from "./test/test";
 import data from "./test/data.json";
-import Historique from "./Pages/historique";
 import NotFound from "@/pages/NotFound";
 import { ResizableHandleDemo } from "./Pages/histoire";
+import InterventionsTable from "./Pages/historique";
 
 const InterventionsRoutes: React.FC = () => {
   return (
@@ -17,9 +17,10 @@ const InterventionsRoutes: React.FC = () => {
       <Route path="/nouvelle_intervention" element={<Nouvelle_fiche />} />
       <Route path=":id" element={<Information_fiche />} />
       <Route path=":id/editer" element={<Modifier_intervention />} />
-      {/* <Route path="/historique" element={<DataTable data={data} />} /> */}
+      <Route path="/historique" element={<DataTable data={data} />} />
 
       <Route path="/historique" element={<ResizableHandleDemo />} />
+      <Route path="/intervention" element={<InterventionsTable />} />
 
       <Route path="/*" element={<NotFound />} />
     </Routes>

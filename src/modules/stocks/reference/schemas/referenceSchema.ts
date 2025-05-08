@@ -14,3 +14,4 @@ export const referenceSchema = z.object({
   id_famille: z.number().min(1, "La famille est obligatoire"),
   id_marque: z.number().min(1, "La marque est obligatoire"),
 });
+

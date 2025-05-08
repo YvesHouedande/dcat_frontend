@@ -11,12 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "../../components/gestions/StatusBadge";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import { DocumentForm } from "../../components/forms/DocumentForm";
@@ -31,8 +26,8 @@ import { useState } from "react";
 import { useProjects } from "../../projet/hooks/useProjects";
 import { Link } from "react-router-dom";
 import { File } from "lucide-react";
-import { Document } from "../../types/types"; // Assurez-vous que ce chemin est correct
 import Layout from "@/components/Layout";
+import { omit } from "@/lib/utils";
 // Si vous avez besoin de gérer l'upload de fichiers, vous pourriez avoir besoin d'importer d'autres fonctions
 // import { uploadDocumentFile } from "../api/documentApi"; // Exemple
 
@@ -42,50 +37,70 @@ export const DocumentsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const filteredDocuments = documents.filter(document =>
-    document.lien_document.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    document.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    document.classification_document.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDocuments = documents.filter(
+    (document) =>
+      document.lien_document.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      document.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      document.classification_document
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
   const getProjectName = (id?: string) => {
-    if (!id) return 'Non associé';
-    return projects.find(p => p.id_projet === id)?.nom_projet || id;
+    if (!id) return "Non associé";
+    return projects.find((p) => p.id_projet === id)?.nom_projet || id;
   };
 
   const getFileIcon = (type: string) => {
-    switch(type) {
-      case 'contrat': return <File className="h-4 w-4 text-blue-500" />;
-      case 'facture': return <File className="h-4 w-4 text-green-500" />;
-      case 'rapport': return <File className="h-4 w-4 text-purple-500" />;
-      case 'plan': return <File className="h-4 w-4 text-orange-500" />;
-      default: return <File className="h-4 w-4 text-gray-500" />;
+    switch (type) {
+      case "contrat":
+        return <File className="h-4 w-4 text-blue-500" />;
+      case "facture":
+        return <File className="h-4 w-4 text-green-500" />;
+      case "rapport":
+        return <File className="h-4 w-4 text-purple-500" />;
+      case "plan":
+        return <File className="h-4 w-4 text-orange-500" />;
+      default:
+        return <File className="h-4 w-4 text-gray-500" />;
     }
   };
 
   // Version corrigée de handleCreateDocument
-  const handleCreateDocument = async (values: Omit<Document, 'Id_documents'> & { file?: File | undefined }) => {
+  const handleCreateDocument = async (values: {
+    version: string;
+    description: string;
+    id_projet: string;
+    libele_document: string;
+    classification_document:
+      | "contrat"
+      | "facture"
+      | "rapport"
+      | "plan"
+      | "autre";
+    lien_document: string;
+    etat_document: "brouillon" | "validé" | "archivé" | "obsolète";
+    date_creation: Date;
+    createur: string;
+    file?: File;
+  }) => {
     try {
-      // Nous devons extraire le fichier du reste des valeurs
-      const { file, ...documentData } = values;
-      
-      // Création d'un objet document sans le fichier
-      const documentToCreate: Omit<Document, 'Id_documents'> = {
-        ...documentData,
-        // Assurez-vous que tous les champs requis sont présents
-        libele_document: documentData.libele_document,
-        classification_document: documentData.classification_document,
-        etat_document: documentData.etat_document,
-        lien_document: documentData.lien_document || '', // Fournir une valeur par défaut si nécessaire
+      const formValues = omit(values, ["file"]);
+      // Map form values to your Document model
+      const documentToCreate = {
+        ...formValues,
+        nom_document: formValues.libele_document, // or another mapping if needed
+        description_document: formValues.description, // or another mapping if needed
+        date_creation: formValues.date_creation instanceof Date
+          ? formValues.date_creation.toISOString()
+          : formValues.date_creation,
       };
-      
-      // Appeler createDocument avec l'objet document conforme
-      await createDocument(documentToCreate);
-      
-      // Si vous devez gérer le fichier séparément, vous pourriez avoir besoin d'une 
-      // fonction séparée comme uploadDocumentFile(file, documentId)
-      // ou modifier votre hook useDocuments pour qu'il accepte aussi un fichier
-      
+
+      // Remove fields not expected by your API if necessary
+      // For example, if your API does not expect 'version', 'createur', etc., remove them here
+
+      await createDocument(documentToCreate); // Cast if needed, or adjust your types
+
       setIsDialogOpen(false);
     } catch (err) {
       console.error(err);
@@ -94,11 +109,14 @@ export const DocumentsPage = () => {
 
   if (error) return <div>Erreur: {error}</div>;
 
-  const btndoc =()=>{
-    return(
+  const btndoc = () => {
+    return (
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
-          <Button className="cursor-pointer transition ease-in-out duration-300 active:scale-95" variant={"outline"}>
+          <Button
+            className="cursor-pointer transition ease-in-out duration-300 active:scale-95"
+            variant={"outline"}
+          >
             <PlusIcon className="h-4 w-4 mr-2" />
             Nouveau Document
           </Button>
@@ -107,43 +125,36 @@ export const DocumentsPage = () => {
           <DialogHeader>
             <DialogTitle>Ajouter un nouveau document</DialogTitle>
           </DialogHeader>
-          <DocumentForm 
-            onSubmit={handleCreateDocument} 
-            projects={projects.map(p => ({ 
-              id_projet: p.id_projet, 
-              nom_projet: p.nom_projet 
+          <DocumentForm
+            onSubmit={handleCreateDocument}
+            projects={projects.map((p) => ({
+              id_projet: p.id_projet,
+              nom_projet: p.nom_projet,
             }))}
           />
         </DialogContent>
       </Dialog>
     );
-  }
+  };
 
   return (
     <Layout autre={btndoc}>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Gestion des Documents</h1>
-          
         </div>
 
         {/* KPIs */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <KPICard 
-            title="Total des documents" 
-            value={stats?.total || 0} 
+          <KPICard title="Total des documents" value={stats?.total || 0} />
+          <KPICard
+            title="Documents validés"
+            value={stats?.byStatus["validé"] || 0}
           />
-          <KPICard 
-            title="Documents validés" 
-            value={stats?.byStatus['validé'] || 0} 
-          />
-          <KPICard 
-            title="Contrats" 
-            value={stats?.byType['contrat'] || 0} 
-          />
-          <KPICard 
-            title="Documents archivés" 
-            value={stats?.byStatus['archivé'] || 0} 
+          <KPICard title="Contrats" value={stats?.byType["contrat"] || 0} />
+          <KPICard
+            title="Documents archivés"
+            value={stats?.byStatus["archivé"] || 0}
           />
         </div>
 
@@ -178,12 +189,12 @@ export const DocumentsPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDocuments.map(document => (
+                {filteredDocuments.map((document) => (
                   <TableRow key={document.Id_documents}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {getFileIcon(document.classification_document)}
-                        <Link 
+                        <Link
                           to={`/technique/documents/${document.Id_documents}`}
                           className="hover:underline"
                         >
@@ -192,31 +203,37 @@ export const DocumentsPage = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="capitalize">{document.classification_document}</span>
+                      <span className="capitalize">
+                        {document.classification_document}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={document.etat_document} />
                     </TableCell>
                     <TableCell>
                       {document.id_projet ? (
-                        <Link 
+                        <Link
                           to={`/technique/Projets/${document.id_projet}`}
                           className="hover:underline"
                         >
                           {getProjectName(document.id_projet)}
                         </Link>
                       ) : (
-                        <span className="text-muted-foreground">Non associé</span>
+                        <span className="text-muted-foreground">
+                          Non associé
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>
-                      {document.date_creation ? 
-                        new Date(document.date_creation).toLocaleDateString() : 
-                        '-'}
+                      {document.date_creation
+                        ? new Date(document.date_creation).toLocaleDateString()
+                        : "-"}
                     </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/documents/${document.Id_documents}/modifier`}>
+                        <Link
+                          to={`/documents/${document.Id_documents}/modifier`}
+                        >
                           Éditer
                         </Link>
                       </Button>
@@ -229,6 +246,5 @@ export const DocumentsPage = () => {
         </Card>
       </div>
     </Layout>
-    
   );
 };

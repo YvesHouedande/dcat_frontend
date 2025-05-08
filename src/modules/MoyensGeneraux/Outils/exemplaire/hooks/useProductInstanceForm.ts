@@ -33,7 +33,7 @@ export function useProductInstanceForm({
   const schema = isEditMode ? ProductInstanceEditSchema : productInstanceSchema;
   
   const form = useForm<ProductInstanceFormValues>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema as typeof productInstanceSchema),
     defaultValues: {
       id_exemplaire: initialData?.id_exemplaire || "",
       num_serie: initialData?.num_serie || "",

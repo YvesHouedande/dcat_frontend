@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/form";
 import { DeliveryCombobox } from "../../../../../components/combobox/DeliveryCombobox";
 import { ProductCombobox } from "../../../../../components/combobox/ProductCombobox";
-import { ProductInstance } from "../../types";
 import {
   Select,
   SelectContent,
@@ -23,9 +22,11 @@ import { useProductInstanceForm } from "../../hooks/useProductInstanceForm";
 import React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { FournisseurCombobox } from "@/components/combobox/FournisseurCombobox";
+import { UseFormReturn } from "react-hook-form";
+import { ProductInstanceFormValues } from "../../schemas/productInstanceSchema";
 
 interface ProductInstanceFormProps {
-  initialData?: Partial<ProductInstance>;
+  initialData?: Partial<ProductInstanceFormValues>;
   onSuccess?: () => void;
   onCancel?: () => void;
   isEditMode?: boolean;
@@ -33,7 +34,7 @@ interface ProductInstanceFormProps {
 }
 
 export const ProductInstanceForm = React.forwardRef<
-  any,
+  UseFormReturn<ProductInstanceFormValues> | null,
   ProductInstanceFormProps
 >(
   (
@@ -159,6 +160,29 @@ export const ProductInstanceForm = React.forwardRef<
             <FormField
               control={form.control}
               name="id_livraison"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{isTools ? "Fournisseur" : "Achat"}</FormLabel>
+                  <FormControl>
+                    {isTools ? (
+                      <FournisseurCombobox
+                        value={String(field.value)}
+                        onChange={field.onChange}
+                      />
+                    ) : (
+                      <DeliveryCombobox
+                        value={String(field.value)}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="prix_exemplaire"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{isTools ? "Fournisseur" : "Achat"}</FormLabel>

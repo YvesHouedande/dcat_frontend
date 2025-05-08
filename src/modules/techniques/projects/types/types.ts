@@ -85,7 +85,7 @@ export type LivrableStatus = 'en attente' | 'approuvé' | 'rejeté' | 'révision
 
 //Gestions des documents
 export interface Document {
-  description: any;
+  description: string;
   version: string;
   libele_document: ReactNode;
   Id_documents?: number; // Optionnel si c'est généré côté serveur

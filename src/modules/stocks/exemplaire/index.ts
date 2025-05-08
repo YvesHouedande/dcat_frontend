@@ -17,7 +17,6 @@ export { productInstanceService } from './services/productInstance.service';
 
 // Types
 export type { 
-  ProductInstance,
   Delivery,
   Product,
   PaginationParams,

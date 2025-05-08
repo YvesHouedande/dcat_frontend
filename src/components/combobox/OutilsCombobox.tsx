@@ -28,14 +28,12 @@ export function OutilsCombobox({ value, onChange }: DeliveryComboboxProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const { livraisons: deliveries, isLoading } = useLivraisonData();
 
-  const deliveriesArray = Array.isArray(deliveries) ? deliveries : [];
-
   const filteredDeliveries = React.useMemo(() => {
-    if (!searchTerm) return deliveriesArray;
-    return deliveriesArray.filter((delivery) =>
+    if (!searchTerm) return deliveries;
+    return deliveries.filter((delivery) =>
       delivery.reference.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [deliveriesArray, searchTerm]);
+  }, [deliveries, searchTerm]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -48,7 +46,7 @@ export function OutilsCombobox({ value, onChange }: DeliveryComboboxProps) {
           disabled={isLoading}
         >
           {value
-            ? deliveriesArray.find(
+            ? deliveries.find(
                 (delivery) => String(delivery.id_livraison) === value
               )?.reference
             : "Sélectionner un outil..."}

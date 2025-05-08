@@ -33,7 +33,8 @@ export const mockProjects: Project[] = [
     profiles:[], 
     site: 'Paris',
     id_famille: 'FAM-IT-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
 
   {
@@ -50,7 +51,8 @@ export const mockProjects: Project[] = [
     profiles:[], 
     site: 'Lyon',
     id_famille: 'FAM-QA-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-003',
@@ -66,7 +68,8 @@ export const mockProjects: Project[] = [
     profiles:[],
     site: 'Paris',
     id_famille: 'FAM-MKT-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-004',
@@ -82,7 +85,8 @@ export const mockProjects: Project[] = [
     profiles:[], 
     site: 'Marseille',
     id_famille: 'FAM-LOG-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-005',
@@ -98,7 +102,8 @@ export const mockProjects: Project[] = [
     profiles:[],
     site: 'Berlin',
     id_famille: 'FAM-BUS-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-006',
@@ -114,7 +119,8 @@ export const mockProjects: Project[] = [
     profiles:[],
     site: 'Paris',
     id_famille: 'FAM-IT-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-007',
@@ -130,7 +136,8 @@ export const mockProjects: Project[] = [
     profiles:[], 
     site: 'Paris',
     id_famille: 'FAM-HR-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-008',
@@ -146,7 +153,8 @@ export const mockProjects: Project[] = [
     profiles:[],
     site: 'Lyon',
     id_famille: 'FAM-ENV-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-009',
@@ -162,7 +170,8 @@ export const mockProjects: Project[] = [
     profiles:[],
     site: 'Paris',
     id_famille: 'FAM-JUR-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-010',
@@ -178,7 +187,8 @@ export const mockProjects: Project[] = [
     profiles:[],
     site: 'Paris',
     id_famille: 'FAM-MKT-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-011',
@@ -194,7 +204,8 @@ export const mockProjects: Project[] = [
     profiles:[], 
     site: 'Lyon',
     id_famille: 'FAM-IT-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   },
   {
     id_projet: 'PRJ-012',
@@ -210,7 +221,8 @@ export const mockProjects: Project[] = [
     profiles:[], 
     site: 'Paris',
     id_famille: 'FAM-FIN-001',
-    partenaires: []
+    partenaires: [],
+    responsable: 'Nicolas Laurent'
   }
 ];
 

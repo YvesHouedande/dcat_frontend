@@ -41,11 +41,11 @@ export const useRetourSorties = (params: PaginationParams = { page: 1, pageSize:
 
   // Mutation pour mettre à jour un retour
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: idSotieOutils, data: Omit<RetourSchemaFormsValue,  "id_exemplaire" | "id_employes" | "date_de_retour"> }) => 
-      { 
-        await new Promise((resolve)=>setTimeout(resolve,200)),
-        await retourService.update(id, data)
-      },
+    mutationFn: async ({ id, data }: { id: idSotieOutils, data: Omit<RetourSchemaFormsValue, "id_exemplaire" | "id_employes" | "date_de_retour"> }) => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return await retourService.update(id, data);
+    },
+    
     onSuccess: (_, { id }) => {
       // Invalider à la fois la liste et l'élément spécifique
       queryClient.invalidateQueries({ queryKey: retourSortiesKeys.detail(id) });
@@ -66,7 +66,7 @@ export const useRetourSorties = (params: PaginationParams = { page: 1, pageSize:
   const deleteMutation = useMutation({
     mutationFn: async (id: idSotieOutils) => {
       await new Promise(res => setTimeout(res, 200));
-      await retourService.delete(id);
+      return await retourService.delete(id);
     },
     onSuccess: () => {
       // Invalider et rafraîchir la liste après suppression

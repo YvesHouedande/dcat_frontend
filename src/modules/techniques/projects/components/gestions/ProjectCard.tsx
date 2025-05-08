@@ -48,7 +48,7 @@ export const ProjectCard = ({
           </div>
           <div className="text-sm">
             <span>Responsable: </span>
-            <span className="font-medium">{project.Responsable}</span>
+            <span className="font-medium">{project.responsable}</span>
           </div>
         </div>
       </CardContent>

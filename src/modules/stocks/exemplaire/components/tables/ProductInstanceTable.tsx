@@ -26,15 +26,15 @@ import {
   Plus,
   ChevronRight,
 } from "lucide-react";
-import { ProductInstance} from "../../types";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/modules/stocks/reference/hooks/useProducts";
 import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
+import { ProductInstanceFormValues } from "../../schemas/productInstanceSchema";
 interface ProductInstanceTableProps {
-  productInstances: ProductInstance[];
+  productInstances: ProductInstanceFormValues[];
   onPageChange: (page: number) => void;
   onSearch: (term: string) => void;
-  onEdit: (instance: ProductInstance) => void;
+  onEdit: (instance: ProductInstanceFormValues) => void;
   onDelete: (id: string | number) => void;
   onAdd: () => void;
   currentPage: number;
@@ -44,6 +44,9 @@ interface ProductInstanceTableProps {
   loading: boolean;
 }
 
+interface Props {
+  Id: string | number;
+}
 export function ProductInstanceTable({
   productInstances,
   onPageChange,
@@ -68,16 +71,23 @@ export function ProductInstanceTable({
     onSearch(searchTerm);
   };
 
-  const getDeliveryName = (id: string | number): string => {
-    const { livraison } = useLivraisonData(id);
-    return livraison?.reference || String(id);
+  // Dans ton composant React (ProductInstanceTable ou un sous-composant)
+
+  const LivraisonReference: React.FC<Props> = ({ Id }) => {
+    const { livraison, isLoading } = useLivraisonData(Id);
+
+    if (isLoading) return <span>Chargement...</span>;
+
+    return <span>{livraison?.reference || Id}</span>;
   };
 
-  function getCodeProduit(id_produit: number | string): React.ReactNode {
-    const { product } = useProducts(id_produit);
-    // If found, return its code or name, otherwise fallback to the id
-    return product.data?.code_produit || id_produit;
-  }
+  const GetCodeProduit: React.FC<Props> = ({ Id }) => {
+    const { product } = useProducts(Id);
+
+    if (product.isLoading) return <span>Chargement...</span>;
+
+    return <span>{product.data?.code_produit || Id}</span>;
+  };
 
   const handleProductClick = (id: number | string) => {
     navigate(`/stocks/references/${id}`);
@@ -154,12 +164,12 @@ export function ProductInstanceTable({
                       onClick={() => handleProductClick(instance.id_produit)}
                       className="text-blue-600 hover:underline cursor-pointer hover:text-blue-800 flex items-center gap-1"
                     >
-                      {getCodeProduit(instance.id_produit)}
+                      <GetCodeProduit Id={instance.id_produit} />
                       <ChevronRight className="w-4 h-4" />
                     </button>{" "}
                   </TableCell>
                   <TableCell>
-                    {getDeliveryName(instance.id_livraison)}
+                    <LivraisonReference Id={instance.id_livraison} />
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -176,7 +186,11 @@ export function ProductInstanceTable({
                           <Edit className="mr-2 h-4 w-4" /> Modifier
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => onDelete(instance.id_exemplaire)}
+                          onClick={() => {
+                            if (instance.id_exemplaire !== undefined) {
+                              onDelete(instance.id_exemplaire);
+                            }
+                          }}
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                         </DropdownMenuItem>

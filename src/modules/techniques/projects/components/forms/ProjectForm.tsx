@@ -33,6 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MultiSelectProfile } from "../gestions/MultiSelectProfile";
+import { omit } from "@/lib/utils";
 // import { profiles } from "@/modules/administration-Finance/administration/pages/employers/employe";
 
 // Mise à jour du schéma pour inclure les partenaires
@@ -108,10 +109,9 @@ export const ProjectForm = ({
       .filter((m): m is EmployeProfile => m !== undefined);
 
     // Suppression du champ partenairesIds et ajout du champ partenaires avec les objets complets
-    const { partenairesIds, ...restValues } = values;
-
+    const restValue = omit(values, ["partenairesIds"]);
     onSubmit({
-      ...restValues,
+      ...restValue,
       partenaires: selectedPartenaires,
       profiles: selectedProfiles,
     });

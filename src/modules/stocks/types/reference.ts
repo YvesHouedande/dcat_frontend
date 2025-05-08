@@ -1,12 +1,14 @@
 // This file contains the TypeScript interface for the ReferenceProduit object.
 // It defines the structure of the object, including its properties and their types.
+import { z } from "zod";
 import { referenceSchema } from "../reference/schemas/referenceSchema";
-import {z} from "zod"
 
-const referenceSchemaExtend = referenceSchema.extend({
-  qte_produit : z.number(),
-})
-export type ReferenceProduit =z.infer<typeof referenceSchemaExtend>;
+export const referenceProduitSchema = referenceSchema.extend({
+  qte_produit: z.number(),
+});
+
+export type ReferenceProduit = z.infer<typeof referenceProduitSchema>;
+
 // export interface  ReferenceProduit {
   //   id_produit: string | number;
   //   code_produit: string;

@@ -33,7 +33,7 @@ import { useState } from "react";
 import FileUpload  from "@/components/ui/file-upload";
 import { fr } from "date-fns/locale";
 
-const documentFormSchema = z.object({
+export const documentFormSchema = z.object({
   libele_document: z.string().min(1, "Le nom du document est requis"),
   classification_document: z.enum(['contrat', 'facture', 'rapport', 'plan', 'autre']),
   lien_document: z.string().min(1, "Le fichier est requis"),
@@ -45,7 +45,22 @@ const documentFormSchema = z.object({
   description: z.string().min(1, "La description est requise")
 });
 
-type DocumentFormValues = z.infer<typeof documentFormSchema>;
+
+
+export type DocumentFormValues = z.infer<typeof documentFormSchema>;
+
+ // Map Document to DocumentFormDefaultValues
+ export const mapDocumentToFormValues = (document: Partial<Record<keyof DocumentFormValues, unknown>>): DocumentFormValues => ({
+  id_projet: String(document.id_projet ?? ""),
+  libele_document: String(document.libele_document ?? ""),
+  description: String(document.description ?? ""),
+  version: String(document.version ?? ""),
+  lien_document: String(document.lien_document ?? ""),
+  classification_document: document.classification_document as DocumentFormValues["classification_document"] ?? "autre",
+  etat_document: document.etat_document as DocumentFormValues["etat_document"] ?? "brouillon",
+  date_creation: document.date_creation ? new Date(document.date_creation as string) : new Date(),
+  createur: String(document.createur ?? ""),
+});
 
 // Créer un type pour les valeurs par défaut qui correspond exactement au schéma
 type DocumentFormDefaultValues = Partial<DocumentFormValues> & {

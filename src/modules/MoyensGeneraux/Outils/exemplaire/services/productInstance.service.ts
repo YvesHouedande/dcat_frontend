@@ -6,6 +6,7 @@ export const productInstanceService = {
   getAll: async (params: PaginationParams): Promise<PaginatedResponse<ProductInstance>> => {
     // const response = await api.get("/product-instances", { params });
     // return response.data;
+    console.log(params)
     const productInstances: ProductInstance[] = [
         {
           id_exemplaire: 1,
@@ -13,7 +14,7 @@ export const productInstanceService = {
           prix_exemplaire: "749",
           date_entree: "2025-04-10",
           etat_vente: "invendu",
-         
+          commentaire: "",
           id_livraison: 2,
           id_produit: 1
         },
@@ -23,7 +24,7 @@ export const productInstanceService = {
           prix_exemplaire: "749",
           date_entree: "2025-04-10",
           etat_vente: "invendu",
-          
+          commentaire: "",
           id_livraison: 2,
           id_produit: 2
         },
@@ -33,7 +34,7 @@ export const productInstanceService = {
           prix_exemplaire: "749",
           date_entree: "2025-04-12",
           etat_vente: "vendu",
-         
+          commentaire: "",
           id_livraison: 3,
           id_produit: 3
         }

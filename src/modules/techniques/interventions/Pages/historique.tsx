@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import {
@@ -68,6 +67,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import Layout from "@/components/Layout";
 
 
 
@@ -459,7 +459,6 @@ const interventionsData: Intervention[] = [
     lieu: "Atelier principal",
     id_probleme: "PROB-789",
   },
-
   {
     id_intervention: "INT-001",
     date_: "2025-03-15",
@@ -836,6 +835,7 @@ const interventionsData: Intervention[] = [
 const InterventionsTable = () => {
   const [globalFilter, setGlobalFilter] = useState("");
   const [rowSelection, setRowSelection] = useState({});
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const navigate = useNavigate(); // ou useRouter() avec Next.js
 
@@ -843,7 +843,7 @@ const InterventionsTable = () => {
   const columns: ColumnDef<Intervention>[] = [
     {
       accessorKey: "numero",
-      header: ({ column }) => (
+      header: () => (
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
           <span>Numéro</span>
@@ -864,7 +864,7 @@ const InterventionsTable = () => {
     },
     {
       accessorKey: "date_",
-      header: ({ column }) => (
+      header: () => (
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <span>Date</span>
@@ -914,7 +914,7 @@ const InterventionsTable = () => {
 
     {
       accessorKey: "superviseur",
-      header: ({ column }) => (
+      header: () => (
         <div className="flex items-center gap-2">
           <UserCircle className="h-4 w-4 text-muted-foreground" />
           <span>Superviseur</span>
@@ -923,7 +923,7 @@ const InterventionsTable = () => {
     },
     {
       accessorKey: "duree",
-      header: ({ column }) => (
+      header: () => (
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-muted-foreground" />
           <span>Durée</span>
@@ -932,7 +932,7 @@ const InterventionsTable = () => {
     },
     {
       accessorKey: "lieu",
-      header: ({ column }) => (
+      header: () => (
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
           <span>Lieu</span>
@@ -941,7 +941,7 @@ const InterventionsTable = () => {
     },
     {
       id: "actions",
-      header: ({ column }) => (
+      header: () => (
         <div className="flex items-center gap-2 justify-end">
           <Settings className="h-4 w-4 text-muted-foreground" />
           <span>Actions</span>
@@ -949,7 +949,6 @@ const InterventionsTable = () => {
       ),
       cell: ({ row }) => {
         const intervention = row.original;
-        const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
         return (
           <>
@@ -1034,6 +1033,7 @@ const InterventionsTable = () => {
               </AlertDialogContent>
             </AlertDialog>
           </>
+
         );
       },
     },
@@ -1086,180 +1086,180 @@ const InterventionsTable = () => {
   });
 
   return (
-    // <Layout autre={NavComponent}>
-    <div className="space-y-4 flex flex-col p-4 w-full">
-      {/* Contrôles de filtre et de colonnes */}
-      {/* <div className="flex gap-4 justify-between items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-3 h-4 w-4 text-gray-500" />
-            <Input
-              type="text"
-              placeholder="Rechercher une intervention..."
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pl-8 w-96"
-            />
-          </div>
+    <Layout>
+      <div className="space-y-4 flex flex-col p-4 w-full">
+        {/* Contrôles de filtre et de colonnes */}
+        {/* <div className="flex gap-4 justify-between items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-3 h-4 w-4 text-gray-500" />
+              <Input
+                type="text"
+                placeholder="Rechercher une intervention..."
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="pl-8 w-96"
+              />
+            </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                {" "}
-                <TableOfContents /> Colonnes
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id.replace(/_/g, " ")}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div> */}
-
-      <div className="rounded-md border flex-1 overflow-hidden relative h-full max-h-[calc(100vh-300px)] flex flex-col  lg:max-w-[calc(100vw-320px)] ">
-        {/* Conteneur scrollable */}
-        <ScrollArea className="h-full w-full" type="always">
-          <div className=" h-[calc(100vh-300px)] ">
-            <Table className="min-w-full">
-              <TableHeader className="sticky top-0 bg-background z-10">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  {" "}
+                  <TableOfContents /> Colonnes
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
                     >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
+                      {column.id.replace(/_/g, " ")}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div> */}
+
+        <div className="rounded-md border flex-1 overflow-hidden relative h-full max-h-[calc(100vh-300px)] flex flex-col  lg:max-w-[calc(100vw-320px)] ">
+          {/* Conteneur scrollable */}
+          <ScrollArea className="h-full w-full" type="always">
+            <div className=" h-[calc(100vh-300px)] ">
+              <Table className="min-w-full">
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
                       ))}
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
-                      Aucun résultat.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
-      </div>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && "selected"}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                      >
+                        Aucun résultat.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4">
-        <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-          {table.getFilteredSelectedRowModel().rows.length} sur{" "}
-          {table.getFilteredRowModel().rows.length} ligne(s) sélectionnée(s).
-        </div>
-        <div className="flex w-full items-center gap-8 lg:w-fit">
-          <div className="hidden items-center gap-2 lg:flex">
-            <Label htmlFor="rows-per-page" className="text-sm font-medium">
-              Lignes par page
-            </Label>
-            <Select
-              value={`${table.getState().pagination.pageSize}`}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value));
-              }}
-            >
-              <SelectTrigger className="w-20" id="rows-per-page">
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[5, 10, 20, 30, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-4">
+          <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
+            {table.getFilteredSelectedRowModel().rows.length} sur{" "}
+            {table.getFilteredRowModel().rows.length} ligne(s) sélectionnée(s).
           </div>
-          <div className="flex w-fit items-center justify-center text-sm font-medium">
-            Page {table.getState().pagination.pageIndex + 1} sur{" "}
-            {table.getPageCount()}
-          </div>
-          <div className="ml-auto flex items-center gap-2 lg:ml-0">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Aller à la première page</span>
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Aller à la page précédente</span>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Aller à la page suivante</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Aller à la dernière page</span>
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
+          <div className="flex w-full items-center gap-8 lg:w-fit">
+            <div className="hidden items-center gap-2 lg:flex">
+              <Label htmlFor="rows-per-page" className="text-sm font-medium">
+                Lignes par page
+              </Label>
+              <Select
+                value={`${table.getState().pagination.pageSize}`}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value));
+                }}
+              >
+                <SelectTrigger className="w-20" id="rows-per-page">
+                  <SelectValue
+                    placeholder={table.getState().pagination.pageSize}
+                  />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[5, 10, 20, 30, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex w-fit items-center justify-center text-sm font-medium">
+              Page {table.getState().pagination.pageIndex + 1} sur{" "}
+              {table.getPageCount()}
+            </div>
+            <div className="ml-auto flex items-center gap-2 lg:ml-0">
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <span className="sr-only">Aller à la première page</span>
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <span className="sr-only">Aller à la page précédente</span>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <span className="sr-only">Aller à la page suivante</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                <span className="sr-only">Aller à la dernière page</span>
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    // </Layout>
+    </Layout>
   );
 };
 export default InterventionsTable;
