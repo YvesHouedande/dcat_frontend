@@ -330,7 +330,7 @@ jobs:
       - name: Start new container
         run: |
           docker run -d --name dcat-frontend \
-            -p 3000:80 \
+            -p 3000:3000 \
             --restart unless-stopped \
             dcat-frontend:${{ github.sha }}
 
