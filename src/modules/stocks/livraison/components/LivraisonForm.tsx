@@ -43,7 +43,7 @@ const LivraisonForm: React.FC<LivraisonFormProps> = ({
 }) => {
   const schema = isEditing ? livraisonUpdateSchema : livraisonSchema;
   const form = useForm<LivraisonFormValues>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema as typeof livraisonSchema),
     defaultValues,
   });
 

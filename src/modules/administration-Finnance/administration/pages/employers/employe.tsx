@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 
-interface EmployeProfile {
+export interface EmployeProfile {
   id: string;
   name: string;
   role: string;
@@ -30,106 +30,84 @@ interface EmployeProfile {
   initials: string;
 }
 
-interface DemandesInterface {
-  id: string | number;
-  name: string;
-}
+
+ // Données d'exemple pour les profils
+ const profiles: EmployeProfile[] = [
+  {
+    id: "1",
+    name: "Thomas Dubois",
+    role: "Développeur Frontend",
+    department: "Technologie",
+    status: "actif",
+    initials: "TD",
+  },
+  {
+    id: "2",
+    name: "Marie Laurent",
+    role: "Chef de Projet",
+    department: "Gestion",
+    status: "actif",
+    initials: "ML",
+  },
+  {
+    id: "3",
+    name: "Alexandre Moreau",
+    role: "Designer UX/UI",
+    department: "Création",
+    status: "absent",
+    initials: "AM",
+  },
+  {
+    id: "4",
+    name: "Sophie Lefebvre",
+    role: "Développeur Backend",
+    department: "Technologie",
+    status: "depart",
+    initials: "SL",
+  },
+  {
+    id: "5",
+    name: "Lucas Bernard",
+    role: "Ingénieur DevOps",
+    department: "Infrastructure",
+    status: "actif",
+    initials: "LB",
+  },
+  {
+    id: "6",
+    name: "Emma Petit",
+    role: "Responsable Marketing",
+    department: "Marketing",
+    status: "absent",
+    initials: "EP",
+  },
+  {
+    id: "7",
+    name: "Julien Roux",
+    role: "Analyste de Données",
+    department: "Analytique",
+    status: "actif",
+    initials: "JR",
+  },
+  {
+    id: "8",
+    name: "Camille Dupont",
+    role: "Responsable RH",
+    department: "Ressources Humaines",
+    status: "depart",
+    initials: "CD",
+  },
+];
+export const profilesList = profiles
+
 
 const ModernProfileGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
-  // Données d'exemple pour les profils
-  const profiles: EmployeProfile[] = [
-    {
-      id: "1",
-      name: "Thomas Dubois",
-      role: "Développeur Frontend",
-      department: "Technologie",
-      status: "actif",
-      initials: "TD",
-    },
-    {
-      id: "2",
-      name: "Marie Laurent",
-      role: "Chef de Projet",
-      department: "Gestion",
-      status: "actif",
-      initials: "ML",
-    },
-    {
-      id: "3",
-      name: "Alexandre Moreau",
-      role: "Designer UX/UI",
-      department: "Création",
-      status: "absent",
-      initials: "AM",
-    },
-    {
-      id: "4",
-      name: "Sophie Lefebvre",
-      role: "Développeur Backend",
-      department: "Technologie",
-      status: "depart",
-      initials: "SL",
-    },
-    {
-      id: "5",
-      name: "Lucas Bernard",
-      role: "Ingénieur DevOps",
-      department: "Infrastructure",
-      status: "actif",
-      initials: "LB",
-    },
-    {
-      id: "6",
-      name: "Emma Petit",
-      role: "Responsable Marketing",
-      department: "Marketing",
-      status: "absent",
-      initials: "EP",
-    },
-    {
-      id: "7",
-      name: "Julien Roux",
-      role: "Analyste de Données",
-      department: "Analytique",
-      status: "actif",
-      initials: "JR",
-    },
-    {
-      id: "8",
-      name: "Camille Dupont",
-      role: "Responsable RH",
-      department: "Ressources Humaines",
-      status: "depart",
-      initials: "CD",
-    },
-  ];
+ 
 
-  // Donnée de demandes
-  const demandes: DemandesInterface[] = [
-    {
-      id: "1",
-      name: "En cours",
-    },
-    {
-      id: "3",
-      name: "Demande 3",
-    },
-    {
-      id: "4",
-      name: "Demande 4",
-    },
-    {
-      id: "7",
-      name: "Demande 3",
-    },
-    {
-      id: "8",
-      name: "Demande 4",
-    },
-  ];
+
 
   // Filtrage des profils basé sur la recherche
   const filteredProfiles = searchQuery

@@ -21,7 +21,6 @@ import {
   AlertTriangle,
   Activity,
   FileText,
-  Clock,
   Package,
   Clipboard,
   CheckSquare,
@@ -45,10 +44,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate} from "react-router-dom";
 
 // Ajout des imports pour Zod et React Hook Form
-import { useForm } from "react-hook-form";
+import {useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
@@ -133,7 +132,7 @@ export function Nouvelle_fiche() {
   const navigate = useNavigate();
 
   // Données initiales du formulaire
-  const { id } = useParams();
+
   const initialData = React.useMemo(
     () => ({
       date: undefined,
@@ -368,51 +367,14 @@ export function Nouvelle_fiche() {
   );
 
   // Fonction de gestion des erreurs lors de la soumission
-  const onError = (errors: any) => {
-    console.error("Erreurs de validation:", errors);
-
+  const onError = () => {
     toast.error("Erreur lors de l'enregistrement", {
       description: "Veuillez corriger les erreurs dans le formulaire",
     });
   };
 
     // Vérification des modifications
-    React.useEffect(() => {
-      const currentData = {
-        date,
-        client: value,
-        intervenants: selectedIntervenants,
-        typeMaintenance,
-        typeDefaillance,
-        causeDefaillance,
-        rapportIntervention,
-        duree,
-        problemeSignale,
-        descriptionCause,
-        produits: selectedProducts.map((id) => ({
-          id,
-          quantity: quantities[id] || 1,
-        })),
-        superviseur,
-      };
-  
-      setHasChanges(JSON.stringify(currentData) !== JSON.stringify(initialData));
-    }, [
-      date,
-      value,
-      selectedIntervenants,
-      rapportIntervention,
-      typeMaintenance,
-      typeDefaillance,
-      causeDefaillance,
-      causeLiee,
-      rapport,
-      duree,
-      selectedProducts,
-      quantities,
-      superviseur,
-      initialData,
-    ]);
+
   const NavComponent = () => {
     return (
       <div className="flex space-x-4">
@@ -481,7 +443,9 @@ export function Nouvelle_fiche() {
                     selected={date}
                     onSelect={(selectedDate) => {
                       setDate(selectedDate);
-                      form.setValue("date", selectedDate);
+                      if (selectedDate) {
+                        form.setValue("date", selectedDate);
+                      }
                     }}
                     initialFocus
                   />

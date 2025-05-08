@@ -24,17 +24,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  FormValues,
-  ReferenceSelectMarque,
-  ReferenceSelectCategorie,
-  ReferenceSelectFamille,
-  ReferenceSelectModele,
-  formSchema,
+  ReferenceSelect,
 } from "../components/ui/ReferenceSelect";
 import { ImageDropzone } from "../utils/ImageDropzone";
 import { generateProductCode } from "../../utils/generateProductCode";
 import { useReferenceOptions } from "../../hooks/useReferenceOptions";
+import { z } from "zod";
+import { referenceSchema } from "../schemas/referenceSchema";
 
+export type FormValues = z.infer<typeof referenceSchema>;
 // ... tes listes de références (categories, modeles, familles, marques) ...
 export default function ReferenceEditForm() {
   const { categories, modeles, familles, marques } = useReferenceOptions();
@@ -83,7 +81,7 @@ export default function ReferenceEditForm() {
   }, []);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(referenceSchema),
     defaultValues: {
       id_produit: Number(id),
       code_produit: "",
@@ -146,7 +144,7 @@ export default function ReferenceEditForm() {
     } catch (error) {
       setSubmitResult({
         success: false,
-        message: "Erreur lors de la modification du produit.",
+        message: "Erreur lors de la modification du produit." + error,
       });
     } finally {
       setIsSubmitting(false);
@@ -188,32 +186,35 @@ export default function ReferenceEditForm() {
               <div className=" p-4 rounded-md mb-4">
                 <h3 className="font-medium mb-2">Classification du produit</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ReferenceSelectMarque
+                  <ReferenceSelect
                     items={marques}
                     label="Marque"
                     name="id_marque"
                     control={form.control}
                     isRequired={true}
+                    getLabel={(item) => item.libelle_marque}
                     onChange={(value) =>
                       handleReferenceChange("id_marque", Number.parseInt(value))
                     }
                   />
-                  <ReferenceSelectModele
+                  <ReferenceSelect
                     items={modeles}
                     label="Modèle"
                     name="id_modele"
                     control={form.control}
+                    getLabel={(item) => item.libelle_modele}
                     isRequired={true}
                     onChange={(value) =>
                       handleReferenceChange("id_modele", Number.parseInt(value))
                     }
                   />
-                  <ReferenceSelectCategorie
+                  <ReferenceSelect
                     items={categories}
                     label="Catégorie"
                     name="id_categorie"
                     control={form.control}
                     isRequired={true}
+                    getLabel={(item) => item.libelle_categorie}
                     onChange={(value) =>
                       handleReferenceChange(
                         "id_categorie",
@@ -221,12 +222,13 @@ export default function ReferenceEditForm() {
                       )
                     }
                   />
-                  <ReferenceSelectFamille
+                  <ReferenceSelect
                     items={familles}
                     label="Famille"
                     name="id_famille"
                     control={form.control}
                     isRequired={true}
+                    getLabel={(item) => item.libelle_famille}
                     onChange={(value) =>
                       handleReferenceChange(
                         "id_famille",

@@ -1,5 +1,5 @@
 import { UseFormReturn } from "react-hook-form";
-import { ExemplaireSortieFormValues } from "../schemas/exemplaireSortieSchema";
+
 import {
   Select,
   SelectContent,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ExemplaireSortieFormValues } from "@/modules/stocks/sorties/schemas/exemplaireSortieSchema";
 
 // Définir les types pour les données
 interface Client {

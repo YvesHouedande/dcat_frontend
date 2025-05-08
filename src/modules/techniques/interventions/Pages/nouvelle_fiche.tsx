@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { memo, useMemo } from "react";
+// import { memo, useMemo } from "react";
 import {
   Popover,
   PopoverContent,
@@ -22,7 +22,7 @@ import {
   AlertTriangle,
   Activity,
   FileText,
-  Clock,
+  //Clock,
   Package,
   Clipboard,
   CheckSquare,
@@ -46,7 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   FicheInterventionFormValues,
   ficheInterventionSchema,
@@ -54,25 +54,16 @@ import {
 // Ajout des imports pour Zod et React Hook Form
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+
 import { toast } from "sonner";
-import {
-  useCreateIntervention,
-  useInterventions,
-  usePartenaires,
-  useProduits,
-} from "../lib/queries";
+import { useCreateIntervention } from "../lib/queries";
 
 export function Nouvelle_fiche() {
   // Initialisation de React Hook Form avec Zod
   const navigate = useNavigate();
 
-  const { mutate, isLoading, isSuccess } = useCreateIntervention();
-  const { data: interventions, isLoading: isLoadingInterventions } =
-    useInterventions();
-  const { data: partenaires, isLoading: isLoadingPartenaires } =
-    usePartenaires();
-  const { data: produits, isLoading: isLoadingProduits } = useProduits();
+  const { mutate, isLoading } = useCreateIntervention();
+
   const form = useForm<FicheInterventionFormValues>({
     resolver: zodResolver(ficheInterventionSchema),
     defaultValues: {
@@ -293,7 +284,7 @@ export function Nouvelle_fiche() {
   );
 
   // Fonction de gestion des erreurs lors de la soumission
-  const onError = (errors: any) => {
+  const onError = () => {
     toast.error("Erreur lors de l'enregistrement", {
       description: "Veuillez corriger les erreurs dans le formulaire",
     });
@@ -398,7 +389,9 @@ export function Nouvelle_fiche() {
                     selected={date}
                     onSelect={(selectedDate) => {
                       setDate(selectedDate);
-                      form.setValue("date", selectedDate);
+                      if (selectedDate) {
+                        form.setValue("date", selectedDate);
+                      }
                     }}
                     initialFocus
                   />

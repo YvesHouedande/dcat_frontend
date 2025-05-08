@@ -24,13 +24,15 @@ import { toast } from "sonner";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { RetourForms } from "../../Retour/components/RetourForms";
 import { ExemplaireSortieForm } from "../../sorties/components/ExemplaireSortieForm";
+import { UseFormReturn } from "react-hook-form";
+import { ProductInstanceFormValues } from "../schemas/productInstanceSchema";
 
 export function ProductInstanceDashboard({
   id_outil,
 }: {
-  id_outil: string | number | undefined;
+  id_outil?: string | number | undefined;
 }) {
-  const formRef = useRef<any>(null);
+  const formRef = useRef<UseFormReturn<ProductInstanceFormValues> | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isOutFormOpen, setIsOutFormOpen] = useState(false);
   const [isReturnFormOpen, setIsReturnFormOpen] = useState(false);
@@ -103,9 +105,7 @@ export function ProductInstanceDashboard({
     toast.success(
       isEditMode
         ? "Exemplaire modifié avec succès"
-        : `Exemplaire "${formRef.current.getValues(
-            "num_serie"
-          )}" ajouté avec succès`,
+        : `Exemplaire "${formRef.current ? formRef.current.getValues("num_serie") : ""}" ajouté avec succès`,
       {
         duration: 2000,
       }
@@ -175,15 +175,6 @@ export function ProductInstanceDashboard({
             <DialogTitle>Retourner un outil</DialogTitle>
           </DialogHeader>
           <RetourForms
-            sortieData={{
-              id_exemplaire: currentInstance?.id_exemplaire ?? "",
-              id_employes: "",
-              but_usage: "",
-              etat_avant: currentInstance?.etat_vente ?? "",
-              date_de_sortie: "",
-              site_intervention: "",
-              commentaire: "",
-            }}
             defaultValues={{
               id_exemplaire: currentInstance?.id_exemplaire ?? "",
               id_employes: "",

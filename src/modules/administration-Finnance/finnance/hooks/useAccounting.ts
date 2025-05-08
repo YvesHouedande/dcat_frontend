@@ -1,8 +1,9 @@
 import { Fichier } from "../data/mockFichier";
 import { fetchFichiers } from "../data/mockFichier";
+import { useCallback } from "react";
 
 export function useAccounting() {
-  const getFichiers = async (type?: Fichier["type"]): Promise<{
+  const getFichiers = useCallback(async (type?: Fichier["type"]): Promise<{
     data: Fichier[];
     error?: string;
   }> => {
@@ -10,9 +11,9 @@ export function useAccounting() {
       const data = await fetchFichiers(type);
       return { data };
     } catch (error) {
-      return { data: [], error: "Erreur de chargement" };
+      return { data: [], error: error instanceof Error ? error.message : String(error) };
     }
-  };
+  }, []);
 
   return { getFichiers };
 }

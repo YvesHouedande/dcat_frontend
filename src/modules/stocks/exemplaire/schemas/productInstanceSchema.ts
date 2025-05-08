@@ -5,6 +5,7 @@ export const productInstanceSchema = z.object({
   id_exemplaire:z.union([z.string(), z.number()]).optional(),
   num_serie: z.string().min(1, "Le numéro de série est requis"),
   date_entree: z.string().min(1, "La date d'entrée est requise"),
+  prix_exemplaire:z.string().optional(),
   etat_vente: z.enum(["vendu", "invendu","bon","endommage"]).default("invendu"),
   id_livraison: z.union([
     z.string().min(1, "L'identifiant est requis"),

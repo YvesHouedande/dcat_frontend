@@ -26,11 +26,9 @@ import {
   Clipboard,
   CheckSquare,
 } from "lucide-react";
-import { useInterventions } from "../lib/queries";
 
 const NavComponent = () => {
   const { id } = useParams();
-  const {data: intervention, isLoading, i} = useInterventions();
   return (
     <div className="flex space-x-4">
       <Link

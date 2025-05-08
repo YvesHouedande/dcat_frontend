@@ -10,12 +10,12 @@ interface StatItem {
 }
 
 interface CarteStatitiqueProps {
-  exemplaireSorties: any[]; // Remplacez par le type approprié
+  nombrexemplaire: number; // Remplacez par le type approprié
   stats: StatItem[];
   totalSorties:number;
 }
 
-function CarteStatitique({ exemplaireSorties, stats, totalSorties }: CarteStatitiqueProps) {
+function CarteStatitique({ nombrexemplaire, stats, totalSorties }: CarteStatitiqueProps) {
   return (
     <>
       {stats.map((stat) => (
@@ -30,7 +30,7 @@ function CarteStatitique({ exemplaireSorties, stats, totalSorties }: CarteStatit
             </div>
             {typeof stat.percent === "number" && (
               <p className="text-xs text-muted-foreground">
-                {exemplaireSorties.length > 0
+                {nombrexemplaire > 0
                   ? `${stat.percent.toFixed(1)}% du total (${totalSorties})`
                   : "Aucune sortie"}
               </p>

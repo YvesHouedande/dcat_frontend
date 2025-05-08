@@ -18,6 +18,7 @@ export function formatDate(dateString: string): string {
       year: "numeric",
     });
   } catch (error) {
+    console.log(error)
     return dateString;
   }
 }

@@ -132,7 +132,8 @@ const ModernDocumentGrid: React.FC = () => {
   };
 
   const getFileIcon = (type: string) => {
-    const typeMap = {
+    type FileType = "pdf" | "docx" | "xlsx" | "pptx" | "default";
+    const typeMap: Record<FileType, { color: string; size: number }> = {
       pdf: { color: "text-red-500", size: 28 },
       docx: { color: "text-blue-500", size: 28 },
       xlsx: { color: "text-green-500", size: 28 },
@@ -140,7 +141,8 @@ const ModernDocumentGrid: React.FC = () => {
       default: { color: "text-gray-500", size: 28 }
     };
     
-    const style = typeMap[type.toLowerCase()] || typeMap.default;
+    const key = (type.toLowerCase() as FileType);
+    const style = typeMap[key] || typeMap.default;
     return <FileText size={style.size} className={style.color} />;
   };
 

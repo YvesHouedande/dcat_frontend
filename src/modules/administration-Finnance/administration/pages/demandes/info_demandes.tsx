@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Card,
   CardContent,
@@ -9,16 +9,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useParams } from "react-router-dom";
 import {
-  Calendar,
   CalendarIcon,
-  Clock,
   FileText,
   User,
-  ChevronLeft,
   Pencil,
   XCircle,
   CheckCircle,
@@ -110,7 +106,6 @@ const calculerDuree = (dateDebut: Date, dateFin: Date): number => {
 
 const DemandeDetailPage: React.FC = () => {
   // État pour gérer l'onglet actif
-  const [activeTab, setActiveTab] = useState("details");
   const { id } = useParams();
 
   // Fonction pour obtenir la couleur et l'icône du badge selon le statut

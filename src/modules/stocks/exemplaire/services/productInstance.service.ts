@@ -1,12 +1,14 @@
 // src/services/productInstanceService.ts
 import { api } from "@/api/api";
-import { PaginatedResponse, PaginationParams, ProductInstance } from "../types";
+import { PaginatedResponse, PaginationParams } from "../types";
+import { ProductInstanceFormValues } from "../schemas/productInstanceSchema";
 
 export const productInstanceService = {
-  getAll: async (params: PaginationParams): Promise<PaginatedResponse<ProductInstance>> => {
+  getAll: async (params: PaginationParams): Promise<PaginatedResponse<ProductInstanceFormValues>> => {
     // const response = await api.get("/product-instances", { params });
     // return response.data;
-    const productInstances: ProductInstance[] = [
+    console.log(params)
+    const productInstances: ProductInstanceFormValues[] = [
         {
           id_exemplaire: 1,
           num_serie: "ABC123456789",
@@ -47,18 +49,18 @@ export const productInstanceService = {
     };
   },
   
-  getById: async (id: string): Promise<ProductInstance> => {
+  getById: async (id: string): Promise<ProductInstanceFormValues> => {
     const response = await api.get(`/product-instances/${id}`);
     return response.data;
   },
   
-  create: async (data: Omit<ProductInstance, "id_exemplaire" | "prix_exemplaire">): Promise<ProductInstance> => {
+  create: async (data: Omit<ProductInstanceFormValues, "id_exemplaire" | "prix_exemplaire">): Promise<ProductInstanceFormValues> => {
     const response = await api.post("/product-instances", data);
     return response.data;
   },
 
   
-  update: async (id: string | number, data: Omit<ProductInstance, "prix_exemplaire">): Promise<ProductInstance> => {
+  update: async (id: string | number, data: Omit<ProductInstanceFormValues, "prix_exemplaire">): Promise<ProductInstanceFormValues> => {
     const response = await api.put(`/product-instances/${id}`, data);
     return response.data;
   },

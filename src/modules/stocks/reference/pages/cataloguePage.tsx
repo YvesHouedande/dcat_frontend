@@ -31,18 +31,17 @@ export default function CataloguePage() {
   //. Filtrer les produits
   const filteredProducts = (productsData.data ?? []).filter((product) => {
     const matchesSearch =
-      product.desi_produit.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.code_produit.toLowerCase().includes(searchTerm.toLowerCase());
+      product.desi_produit.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory =
-      categoryFilter === "all" || product.categorie === categoryFilter;
+      categoryFilter === "all" || String(product.id_categorie) === categoryFilter;
     const matchesProductType =
-      productTypeFilter === "all" || product.type_produit === productTypeFilter;
+      productTypeFilter === "all" || String(product.id_type_produit) === productTypeFilter;
     const matchesModel =
-      modelFilter === "all" || product.modele === modelFilter;
+      modelFilter === "all" || String(product.id_modele) === modelFilter;
     const matchesBrand =
-      brandFilter === "all" || product.marque === brandFilter;
+      brandFilter === "all" || String(product.id_marque) === brandFilter;
     const matchesFamily =
-      familyFilter === "all" || product.famille === familyFilter;
+      familyFilter === "all" || String(product.id_famille) === familyFilter;
     return (
       matchesSearch &&
       matchesCategory &&

@@ -2,18 +2,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  productInstanceSchema,
-  ProductInstanceFormValues,
-  ProductInstanceEditSchema,
-} from "../schemas/productInstanceSchema";
-import { ProductInstance } from "../types";
+
 import { toDatetimeLocal } from "@/modules/stocks/utils/helpers";
 import { useProductInstances } from "./useProductInstances";
+import { ProductInstanceEditSchema, ProductInstanceFormValues, productInstanceSchema } from "../schemas/productInstanceSchema";
 
 interface UseProductInstanceFormProps {
   onSuccess?: () => void;
-  initialData?: Partial<ProductInstance>;
+  initialData?: Partial<ProductInstanceFormValues>;
   isEditMode?: boolean;
 }
 
@@ -33,7 +29,7 @@ export function useProductInstanceForm({
   const schema = isEditMode ? ProductInstanceEditSchema : productInstanceSchema;
   
   const form = useForm<ProductInstanceFormValues>({
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema as typeof productInstanceSchema),
     defaultValues: {
       id_exemplaire: initialData?.id_exemplaire || "",
       num_serie: initialData?.num_serie || "",
@@ -75,7 +71,7 @@ export function useProductInstanceForm({
 
   const onSubmit = form.handleSubmit(handleSubmit);
 
-  const reset = (data?: Partial<ProductInstance>) => {
+  const reset = (data?: Partial<ProductInstanceFormValues>) => {
     form.reset({
       id_exemplaire: data?.id_exemplaire || "",
       num_serie: data?.num_serie || "",

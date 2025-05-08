@@ -7,6 +7,7 @@ export const MoyensDesTravailService = {
   getAll: async (filters: MoyensFilters): Promise<PaginatedResponse<MoyenDeTravail>> => {
     // const { data } = await api.get(BASE_PATH, { params: filters });
     // return data;
+        console.log(filters)
         const data:MoyenDeTravail[] = [
           {
             "id_moyens_de_travail": 1,

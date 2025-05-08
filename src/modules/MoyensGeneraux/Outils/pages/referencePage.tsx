@@ -64,7 +64,7 @@ export default function ReferencePage() {
       setShowDeleteDialog(false);
       navigate("/stocks/references");
     } catch (error) {
-      setDeleteError("La suppression a échoué. Veuillez réessayer.");
+      setDeleteError("La suppression a échoué. Veuillez réessayer.  " + error);
     } finally {
       setIsDeleting(false);
     }

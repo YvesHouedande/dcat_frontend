@@ -35,11 +35,11 @@ export default function ReferencePage() {
     desi_produit: "Écran LCD 24 pouces",
     desc_produit: "Écran LCD haute résolution 1080p avec ports HDMI et VGA",
     image_produit: "/images/products/lcd_screen.jpg",
-    categorie: "CAT001",
-    type_produit: "TYPE001",
-    modele: "MOD123",
-    marque: "BRAND05",
-    famille: "FAM22",
+    id_categorie: 1,
+    id_type_produit: 1,
+    id_modele: 1,
+    id_marque: 1,
+    id_famille: 1,
     qte_produit: 0,
     emplacement: "",
     caracteristiques: "Résolution 1920x1080, Temps de réponse 5ms",
@@ -70,7 +70,7 @@ export default function ReferencePage() {
       navigate("/stocks/references");
     } catch (error) {
       // En cas d'erreur, on met à jour le message d'erreur mais on ne ferme pas le dialogue
-      setDeleteError("La suppression a échoué. Veuillez réessayer.");
+      setDeleteError("La suppression a échoué. Veuillez réessayer."+ error);
     } finally {
       setIsDeleting(false);
     }
@@ -183,19 +183,19 @@ export default function ReferencePage() {
                     <p className="text-sm font-medium text-gray-500">
                       Catégorie
                     </p>
-                    <p className="mt-1">{product.categorie}</p>
+                    <p className="mt-1">{product.id_categorie}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Modèle</p>
-                    <p className="mt-1">{product.modele}</p>
+                    <p className="mt-1">{product.id_modele}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Marque</p>
-                    <p className="mt-1">{product.marque}</p>
+                    <p className="mt-1">{product.id_marque}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Famille</p>
-                    <p className="mt-1">{product.famille}</p>
+                    <p className="mt-1">{product.id_famille}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">

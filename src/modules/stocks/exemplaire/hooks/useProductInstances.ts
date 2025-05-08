@@ -1,13 +1,14 @@
 // src/hooks/useProductInstances.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ProductInstance, PaginationParams, PaginatedResponse } from "../types";
+import { PaginationParams, PaginatedResponse } from "../types";
 import { productInstanceService } from "../services/productInstance.service";
+import { ProductInstanceFormValues } from "../schemas/productInstanceSchema";
 
 // Clés de query pour React Query
 const PRODUCT_INSTANCES_KEY = "productInstances";
 
 
-const wait = (result?: any) =>
+const wait = <T>(result: T): Promise<T> =>
   new Promise(resolve => setTimeout(() => resolve(result), 200));
 export const useProductInstances = () => {
   const queryClient = useQueryClient();
@@ -19,7 +20,7 @@ export const useProductInstances = () => {
     data: productInstancesResponse,
     isLoading: loading,
     error,
-  } = useQuery<PaginatedResponse<ProductInstance>, Error>({
+  } = useQuery<PaginatedResponse<ProductInstanceFormValues>, Error>({
     queryKey: [PRODUCT_INSTANCES_KEY, { page: 1, pageSize: 10 }],
     queryFn: () => fetchProductInstances({ page: 1, pageSize: 10 }),
     staleTime: 15 * 60 * 1000, // 15 minutes (optionnel)
@@ -27,7 +28,7 @@ export const useProductInstances = () => {
 
   // Créer une nouvelle instance de produit
   const createMutation = useMutation({
-    mutationFn: async (data: Omit<ProductInstance, "id_exemplaire" | "prix_exemplaire">) =>
+    mutationFn: async (data: Omit<ProductInstanceFormValues, "id_exemplaire" | "prix_exemplaire">) =>
       await  wait(productInstanceService.create(data)),
       // productInstanceService.create(data),
     onSuccess: () => {
@@ -38,7 +39,7 @@ export const useProductInstances = () => {
 
   // Mettre à jour une instance de produit
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string | number;  data: Omit<ProductInstance, "prix_exemplaire">}) =>
+    mutationFn: async ({ id, data }: { id: string | number;  data: Omit<ProductInstanceFormValues, "prix_exemplaire">}) =>
       await wait(productInstanceService.update(id, data)),
       // productInstanceService.update(id, data),
     onSuccess: () => {

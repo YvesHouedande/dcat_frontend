@@ -45,7 +45,7 @@ const AppContent: React.FC = () => {
           element={<PrivateRoute element={<MoyenGenerauxgRoutes />} />}
         />
         <Route
-          path="/projects/*"
+          path="/technique/*"
           element={<PrivateRoute element={<ProjectsRoutes />} />}
         />
         <Route path="*" element={<PrivateRoute element={<NotFound />} />} />

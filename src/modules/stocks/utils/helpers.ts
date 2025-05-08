@@ -18,6 +18,7 @@ export function formatDate(dateString: string): string {
       year: "numeric",
     });
   } catch (error) {
+    console.log(error)
     return dateString;
   }
 }
@@ -35,6 +36,7 @@ export function formatDateTime(dateString: string): string {
       minute: "2-digit",
     });
   } catch (error) {
+    console.log(error)
     return dateString;
   }
 }

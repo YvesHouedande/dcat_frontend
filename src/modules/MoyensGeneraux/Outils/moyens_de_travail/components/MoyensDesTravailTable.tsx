@@ -136,7 +136,7 @@ export function MoyensDesTravailTable({
     const { page, totalPages } = pagination;
     const delta = 2; // Nombre de pages à afficher de chaque côté
     
-    let range = [];
+    const range = [];
     for (
       let i = Math.max(2, page - delta);
       i <= Math.min(totalPages - 1, page + delta);

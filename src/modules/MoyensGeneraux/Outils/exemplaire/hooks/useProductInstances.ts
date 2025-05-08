@@ -7,8 +7,9 @@ import { productInstanceService } from "../services/productInstance.service";
 const PRODUCT_INSTANCES_KEY = "productInstances";
 
 
-const wait = (result?: any) =>
+const wait = <T>(result: T): Promise<T> =>
   new Promise(resolve => setTimeout(() => resolve(result), 200));
+
 export const useProductInstances = () => {
   const queryClient = useQueryClient();
   // Récupérer la liste des instances de produit avec pagination

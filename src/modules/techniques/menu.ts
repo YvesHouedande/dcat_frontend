@@ -11,23 +11,23 @@ export const TechniqueMenu: MenuItem[] = [
     items: [
       {
         title: "Gestion des projets",
-        url: "/projects/Projets",
+        url: "/technique/Projets",
       },
       {
         title: "Gestion des interventions",
-        url: "/projects/Missions",
+        url: "/technique/intervention",
       },
       {
         title: "Gestion des tâches",
-        url: "/projects/Taches",
+        url: "/technique/Taches",
       },
       {
         title: "Documents",
-        url: "/projects/Documents",
+        url: "/technique/Documents",
       },
       {
-        title: "rapports et suivi",
-        url: "/projects/Rapports",
+        title: "rapports",
+        url: "/technique/Rapports",
       },
     ],
   },
