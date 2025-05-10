@@ -24,3 +24,5 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ element }) => {
 };
 
 export default PrivateRoute;
+
+
