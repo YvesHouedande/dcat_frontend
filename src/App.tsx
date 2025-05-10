@@ -1,9 +1,9 @@
-import React from "react";
+// import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-// import { ReactKeycloakProvider } from "@react-keycloak/web";
+import { ReactKeycloakProvider } from "@react-keycloak/web";
 import NotFound from "./pages/NotFound";
 import PrivateRoute from "./helpers/PrivateRoute";
-// import keycloak from "../KeycloakService";
+import keycloak from "../KeycloakService";
 import DashboardRoutes from "./modules/dashboard/DashboardRoutes";
 import AdministrationRoutes from "./modules/administration-Finnance/administration/AdministrationRoutes";
 import InterventionsRoutes from "./modules/techniques/interventions/InterventionsRoutes";
@@ -56,19 +56,19 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    // <ReactKeycloakProvider
-    //   authClient={keycloak}
-    //   initOptions={{
-    //     onLoad: 'check-sso',
-    //     checkLoginIframe: false,
-    //     flow: 'standard',
-    //     pkceMethod: 'S256',
-    //   }}
-    // >
+    <ReactKeycloakProvider
+      authClient={keycloak}
+      initOptions={{
+        onLoad: 'check-sso',
+        checkLoginIframe: false,
+        flow: 'standard',
+        pkceMethod: 'S256',
+      }}
+    >
     <Router>
       <AppContent />
     </Router>
-    // </ReactKeycloakProvider>
+  </ReactKeycloakProvider>
   );
 };
 
