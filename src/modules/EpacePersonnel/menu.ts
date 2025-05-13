@@ -4,16 +4,16 @@ import { PiggyBank } from "lucide-react";
 export const EspacePersonnelMenu: MenuItem[] = [
   {
     title: "Espace Personnel",
-    url: "/Espace-Personnel",
+    url: "/espace-personnel",
     icon: PiggyBank,
     isActive: false,
     items: [
       {
-        title: "Finance",
-        url: "/COMPTABILITE/finance",
+        title: "Congés et asbsences",
+        url: "/espace-personnel/demandes",
       },
       {
-        title: "Comptabilité",
+        title: "infromation entrepise",
         url: "/COMPTABILITE/comptabilite",
       },
     ],

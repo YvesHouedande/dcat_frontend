@@ -24,14 +24,14 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2, Plus } from "lucide-react";
 import { getMoyensDesTravailColumns } from "./columns";
-import { MoyensDesTravailDialog } from "./MoyensDesTravailDialog";
-import { MoyensDesTravailFilter } from "./MoyensDesTravailFilter";
-import { 
-  MoyenDeTravail, 
-  MoyenDeTravailFormData, 
-  MoyensFilters 
-} from "../types/moyens-de-travail.types";
-import { 
+import { MoyensDesTravailDialog } from "./MaitenanceDialog";
+import { Maintenanceilter } from "./MaintenanceFilter";
+import {
+  Maintenance,
+  MaintenanceFormData,
+  MoyensFilters,
+} from "../types/maitenance.types";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -42,8 +42,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface MoyensDesTravailTableProps {
-  moyens: MoyenDeTravail[];
+interface MaitenanceTableProps {
+  moyens: Maintenance[];
   sections: string[];
   filters: MoyensFilters;
   pagination: {
@@ -57,12 +57,12 @@ interface MoyensDesTravailTableProps {
   error: unknown;
   isSubmitting: boolean;
   updateFilters: (filters: Partial<MoyensFilters>) => void;
-  createMoyen: (data: MoyenDeTravailFormData) => void;
-  updateMoyen: (params: { id: number; data: MoyenDeTravailFormData }) => void;
+  createMoyen: (data: MaintenanceFormData) => void;
+  updateMoyen: (params: { id: number; data: MaintenanceFormData }) => void;
   deleteMoyen: (id: number) => void;
 }
 
-export function MoyensDesTravailTable({
+export function MaintenanceTable({
   moyens,
   sections,
   filters,
@@ -75,14 +75,14 @@ export function MoyensDesTravailTable({
   createMoyen,
   updateMoyen,
   deleteMoyen,
-}: MoyensDesTravailTableProps) {
+}: MaitenanceTableProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedMoyen, setSelectedMoyen] = useState<MoyenDeTravail | undefined>();
+  const [selectedMoyen, setSelectedMoyen] = useState<Maintenance | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const handleEdit = (moyen: MoyenDeTravail) => {
-    setSelectedMoyen(moyen);
+  const handleEdit = (maintenance: Maintenance) => {
+    setSelectedMoyen(maintenance);
     setDialogOpen(true);
   };
 
@@ -99,16 +99,16 @@ export function MoyensDesTravailTable({
     }
   };
 
-  const handleSubmit = (data: MoyenDeTravailFormData) => {
+  const handleSubmit = (data: MaintenanceFormData) => {
     if (selectedMoyen) {
       updateMoyen({
-        id: selectedMoyen.id_moyens_de_travail,
+        id: Number(selectedMoyen.id_maintenance),
         data,
       });
     } else {
       createMoyen(data);
     }
-    
+
     if (!isSubmitting) {
       setDialogOpen(false);
       setSelectedMoyen(undefined);
@@ -135,7 +135,7 @@ export function MoyensDesTravailTable({
   const getPaginationRange = () => {
     const { page, totalPages } = pagination;
     const delta = 2; // Nombre de pages à afficher de chaque côté
-    
+
     const range = [];
     for (
       let i = Math.max(2, page - delta);
@@ -148,47 +148,57 @@ export function MoyensDesTravailTable({
     // Ajouter les ellipses si nécessaire
     if (page - delta > 2) range.unshift("...");
     if (page + delta < totalPages - 1) range.push("...");
-    
+
     // Ajouter toujours la première et la dernière page
     if (totalPages > 1) {
       range.unshift(1);
       if (totalPages > 1) range.push(totalPages);
     }
-    
+
     return range;
   };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Moyens de Travail</h2>
+        <h2 className="text-2xl font-bold">
+          Maintenance des Equiments et Moyens de Travail
+        </h2>
         <Button variant={"blue"} onClick={handleOpenDialog}>
-          <Plus  className="h-4 w-4 mr-2" /> Ajouter
+          <Plus className="h-4 w-4 mr-2" /> Ajouter
         </Button>
       </div>
-      
-      <MoyensDesTravailFilter 
-        filters={filters} 
-        sections={sections} 
-        onFiltersChange={updateFilters} 
+
+      <Maintenanceilter
+        filters={filters}
+        sections={sections}
+        onFiltersChange={updateFilters}
       />
 
       {isError ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Une erreur est survenue: {(error as Error)?.message || "Impossible de charger les données"}
+            Une erreur est survenue:{" "}
+            {(error as Error)?.message || "Impossible de charger les données"}
           </AlertDescription>
         </Alert>
       ) : (
         <>
           <div className="rounded-md border">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
+                      <TableHead
+                        key={header.id}
+                        className={
+                          header.column.columnDef.id === "actions"
+                            ? "w-[50px]"
+                            : undefined
+                        }
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -203,14 +213,22 @@ export function MoyensDesTravailTable({
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                      <p className="mt-2 text-sm text-muted-foreground">Chargement des données...</p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Chargement des données...
+                      </p>
                     </TableCell>
                   </TableRow>
                 ) : moyens.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
                       Aucun résultat trouvé.
                     </TableCell>
                   </TableRow>
@@ -234,15 +252,16 @@ export function MoyensDesTravailTable({
               </TableBody>
             </Table>
           </div>
-          
+
           {/* Affichage de la pagination */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
                 Affichage de {(pagination.page - 1) * pagination.limit + 1} à{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)} sur {pagination.total} entrées
+                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                sur {pagination.total} entrées
               </p>
-              
+
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
@@ -251,13 +270,17 @@ export function MoyensDesTravailTable({
                       onClick={(e) => {
                         e.preventDefault();
                         if (pagination.page > 1) {
-                            updateFilters({ page: pagination.page - 1 });
+                          updateFilters({ page: pagination.page - 1 });
                         }
                       }}
-                      className={pagination.page <= 1 ? "pointer-events-none opacity-50" : ""}
+                      className={
+                        pagination.page <= 1
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
                     />
                   </PaginationItem>
-                  
+
                   {getPaginationRange().map((pageNumber, i) => (
                     <PaginationItem key={i}>
                       {pageNumber === "..." ? (
@@ -276,7 +299,7 @@ export function MoyensDesTravailTable({
                       )}
                     </PaginationItem>
                   ))}
-                  
+
                   <PaginationItem>
                     <PaginationNext
                       href="#"
@@ -286,7 +309,11 @@ export function MoyensDesTravailTable({
                           updateFilters({ page: pagination.page + 1 });
                         }
                       }}
-                      className={pagination.page >= pagination.totalPages ? "pointer-events-none opacity-50" : ""}
+                      className={
+                        pagination.page >= pagination.totalPages
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
                     />
                   </PaginationItem>
                 </PaginationContent>
@@ -299,7 +326,7 @@ export function MoyensDesTravailTable({
       <MoyensDesTravailDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        moyen={selectedMoyen}
+        maintenance={selectedMoyen}
         onSubmit={handleSubmit}
         sections={sections}
         isSubmitting={isSubmitting}
@@ -310,13 +337,14 @@ export function MoyensDesTravailTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmation de suppression</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce moyen de travail ? Cette action ne peut pas être annulée.
+              Êtes-vous sûr de vouloir supprimer ce moyen de travail ? Cette
+              action ne peut pas être annulée.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
+            <AlertDialogAction
+              onClick={confirmDelete}
               className="bg-destructive hover:bg-destructive/90"
             >
               Supprimer
@@ -327,4 +355,3 @@ export function MoyensDesTravailTable({
     </div>
   );
 }
-

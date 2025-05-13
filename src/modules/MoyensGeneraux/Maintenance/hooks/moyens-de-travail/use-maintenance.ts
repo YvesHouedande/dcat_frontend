@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { MoyensDesTravailService } from "../../services/moyens-de-travail.service";
-import { MoyensFilters, MoyenDeTravailFormData } from "../../types/moyens-de-travail.types";
+import { MoyensFilters, MaintenanceFormData } from "../../types/maitenance.types";
 
 const defaultFilters: MoyensFilters = {
   page: 1,
@@ -19,33 +19,34 @@ export function useMoyensDeTravail() {
     isError,
     error,
   } = useQuery({
-    queryKey: ["moyens-de-travail", filters],
+    queryKey: ["maintenace-moyens-de-travail", filters],
     queryFn: () => MoyensDesTravailService.getAll(filters),
     keepPreviousData: true,
+    staleTime: 1000 * 60 * 15, // 15 minutes
   });
 
   // Récupération des sections pour les filtres
   const { data: sections = [] } = useQuery({
     queryKey: ["moyens-de-travail-sections"],
     queryFn: () => MoyensDesTravailService.getSections(),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 15, // 15 minutes
   });
 
   // Mutation pour créer un moyen de travail
   const createMutation = useMutation({
-    mutationFn: (moyenDeTravail: MoyenDeTravailFormData) => 
+    mutationFn: (moyenDeTravail: MaintenanceFormData) => 
       MoyensDesTravailService.create(moyenDeTravail),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["moyens-de-travail"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenace-moyens-de-travail"] });
     }
   });
 
   // Mutation pour mettre à jour un moyen de travail
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: MoyenDeTravailFormData }) => 
+    mutationFn: ({ id, data }: { id: number; data: MaintenanceFormData }) => 
       MoyensDesTravailService.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["moyens-de-travail"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenace-moyens-de-travail"] });
     }
   });
 
@@ -53,7 +54,7 @@ export function useMoyensDeTravail() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => MoyensDesTravailService.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["moyens-de-travail"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenace-moyens-de-travail"] });
     }
   });
 

@@ -24,11 +24,6 @@ export const MoyensGenerauxMenu: MenuItem[] = [
         title: "Maitenance et entretients",
         url: "/moyens-generaux/maitenance-entretients",
       },
-      
-      {
-        title: "Historique",
-        url: "/moyens-generaux/historique",
-      },
     ],
   },
 ];

@@ -6,12 +6,12 @@ export interface MoyenDeTravail {
     created_at: string;
     updated_at: string;
   }
-  
+
   export type MoyenDeTravailFormData = Omit<
     MoyenDeTravail,
     "id_moyens_de_travail" | "created_at" | "updated_at"
   >;
-  
+ 
   export interface MoyensFilters {
     search?: string;
     section?: string;

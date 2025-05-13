@@ -103,7 +103,6 @@ const NouvelleDemandePage: React.FC = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [fichiers, setFichiers] = useState<FichierJoint[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const navigate = useNavigate();
 
   // Initialiser le formulaire
@@ -156,20 +155,6 @@ const NouvelleDemandePage: React.FC = () => {
   // Fonction pour gérer l'upload de fichiers
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // Simulation d'upload
-      setUploadProgress(0);
-
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev !== null && prev < 100) {
-            return prev + 10;
-          } else {
-            clearInterval(interval);
-            return null;
-          }
-        });
-      }, 200);
-
       // Ajouter les nouveaux fichiers à la liste
       const newFiles: FichierJoint[] = Array.from(e.target.files).map(
         (file, index) => {
@@ -394,16 +379,7 @@ const NouvelleDemandePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Barre de progression pour l'upload (simulation) */}
-              {uploadProgress !== null && (
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full"
-                    style={{ width: `${uploadProgress}%` }}
-                  ></div>
-                </div>
-              )}
-
+            
               {/* Liste des fichiers joints */}
               <div className="space-y-2">
                 {fichiers.length > 0 ? (

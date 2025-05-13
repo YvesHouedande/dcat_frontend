@@ -1,95 +1,131 @@
 import { api } from "@/api/api";
-import { MoyenDeTravail, MoyensFilters, PaginatedResponse, MoyenDeTravailFormData } from "../types/moyens-de-travail.types";
+import { Maintenance, MoyensFilters, PaginatedResponse, MaintenanceFormData } from "../types/maitenance.types";
 
 const BASE_PATH = "/moyens-de-travail";
 
 export const MoyensDesTravailService = {
-  getAll: async (filters: MoyensFilters): Promise<PaginatedResponse<MoyenDeTravail>> => {
+  getAll: async (filters: MoyensFilters): Promise<PaginatedResponse<Maintenance>> => {
     // const { data } = await api.get(BASE_PATH, { params: filters });
     // return data;
       //  const { data } = await api.get(BASE_PATH, { params: filters });
-        const data:MoyenDeTravail[] = [
+        const data:Maintenance[] = [
           {
-            "id_moyens_de_travail": 1,
-            "denomination": "Ordinateur portable",
-            "date_acquisition": "2023-08-15",
-            "section": "Informatique",
-            "created_at": "2023-08-15T10:30:00Z",
-            "updated_at": "2023-08-15T10:30:00Z"
+            "id_maintenance": 154767,
+            "recurrence": "mensuelle",
+            "type_maintenance": "preventive",
+            "operations": "Vérification des niveaux Vérification des niveaux Vérification des niveaux",
+            "recommandations": "Ajouter liquide de frein",
+            "autre_intervenant": "Marie Lemoine",
+            "id_intervenants": "23",
+            "id_partenaire": 5,
+            "id_section": "informatique",
+            "id_exemplaire_produit": 1,
+            "date": "2025-05-01"
           },
           {
-            "id_moyens_de_travail": 2,
-            "denomination": "Imprimante laser",
-            "date_acquisition": "2022-05-10",
-            "section": "Bureau",
-            "created_at": "2022-05-10T09:00:00Z",
-            "updated_at": "2022-05-10T09:00:00Z"
+            "id_maintenance": 2,
+            "recurrence": "trimestrielle",
+            "type_maintenance": "curative",
+            "operations": "Remplacement courroie",
+            "recommandations": "Faire contrôle complet",
+            "id_intervenants": 12,
+            "id_partenaire": "8",
+            "id_section": "B3",
+            "id_exemplaire_produit": "202",
+            "date": "2025-04-15"
           },
           {
-            "id_moyens_de_travail": 3,
-            "denomination": "Camionnette de service",
-            "date_acquisition": "2021-11-01",
-            "section": "Logistique",
-            "created_at": "2021-11-01T08:45:00Z",
-            "updated_at": "2021-11-01T08:45:00Z"
+            "id_maintenance": 3,
+            "recurrence": "annuelle",
+            "type_maintenance": "préventive",
+            "operations": "Nettoyage filtre à air",
+            "recommandations": "À renouveler l'année prochaine",
+            "autre_intervenant": "Paul Martin",
+            "id_section": "C2",
+            "id_exemplaire_produit": 305,
+            "date": "2025-01-10"
           },
           {
-            "id_moyens_de_travail": 4,
-            "denomination": "Projecteur",
-            "date_acquisition": "2020-02-20",
-            "section": "Formation",
-            "created_at": "2020-02-20T14:00:00Z",
-            "updated_at": "2020-02-20T14:00:00Z"
+            "id_maintenance": 4,
+            "recurrence": "mensuelle",
+            "type_maintenance": "curative",
+            "operations": "Remplacement de joint",
+            "recommandations": "Surveiller consommation d'huile",
+            "id_intervenants": 18,
+            "id_section": "D5",
+            "id_exemplaire_produit": 410,
+            "date": "2025-05-10"
           },
           {
-            "id_moyens_de_travail": 5,
-            "denomination": "Scanner à plat",
-            "date_acquisition": "2022-07-12",
-            "section": "Bureau",
-            "created_at": "2022-07-12T11:20:00Z",
-            "updated_at": "2022-07-12T11:20:00Z"
+            "id_maintenance": 5,
+            "recurrence": "hebdomadaire",
+            "type_maintenance": "préventive",
+            "operations": "Graissage",
+            "recommandations": "RAS",
+            "id_intervenants": "30",
+            "id_partenaire": "15",
+            "id_section": "Z9",
+            "id_exemplaire_produit": "600",
+            "date": "2025-05-05"
           },
           {
-            "id_moyens_de_travail": 6,
-            "denomination": "Tablette graphique",
-            "date_acquisition": "2023-01-05",
-            "section": "Design",
-            "created_at": "2023-01-05T13:15:00Z",
-            "updated_at": "2023-01-05T13:15:00Z"
+            "id_maintenance": 6,
+            "recurrence": "ponctuelle",
+            "type_maintenance": "curative",
+            "operations": "Réparation fuite",
+            "recommandations": "Réviser le circuit d'eau",
+            "autre_intervenant": "Technicien externe",
+            "id_intervenants": 27,
+            "id_partenaire": 9,
+            "id_section": "E3",
+            "id_exemplaire_produit": 714,
+            "date": "2025-03-22"
           },
           {
-            "id_moyens_de_travail": 7,
-            "denomination": "Appareil photo numérique",
-            "date_acquisition": "2019-09-23",
-            "section": "Communication",
-            "created_at": "2019-09-23T10:00:00Z",
-            "updated_at": "2019-09-23T10:00:00Z"
+            "id_maintenance": 7,
+            "recurrence": "bimensuelle",
+            "type_maintenance": "préventive",
+            "operations": "Contrôle visuel général",
+            "recommandations": "Vérifier état des pneus",
+            "id_section": 10,
+            "id_exemplaire_produit": "808",
+            "date": "2025-04-30"
           },
           {
-            "id_moyens_de_travail": 8,
-            "denomination": "Serveur NAS",
-            "date_acquisition": "2022-11-30",
-            "section": "Informatique",
-            "created_at": "2022-11-30T16:45:00Z",
-            "updated_at": "2022-11-30T16:45:00Z"
+            "id_maintenance": 8,
+            "recurrence": "semestrielle",
+            "type_maintenance": "curative",
+            "operations": "Changement ampoule",
+            "recommandations": "Prévoir ampoules en stock",
+            "autre_intervenant": "Lucas Pereira",
+            "id_intervenants": "21",
+            "id_section": "F4",
+            "id_exemplaire_produit": 909,
+            "date": "2025-02-28"
           },
           {
-            "id_moyens_de_travail": 9,
-            "denomination": "Fauteuil ergonomique",
-            "date_acquisition": "2021-04-18",
-            "section": "Ressources humaines",
-            "created_at": "2021-04-18T09:30:00Z",
-            "updated_at": "2021-04-18T09:30:00Z"
+            "id_maintenance": 9,
+            "recurrence": "mensuelle",
+            "type_maintenance": "préventive",
+            "operations": "Calibration capteurs",
+            "recommandations": "Revoir protocole d'étalonnage",
+            "id_partenaire": "33",
+            "id_section": "H1",
+            "id_exemplaire_produit": 1100,
+            "date": "2025-05-09"
           },
           {
-            "id_moyens_de_travail": 10,
-            "denomination": "Routeur professionnel",
-            "date_acquisition": "2023-06-01",
-            "section": "Réseaux",
-            "created_at": "2023-06-01T08:00:00Z",
-            "updated_at": "2023-06-01T08:00:00Z"
+            "id_maintenance": 10,
+            "recurrence": "annuelle",
+            "type_maintenance": "curative",
+            "operations": "Révision complète moteur",
+            "recommandations": "Remplacer courroie distribution",
+            "id_intervenants": "40",
+            "id_section": "J7",
+            "id_exemplaire_produit": "1205",
+            "date": "2025-01-05"
           }
-        ]
+        ]        
          console.log(filters) 
         return {
           data,
@@ -100,18 +136,18 @@ export const MoyensDesTravailService = {
         }
   },
 
-  getById: async (id: number): Promise<MoyenDeTravail> => {
+  getById: async (id: number): Promise<Maintenance> => {
     const { data } = await api.get(`${BASE_PATH}/${id}`);
     return data;
   },
 
-  create: async (moyenDeTravail: MoyenDeTravailFormData): Promise<MoyenDeTravail> => {
-    const { data } = await api.post(BASE_PATH, moyenDeTravail);
+  create: async (maintenance: MaintenanceFormData): Promise<Maintenance> => {
+    const { data } = await api.post(BASE_PATH, maintenance);
     return data;
   },
 
-  update: async (id: number, moyenDeTravail: MoyenDeTravailFormData): Promise<MoyenDeTravail> => {
-    const { data } = await api.put(`${BASE_PATH}/${id}`, moyenDeTravail);
+  update: async (id: number, maintenance: MaintenanceFormData): Promise<Maintenance> => {
+    const { data } = await api.put(`${BASE_PATH}/${id}`, maintenance);
     return data;
   },
 

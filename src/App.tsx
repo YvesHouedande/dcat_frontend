@@ -13,6 +13,7 @@ import {QueryClientProvider } from "@tanstack/react-query";
 import MoyenGenerauxgRoutes from "./modules/MoyensGeneraux/MoyensGenerauxRoutes";
 import DCATInterface from "./modules/dashboard/pages/AnotherDashboardPage";
 import { queryClient } from "./lib/queryClient";
+import EspacePersonnel from "./modules/EpacePersonnel/EspacePersonnelRoutes";
 
 
 
@@ -47,6 +48,10 @@ const AppContent: React.FC = () => {
         <Route
           path="/technique/*"
           element={<PrivateRoute element={<ProjectsRoutes />} />}
+        />
+        <Route
+          path="/espace-personnel/*"
+          element={<PrivateRoute element={<EspacePersonnel />} />}
         />
         <Route path="*" element={<PrivateRoute element={<NotFound />} />} />
       </Routes>
