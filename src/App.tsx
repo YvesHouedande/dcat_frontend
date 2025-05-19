@@ -9,13 +9,11 @@ import AdministrationRoutes from "./modules/administration-Finnance/administrati
 import InterventionsRoutes from "./modules/techniques/interventions/InterventionsRoutes";
 import StocksRoutes from "./modules/stocks/StocksRoutes";
 import ProjectsRoutes from "./modules/techniques/projects/ProjectsRoutes";
-import {QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import MoyenGenerauxgRoutes from "./modules/MoyensGeneraux/MoyensGenerauxRoutes";
 import DCATInterface from "./modules/dashboard/pages/AnotherDashboardPage";
 import { queryClient } from "./lib/queryClient";
-import EspacePersonnel from "./modules/EpacePersonnel/EspacePersonnelRoutes";
-
-
+import EspacePersonnel from "./modules/epace-personnel/EspacePersonnelRoutes";
 
 const AppContent: React.FC = () => {
   return (
@@ -64,16 +62,16 @@ const App: React.FC = () => {
     <ReactKeycloakProvider
       authClient={keycloak}
       initOptions={{
-        onLoad: 'check-sso',
+        onLoad: "check-sso",
         checkLoginIframe: false,
-        flow: 'standard',
-        pkceMethod: 'S256',
+        flow: "standard",
+        pkceMethod: "S256",
       }}
     >
-    <Router>
-      <AppContent />
-    </Router>
-  </ReactKeycloakProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </ReactKeycloakProvider>
   );
 };
 
