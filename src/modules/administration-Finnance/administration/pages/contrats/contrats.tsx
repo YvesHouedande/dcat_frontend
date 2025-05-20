@@ -23,17 +23,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-
-interface Contrat {
-  id_contrat: string;
-  nom_contrat: string;
-  duree_Contrat: string;
-  date_debut: string;
-  date_fin: string;
-  Id_partenaire: string;
-  fichier: string;
-  nomPartenaire: string; // Ajout pour afficher le nom du partenaire
-}
+import { Contrat } from "../../types/interfaces";
 
 const ModernContractGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,109 +32,42 @@ const ModernContractGrid: React.FC = () => {
   // Données d'exemple pour les contrats
   const contrats: Contrat[] = [
     {
-      id_contrat: "C001",
+      id_contrat: 1, // Changed to number
       nom_contrat: "Accord de service informatique",
       duree_Contrat: "12 mois",
       date_debut: "2025-01-15",
       date_fin: "2026-01-14",
-      Id_partenaire: "P001",
-      fichier: "contrat_service_info.pdf",
-      nomPartenaire: "Systèmes IT Pro",
+      id_partenaire: 1,
+      type_de_contrat: "Service",
+      status: "Actif",
     },
     {
-      id_contrat: "C002",
+      id_contrat: 2, // Changed to number
       nom_contrat: "Contrat de maintenance",
       duree_Contrat: "24 mois",
       date_debut: "2024-11-01",
       date_fin: "2026-10-31",
-      Id_partenaire: "P002",
-      fichier: "maintenance_annuelle.pdf",
-      nomPartenaire: "TechSupport Plus",
-    },
-    {
-      id_contrat: "C003",
-      nom_contrat: "Accord de confidentialité",
-      duree_Contrat: "36 mois",
-      date_debut: "2025-02-20",
-      date_fin: "2028-02-19",
-      Id_partenaire: "P003",
-      fichier: "nda_confidentiel.pdf",
-      nomPartenaire: "ConseilJuridique SA",
-    },
-    {
-      id_contrat: "C004",
-      nom_contrat: "Contrat de fourniture",
-      duree_Contrat: "6 mois",
-      date_debut: "2025-03-01",
-      date_fin: "2025-08-31",
-      Id_partenaire: "P004",
-      fichier: "fourniture_materiel.pdf",
-      nomPartenaire: "FourniPro SARL",
-    },
-    {
-      id_contrat: "C005",
-      nom_contrat: "Contrat publicitaire",
-      duree_Contrat: "12 mois",
-      date_debut: "2024-12-01",
-      date_fin: "2025-11-30",
-      Id_partenaire: "P005",
-      fichier: "campagne_pub.pdf",
-      nomPartenaire: "AgenceCom Digital",
-    },
-    {
-      id_contrat: "C006",
-      nom_contrat: "Licence logiciel",
-      duree_Contrat: "24 mois",
-      date_debut: "2025-01-01",
-      date_fin: "2026-12-31",
-      Id_partenaire: "P006",
-      fichier: "licence_logiciel.pdf",
-      nomPartenaire: "SoftwareSolutions",
-    },
-    {
-      id_contrat: "C007",
-      nom_contrat: "Contrat de partenariat",
-      duree_Contrat: "18 mois",
-      date_debut: "2025-02-01",
-      date_fin: "2026-07-31",
-      Id_partenaire: "P007",
-      fichier: "partenariat_strategique.pdf",
-      nomPartenaire: "PartenairesAssociés",
-    },
-    {
-      id_contrat: "C008",
-      nom_contrat: "Accord de distribution",
-      duree_Contrat: "12 mois",
-      date_debut: "2025-04-01",
-      date_fin: "2026-03-31",
-      Id_partenaire: "P008",
-      fichier: "distribution_produits.pdf",
-      nomPartenaire: "DistribExpress",
+      id_partenaire: 2,
+      type_de_contrat: "Maintenance",
+      status: "Actif",
     },
   ];
 
-  // Filtrage des contrats basé sur la recherche
   const filteredContrats = searchQuery
     ? contrats.filter(
         (contrat) =>
-          contrat.nom_contrat
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          contrat.nomPartenaire
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          contrat.duree_Contrat
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+          contrat.nom_contrat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (contrat.id_partenaire ? contrat.id_partenaire.toString().toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
+          contrat.duree_Contrat.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : contrats;
 
   const handleClick = () => {
-    navigate("/administration/contrats/nouveau_contrat");
+    navigate("/administration/contrats/nouveau");
   };
 
-  const handleClickVoirContrat = (id: string) => {
-    navigate(`/administration/contrats/details/${id}`);
+  const handleClickVoirContrat = (id: number) => { // Changed to number
+    navigate(`/administration/contrats/${id}/details`);
   };
 
   // Fonction pour déterminer le statut du contrat
@@ -188,7 +111,7 @@ const ModernContractGrid: React.FC = () => {
   };
 
   // Obtenir une couleur pour le bord supérieur en fonction de l'ID
-  const getBorderColor = (id: string) => {
+  const getBorderColor = (id: number) => { // Changed to number
     const colors = [
       "from-blue-500 to-indigo-600",
       "from-emerald-500 to-teal-600",
@@ -200,7 +123,7 @@ const ModernContractGrid: React.FC = () => {
       "from-red-500 to-rose-600",
     ];
 
-    const colorIndex = parseInt(id.replace(/[^0-9]/g, "")) % colors.length;
+    const colorIndex = id % colors.length;
     return colors[colorIndex];
   };
 
@@ -266,7 +189,7 @@ const ModernContractGrid: React.FC = () => {
                         {contrat.nom_contrat}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {contrat.nomPartenaire}
+                        Partenaire {contrat.id_partenaire}
                       </p>
                     </div>
                     <div>
@@ -322,10 +245,8 @@ const ModernContractGrid: React.FC = () => {
                     <div className="flex items-center">
                       <File size={14} className="text-gray-400 mr-2" />
                       <div>
-                        <p className="text-xs text-gray-500">Document</p>
-                        <p className="text-sm truncate max-w-xs">
-                          {contrat.fichier}
-                        </p>
+                        <p className="text-xs text-gray-500">Type de contrat</p>
+                        <p className="text-sm">{contrat.type_de_contrat}</p>
                       </div>
                     </div>
 

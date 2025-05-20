@@ -1,10 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-
 import {
   Download,
   Upload,
@@ -20,25 +19,46 @@ import {
   Building,
   Tag,
   Users,
+  UserPlus,
+  X,
 } from "lucide-react";
-
 import { useNavigate, useParams } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Interlocuteur } from "../../types/interfaces";
+import { fetchPartnerById, updatePartner } from '@/modules/administration-Finnance/services/partenaireService'; // Assurez-vous que le chemin est correct
 
 const ModernPartnerProfile: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
 
-  const partnerInfo = {
-    id_partenaire: 1,
-    nom_partenaire: "EcoTech Solutions",
-    telephone_partenaire: "07 45 23 89 67",
-    Email_partenaire: "contact@ecotech-solutions.ci",
-    specialite: "Solutions Numériques Durables",
-    localisation: "Plateau, Abidjan, Côte d'Ivoire",
-    type_partenaire: "Technique",
-    entite: "Entreprise Privée",
-    status: "Actif",
-  };
+  const [partnerInfo, setPartnerInfo] = useState<any>(null);
+  const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur'>>({
+    nom_interlocuteur: "",
+    prenom_interlocuteur: "",
+    fonction_interlocuteur: "",
+    contact_interlocuteur: "",
+    mail_interlocuteur: "",
+  });
+  const [isAddingInterlocuteur, setIsAddingInterlocuteur] = useState(false);
+
+  useEffect(() => {
+    const getPartnerInfo = async () => {
+      if (id === undefined) {
+        console.error("ID is undefined");
+        return;
+      }
+
+      try {
+        const data = await fetchPartnerById(id);
+        setPartnerInfo(data);
+      } catch (error) {
+        console.error('Error fetching partner info:', error);
+      }
+    };
+
+    getPartnerInfo();
+  }, [id]);
 
   const projects = [
     {
@@ -54,13 +74,6 @@ const ModernPartnerProfile: React.FC = () => {
       type: "Formation",
       date: "02/04/2025",
       status: "Planifié",
-    },
-    {
-      id: "3",
-      name: "Maintenance Infrastructures",
-      type: "Support",
-      date: "Récurrent",
-      status: "Actif",
     },
   ];
 
@@ -78,13 +91,6 @@ const ModernPartnerProfile: React.FC = () => {
       type: "Juridique",
       date: "12/01/2025",
       status: "Signé",
-    },
-    {
-      id: "3",
-      name: "Présentation de l'entreprise",
-      type: "Commercial",
-      date: "05/02/2025",
-      status: "Validé",
     },
   ];
 
@@ -105,11 +111,14 @@ const ModernPartnerProfile: React.FC = () => {
     }
   };
 
-  const handleClick = (id: string | number | undefined) => {
+  const handleEditClick = () => {
+    if (id === undefined) {
+      console.error("ID is undefined");
+      return;
+    }
     navigate(`/administration/partenaires/${id}/editer`);
   };
 
-  // Fonction pour obtenir les initiales à partir du nom du partenaire
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -119,9 +128,82 @@ const ModernPartnerProfile: React.FC = () => {
       .toUpperCase();
   };
 
+  const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewInterlocuteur(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addInterlocuteur = async () => {
+    if (id === undefined) {
+      console.error("ID is undefined");
+      return;
+    }
+
+    if (
+      !newInterlocuteur.nom_interlocuteur ||
+      !newInterlocuteur.prenom_interlocuteur ||
+      !newInterlocuteur.mail_interlocuteur ||
+      !newInterlocuteur.contact_interlocuteur
+    ) {
+      return;
+    }
+
+    const newId = Math.max(...partnerInfo.interlocuteurs.map((i: { id_interlocuteur: number; }) => i.id_interlocuteur)) + 1;
+    const newInterlocuteurWithId = {
+      ...newInterlocuteur,
+      id_interlocuteur: newId,
+    };
+
+    try {
+      const updatedPartnerData = {
+        ...partnerInfo,
+        interlocuteurs: [...partnerInfo.interlocuteurs, newInterlocuteurWithId],
+      };
+
+      await updatePartner(id, updatedPartnerData);
+      setPartnerInfo(updatedPartnerData);
+      setNewInterlocuteur({
+        nom_interlocuteur: "",
+        prenom_interlocuteur: "",
+        fonction_interlocuteur: "",
+        contact_interlocuteur: "",
+        mail_interlocuteur: "",
+      });
+      setIsAddingInterlocuteur(false);
+    } catch (error) {
+      console.error('Error updating partner:', error);
+    }
+  };
+
+  const removeInterlocuteur = async (id_interlocuteur: number) => {
+    if (id === undefined) {
+      console.error("ID is undefined");
+      return;
+    }
+
+    try {
+      const updatedInterlocuteurs = partnerInfo.interlocuteurs.filter(
+        (i: { id_interlocuteur: number; }) => i.id_interlocuteur !== id_interlocuteur
+      );
+
+      const updatedPartnerData = {
+        ...partnerInfo,
+        interlocuteurs: updatedInterlocuteurs,
+      };
+
+      await updatePartner(id, updatedPartnerData);
+      setPartnerInfo(updatedPartnerData);
+    } catch (error) {
+      console.error('Error updating partner:', error);
+    }
+  };
+
+  if (!partnerInfo) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header avec logo et nom */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
@@ -146,22 +228,34 @@ const ModernPartnerProfile: React.FC = () => {
               </div>
             </div>
 
-            <Button className="bg-white text-indigo-700 hover:bg-indigo-50">
-              ESPACE PARTENAIRE
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                className="bg-white text-indigo-700 hover:bg-indigo-50"
+                onClick={handleEditClick}
+              >
+                <Edit size={16} className="mr-2" />
+                Modifier
+              </Button>
+              <Button
+                variant="outline"
+                className="text-white border-white hover:bg-indigo-700 hover:text-white"
+              >
+                ESPACE PARTENAIRE
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation tabs */}
       <div className="container mx-auto px-4 -mt-4 rounded-lg shadow-md">
         <Tabs defaultValue="profil" className="mb-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profil">Profil</TabsTrigger>
+            <TabsTrigger value="interlocuteurs">Interlocuteurs</TabsTrigger>
             <TabsTrigger value="projects">Projets</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
+
           <TabsContent value="profil" className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="md:col-span-2">
@@ -174,7 +268,7 @@ const ModernPartnerProfile: React.FC = () => {
                       variant="outline"
                       size="sm"
                       className="text-gray-500 cursor-pointer"
-                      onClick={() => handleClick(id)}
+                      onClick={handleEditClick}
                     >
                       <Edit size={16} className="mr-2" />
                       Modifier
@@ -222,7 +316,7 @@ const ModernPartnerProfile: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Entité</p>
-                        <p className="font-medium">{partnerInfo.entite}</p>
+                        <p className="font-medium">{partnerInfo.Entite}</p>
                       </div>
                     </div>
 
@@ -334,6 +428,155 @@ const ModernPartnerProfile: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="interlocuteurs" className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-800">
+                Interlocuteurs ({partnerInfo.interlocuteurs.length})
+              </h2>
+              <Button
+                className="bg-indigo-600 hover:bg-indigo-700"
+                onClick={() => setIsAddingInterlocuteur(true)}
+              >
+                <UserPlus size={16} className="mr-2" />
+                Ajouter un interlocuteur
+              </Button>
+            </div>
+
+            {isAddingInterlocuteur && (
+              <Card className="mb-6">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-medium">Nouvel interlocuteur</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsAddingInterlocuteur(false)}
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="prenom_interlocuteur">Prénom</Label>
+                      <Input
+                        id="prenom_interlocuteur"
+                        name="prenom_interlocuteur"
+                        value={newInterlocuteur.prenom_interlocuteur}
+                        onChange={handleInterlocuteurChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nom_interlocuteur">Nom</Label>
+                      <Input
+                        id="nom_interlocuteur"
+                        name="nom_interlocuteur"
+                        value={newInterlocuteur.nom_interlocuteur}
+                        onChange={handleInterlocuteurChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <Label htmlFor="fonction_interlocuteur">Fonction</Label>
+                    <Input
+                      id="fonction_interlocuteur"
+                      name="fonction_interlocuteur"
+                      value={newInterlocuteur.fonction_interlocuteur}
+                      onChange={handleInterlocuteurChange}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="mail_interlocuteur">Email</Label>
+                      <Input
+                        id="mail_interlocuteur"
+                        name="mail_interlocuteur"
+                        type="email"
+                        value={newInterlocuteur.mail_interlocuteur}
+                        onChange={handleInterlocuteurChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_interlocuteur">Contact</Label>
+                      <Input
+                        id="contact_interlocuteur"
+                        name="contact_interlocuteur"
+                        value={newInterlocuteur.contact_interlocuteur}
+                        onChange={handleInterlocuteurChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAddingInterlocuteur(false)}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      className="bg-indigo-600 hover:bg-indigo-700"
+                      onClick={addInterlocuteur}
+                    >
+                      Ajouter l'interlocuteur
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {partnerInfo.interlocuteurs.map((interlocuteur: { id_interlocuteur: number; prenom_interlocuteur: string; nom_interlocuteur: string; fonction_interlocuteur: string; mail_interlocuteur: string; contact_interlocuteur: string; }) => (
+                <Card key={interlocuteur.id_interlocuteur}>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-medium">
+                          {interlocuteur.prenom_interlocuteur} {interlocuteur.nom_interlocuteur}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {interlocuteur.fonction_interlocuteur}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => removeInterlocuteur(interlocuteur.id_interlocuteur)}
+                      >
+                        <X size={16} />
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center text-sm">
+                        <Mail size={14} className="mr-2 text-gray-500" />
+                        <p>{interlocuteur.mail_interlocuteur}</p>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <Phone size={14} className="mr-2 text-gray-500" />
+                        <p>{interlocuteur.contact_interlocuteur}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex gap-2">
+                      <Button variant="outline" size="sm">
+                        <Mail size={14} className="mr-1" />
+                        Email
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <Phone size={14} className="mr-1" />
+                        Appeler
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
 
@@ -453,74 +696,6 @@ const ModernPartnerProfile: React.FC = () => {
                 </Card>
               ))}
             </div>
-          </TabsContent>
-
-          <TabsContent value="settings" className="p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-6">
-              Paramètres du partenaire
-            </h2>
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex justify-between items-center py-2 border-b">
-                  <div>
-                    <h3 className="font-medium">
-                      Modification des informations
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      Modifier les informations du partenaire
-                    </p>
-                  </div>
-                  <Button variant="outline" onClick={() => handleClick(id)}>
-                    <ExternalLink size={16} className="mr-2" />
-                    Accéder
-                  </Button>
-                </div>
-
-                <div className="flex justify-between items-center py-2 border-b">
-                  <div>
-                    <h3 className="font-medium">Gestion des contrats</h3>
-                    <p className="text-sm text-gray-500">
-                      Gérer les contrats et accords
-                    </p>
-                  </div>
-                  <Button variant="outline">
-                    <ExternalLink size={16} className="mr-2" />
-                    Accéder
-                  </Button>
-                </div>
-
-                <div className="flex justify-between items-center py-2 border-b">
-                  <div>
-                    <h3 className="font-medium">Historique de collaboration</h3>
-                    <p className="text-sm text-gray-500">
-                      Consulter l'historique des projets
-                    </p>
-                  </div>
-                  <Button variant="outline">
-                    <ExternalLink size={16} className="mr-2" />
-                    Accéder
-                  </Button>
-                </div>
-
-                <div className="flex justify-between items-center py-2 border-b">
-                  <div>
-                    <h3 className="font-medium text-red-600">
-                      Suspendre la collaboration
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      Suspendre temporairement ce partenaire
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="border-red-200 text-red-600 hover:bg-red-50"
-                  >
-                    <ExternalLink size={16} className="mr-2" />
-                    Accéder
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>

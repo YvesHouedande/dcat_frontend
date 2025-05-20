@@ -2,43 +2,42 @@ import { MenuItem } from "@/types/Menu";
 import { UserCog } from "lucide-react";
 
 export const administrationFinanceMenu: MenuItem[] = [
+  
   {
-    title: "Administration & Finnance",
+    title: "Administration & Finance",
     url: "/administration",
     icon: UserCog,
     isActive: false,
     items: [
+      
+      {
+        title: "Gestion administrative",
+        url: "/administration/partenaires",
+      },
       {
         title: "Ressources Humaines",
         url: "/administration/employers",
       },
       {
-        title: "Gestion administrative",
-        url: "/administration/partenaires",
-      },
-      
-      {
-        title: "Comptabilité",
-        url: "/administration/documents",
-      },
-      
-      {
-        title: "Finances",
+        title: "Demandes",
         url: "/administration/demandes",
       },
       {
-        title: "demandes",
-        url: "/administration/demandes",
-      },
-      {
-        title: "contrats",
+        title: "Contrats",
         url: "/administration/contrats",
       },
-      
       {
-        title: "documents",
-        url: "/administration/documents",
+        title: "Comptabilité",
+        url: "/administration/comptabilite",
       },
+      {
+        title: "Finances",
+        url: "/administration/finance",
+      },
+      {
+        title: "Documents",
+        url: "/administration/documents",
+      }
     ],
   },
 ];

@@ -13,26 +13,31 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Camera, Save, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Employe } from "../../types/interfaces"; // Import the Employe interface
+import { jobFunctions } from "./UserProfile";
+
 const AddEmployeForm: React.FC = () => {
   const router = useNavigate();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    missions: "",
-    poste: "",
-    email: "",
-    phone: "",
-    domicile: "",
-    statut: "actif",
+  const [formData, setFormData] = useState<Employe>({
+    id_employe: 0,
+    nom_employes: "",
+    prenom_employes: "",
+    email_employes: "",
+    contact_employes: "",
+    adresse_employes: "",
+    status: "actif",
+    date_embauche_employes: "",
+    date_de_naissance: "",
+    contrats: "",
+    id_fonction: 0,
   });
 
-  // États pour la validation et la soumission
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
-  // Générer les initiales à partir du nom
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -42,12 +47,10 @@ const AddEmployeForm: React.FC = () => {
       .substring(0, 2);
   };
 
-  // Mettre à jour les données du formulaire
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Effacer l'erreur si l'utilisateur modifie le champ
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -57,7 +60,6 @@ const AddEmployeForm: React.FC = () => {
     }
   };
 
-  // Gérer le téléchargement d'image
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -69,46 +71,45 @@ const AddEmployeForm: React.FC = () => {
     }
   };
 
-  // Déclencher le clic sur l'input file
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
 
-  // Gérer la sélection de statut
-  const handlestatutChange = (value: string) => {
+  const handleStatusChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
-      statut: value as "active" | "away" | "offline",
+      status: value as "actif" | "absent" | "depart",
     }));
   };
 
-  // Valider le formulaire
+  const handleJobFunctionChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      id_fonction: Number(value),
+    }));
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Le nom est obligatoire";
+    if (!formData.nom_employes.trim()) {
+      newErrors.nom_employes = "Le nom est obligatoire";
     }
 
-    if (!formData.missions.trim()) {
-      newErrors.missions = "La mission est obligatoire";
+    if (!formData.prenom_employes.trim()) {
+      newErrors.prenom_employes = "Le prénom est obligatoire";
     }
 
-    if (!formData.poste) {
-      newErrors.poste = "Le poste est obligatoire";
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "L'email est obligatoire";
-    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
-      newErrors.email = "Format d'email invalide";
+    if (!formData.email_employes?.trim()) {
+      newErrors.email_employes = "L'email est obligatoire";
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email_employes)) {
+      newErrors.email_employes = "Format d'email invalide";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Soumettre le formulaire
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -118,23 +119,40 @@ const AddEmployeForm: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // Simulation d'une soumission à une API
     setTimeout(() => {
-      // Ici, vous pourriez envoyer les données à votre backend
       console.log("Données soumises:", formData);
-
-      // Redirection vers la liste des employés après ajout
       alert("Employé ajouté avec succès !");
-      router("/administration/employers"); // Redirection vers la liste des employés
+      router("/administration/employers");
 
       setIsSubmitting(false);
     }, 1000);
   };
 
+
+   // Code pour API réelle (à décommenter en production)
+    /*
+    fetch('/api/documents', {
+      method: 'POST',
+      body: formData,
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('Erreur lors de l\'envoi du document');
+        return response.json();
+      })
+      .then(data => {
+        setUploading(false);
+        navigate("/administration/documents");
+      })
+      .catch(error => {
+        setUploading(false);
+        setErrors({ api: "Une erreur est survenue lors de l'envoi du document" });
+        console.error('Erreur:', error);
+      });
+    */
+
   return (
     <div className="bg-gray-50 p-6 min-h-screen">
       <div className="max-w-3xl mx-auto">
-        {/* En-tête */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">
             Ajouter un employé
@@ -144,7 +162,6 @@ const AddEmployeForm: React.FC = () => {
           </p>
         </div>
 
-        {/* Formulaire */}
         <form onSubmit={handleSubmit}>
           <Card className="mb-6">
             <CardHeader>
@@ -153,7 +170,6 @@ const AddEmployeForm: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Section téléchargement photo de profil */}
               <div className="flex flex-col items-center mb-6">
                 <div className="relative mb-4">
                   <Avatar className="h-20 w-20 border-2 border-gray-200">
@@ -167,8 +183,8 @@ const AddEmployeForm: React.FC = () => {
                       </div>
                     ) : (
                       <AvatarFallback className="bg-blue-500 text-white text-lg">
-                        {formData.name ? (
-                          getInitials(formData.name)
+                        {formData.nom_employes ? (
+                          getInitials(formData.nom_employes)
                         ) : (
                           <UserPlus size={24} />
                         )}
@@ -201,68 +217,68 @@ const AddEmployeForm: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Nom complet */}
               <div className="space-y-2">
-                <Label htmlFor="name">Nom complet</Label>
+                <Label htmlFor="nom_employes">Nom</Label>
                 <Input
-                  id="name"
-                  name="name"
-                  placeholder="ex: YAO Biskoty"
-                  value={formData.name}
+                  id="nom_employes"
+                  name="nom_employes"
+                  placeholder="ex: YAO"
+                  value={formData.nom_employes}
                   onChange={handleChange}
-                  className={errors.name ? "border-red-500" : ""}
+                  className={errors.nom_employes ? "border-red-500" : ""}
                 />
-                {errors.name && (
-                  <p className="text-red-500 text-sm">{errors.name}</p>
+                {errors.nom_employes && (
+                  <p className="text-red-500 text-sm">{errors.nom_employes}</p>
                 )}
               </div>
 
-              {/* Rôle */}
               <div className="space-y-2">
-                <Label htmlFor="missions">Rôle ou mission</Label>
+                <Label htmlFor="prenom_employes">Prénom</Label>
                 <Input
-                  id="missions"
-                  name="missions"
-                  placeholder="ex: Développeur Frontend"
-                  value={formData.missions}
+                  id="prenom_employes"
+                  name="prenom_employes"
+                  placeholder="ex: Biskoty"
+                  value={formData.prenom_employes}
                   onChange={handleChange}
-                  className={errors.missions ? "border-red-500" : ""}
+                  className={errors.prenom_employes ? "border-red-500" : ""}
                 />
-                {errors.missions && (
-                  <p className="text-red-500 text-sm">{errors.missions}</p>
+                {errors.prenom_employes && (
+                  <p className="text-red-500 text-sm">{errors.prenom_employes}</p>
                 )}
               </div>
 
-              {/* Poste */}
               <div className="space-y-2">
-                <Label htmlFor="poste">Poste</Label>
-                <Input
-                  id="poste"
-                  name="poste"
-                  placeholder="ex: Développeur Frontend"
-                  value={formData.poste}
-                  onChange={handleChange}
-                  className={errors.poste ? "border-red-500" : ""}
-                />
-                {errors.poste && (
-                  <p className="text-red-500 text-sm">{errors.poste}</p>
-                )}
-              </div>
-
-              {/* Statut */}
-              <div className="space-y-2">
-                <Label htmlFor="statut">Statut</Label>
+                <Label htmlFor="status">Statut</Label>
                 <Select
-                  value={formData.statut}
-                  onValueChange={handlestatutChange}
+                  value={formData.status}
+                  onValueChange={handleStatusChange}
                 >
-                  <SelectTrigger id="statut">
+                  <SelectTrigger id="status">
                     <SelectValue placeholder="Statut" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="actif">Actif</SelectItem>
                     <SelectItem value="absent">Absent</SelectItem>
-                    <SelectItem value="inactif">Inactif</SelectItem>
+                    <SelectItem value="depart">Départ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="id_fonction">Fonction</Label>
+                <Select
+                  value={formData.id_fonction ? formData.id_fonction.toString() : ""}
+                  onValueChange={handleJobFunctionChange}
+                >
+                  <SelectTrigger id="id_fonction">
+                    <SelectValue placeholder="Sélectionner une fonction" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(jobFunctions).map(([id, title]) => (
+                      <SelectItem key={id} value={id}>
+                      {title}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -274,42 +290,40 @@ const AddEmployeForm: React.FC = () => {
               <CardTitle className="text-lg">Informations de contact</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Adresse email</Label>
+                <Label htmlFor="email_employes">Adresse email</Label>
                 <Input
-                  id="email"
-                  name="email"
+                  id="email_employes"
+                  name="email_employes"
                   type="email"
                   placeholder="ex: nom.prenom@dcat.ci"
-                  value={formData.email}
+                  value={formData.email_employes}
                   onChange={handleChange}
-                  className={errors.email ? "border-red-500" : ""}
+                  className={errors.email_employes ? "border-red-500" : ""}
                 />
-                {errors.email && (
-                  <p className="text-red-500 text-sm">{errors.email}</p>
+                {errors.email_employes && (
+                  <p className="text-red-500 text-sm">{errors.email_employes}</p>
                 )}
               </div>
 
-              {/* Téléphone */}
               <div className="space-y-2">
-                <Label htmlFor="phone">Numéro de téléphone</Label>
+                <Label htmlFor="contact_employes">Numéro de téléphone</Label>
                 <Input
-                  id="phone"
-                  name="phone"
+                  id="contact_employes"
+                  name="contact_employes"
                   placeholder="ex: 06 12 34 56 78"
-                  value={formData.phone}
+                  value={formData.contact_employes}
                   onChange={handleChange}
                 />
               </div>
-              {/* Adresse */}
+
               <div className="space-y-2">
-                <Label htmlFor="phone">Domicile</Label>
+                <Label htmlFor="adresse_employes">Adresse</Label>
                 <Input
-                  id="adresse"
-                  name="adresse"
-                  placeholder="ex:Abidjan"
-                  value={formData.domicile}
+                  id="adresse_employes"
+                  name="adresse_employes"
+                  placeholder="ex: Abidjan"
+                  value={formData.adresse_employes}
                   onChange={handleChange}
                 />
               </div>

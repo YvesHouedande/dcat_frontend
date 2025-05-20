@@ -24,117 +24,124 @@ import {
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Document } from "../../types/interfaces";
+import { Document } from "../administration/types/interfaces"; // Importation de l'interface Document depuis votre fichier interface.ts
 
-
-
+// Données d'exemple utilisant l'interface Document
 export const documents: Document[] = [
   {
-    id_document: 1,
-    libele_document: "Rapport annuel 2024",
-    lien_document: "rapport-annuel-2024.pdf",
-    etat_document: "private",
-    id_nature_document: 1,
-    date_document: "2024-04-01T09:30:00",
-    classification_document: "confidentiel"
+    "id_document": 1,
+    "libele_document": "Bilan comptable annuel 2024",
+    "lien_document": "bilan-comptable-2024.pdf",
+    "etat_document": "actif",
+    "id_nature_document": 1,
+    "date_document": "2024-05-10T14:20:00"
   },
   {
-    id_document: 2,
-    libele_document: "Présentation du projet Alpha",
-    lien_document: "presentation-projet-alpha.pptx",
-    etat_document: "public",
-    id_nature_document: 2,
-    date_document: "2024-03-28T14:15:00",
-    classification_document: "interne"
+    "id_document": 2,
+    "libele_document": "Journal général trimestriel Q1 2024",
+    "lien_document": "journal-general-q1-2024.xlsx",
+    "etat_document": "actif",
+    "id_nature_document": 2,
+    "date_document": "2024-04-28T09:45:00"
   },
   {
-    id_document: 3,
-    libele_document: "Manuel d'utilisation ERP",
-    lien_document: "manuel-erp.pdf",
-    etat_document: "private",
-    id_nature_document: 3,
-    date_document: "2024-03-25T11:45:00",
-    classification_document: "public"
+    "id_document": 3,
+    "libele_document": "Plan comptable 2025",
+    "lien_document": "plan-comptable-2025.xlsx",
+    "etat_document": "actif",
+    "id_nature_document": 3,
+    "date_document": "2024-04-15T16:30:00"
   },
   {
-    id_document: 4,
-    libele_document: "Contrat de service client",
-    lien_document: "contrat-service.docx",
-    etat_document: "public",
-    id_nature_document: 4,
-    date_document: "2024-03-20T16:00:00",
-    classification_document: "personnel"
+    "id_document": 4,
+    "libele_document": "Grand livre général",
+    "lien_document": "grand-livre-general.pdf",
+    "etat_document": "actif",
+    "id_nature_document": 1,
+    "date_document": "2024-04-05T11:10:00"
   },
   {
-    id_document: 5,
-    libele_document: "Analyse de marché Q1 2024",
-    lien_document: "analyse-marche-q1.xlsx",
-    etat_document: "private",
-    id_nature_document: 5,
-    date_document: "2024-03-18T10:20:00",
-    classification_document: "restreint"
+    "id_document": 5,
+    "libele_document": "Procédures de clôture mensuelle",
+    "lien_document": "procedures-cloture-mensuelle.docx",
+    "etat_document": "actif",
+    "id_nature_document": 2,
+    "date_document": "2024-03-22T13:25:00"
   },
   {
-    id_document: 6,
-    libele_document: "Spécifications techniques",
-    lien_document: "specs-techniques.pdf",
-    etat_document: "public",
-    id_nature_document: 1,
-    date_document: "2024-03-15T15:30:00",
-    classification_document: "confidentiel"
+    "id_document": 6,
+    "libele_document": "Rapport d'audit comptable 2023",
+    "lien_document": "audit-comptable-2023.pdf",
+    "etat_document": "actif",
+    "id_nature_document": 1,
+    "date_document": "2024-03-18T10:15:00"
   },
   {
-    id_document: 7,
-    libele_document: "Calendrier des formations",
-    lien_document: "calendrier-formations.xlsx",
-    etat_document: "private",
-    id_nature_document: 2,
-    date_document: "2024-03-10T09:00:00",
-    classification_document: "interne"
+    "id_document": 7,
+    "libele_document": "Tableau des amortissements",
+    "lien_document": "amortissements.xlsx",
+    "etat_document": "actif",
+    "id_nature_document": 3,
+    "date_document": "2024-03-10T14:50:00"
   },
   {
-    id_document: 8,
-    libele_document: "Procédures internes",
-    lien_document: "procedures-internes.pdf",
-    etat_document: "public",
-    id_nature_document: 3,
-    date_document: "2024-03-08T11:15:00",
-    classification_document: "public"
+    "id_document": 8,
+    "libele_document": "Contrat avec expert-comptable",
+    "lien_document": "contrat-expert-comptable.pdf",
+    "etat_document": "actif",
+    "id_nature_document": 1,
+    "date_document": "2024-02-28T15:40:00"
   },
+  {
+    "id_document": 9,
+    "libele_document": "Manuel des procédures comptables",
+    "lien_document": "manuel-procedures-comptables.pdf",
+    "etat_document": "actif",
+    "id_nature_document": 1,
+    "date_document": "2024-02-15T09:30:00"
+  },
+  {
+    "id_document": 10,
+    "libele_document": "Analyse des écarts budgétaires",
+    "lien_document": "analyse-ecarts-budgetaires.pptx",
+    "etat_document": "actif",
+    "id_nature_document": 2,
+    "date_document": "2024-02-05T11:20:00"
+  }
 ];
-const ModernDocumentGrid: React.FC = () => {
+
+const ComptabiliteGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const navigate = useNavigate();
 
-  // Données d'exemple pour les documents
-  
+  // Fonction pour extraire le type de fichier à partir de l'extension
+  const getFileType = (filename: string): string => {
+    const extension = filename.split('.').pop()?.toLowerCase() || '';
+    return extension.toUpperCase();
+  };
 
   // Filtrage des documents basé sur la recherche
   const filteredDocuments = searchQuery
     ? documents.filter(
         (document) =>
           document.libele_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          document.lien_document?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          document.classification_document?.toLowerCase().includes(searchQuery.toLowerCase())
+          document.lien_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          getFileType(document.lien_document).toLowerCase().includes(searchQuery.toLowerCase())
       )
     : documents;
 
   const handleAddDocument = () => {
-    navigate("/administration/documents/nouveau");
+    navigate("/administration/comptabilite/nouveau");
   };
 
   const handleViewDocument = (id: number) => {
-    navigate(`/administration/documents/${id}/details`);
+    navigate(`/administration/comptabilite/${id}/details`);
   };
 
-  const getFileType = (filename: string): string => {
-    const extension = filename.split('.').pop()?.toLowerCase() || '';
-    return extension.toUpperCase();
-  };
-
-  const getFileTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
+  const getFileTypeColor = (filename: string) => {
+    const type = getFileType(filename).toLowerCase();
+    switch (type) {
       case "pdf":
         return "bg-red-100 text-red-800 hover:bg-red-100";
       case "docx":
@@ -150,27 +157,42 @@ const ModernDocumentGrid: React.FC = () => {
 
   const getFileIcon = (filename: string) => {
     const type = getFileType(filename).toLowerCase();
-    const typeMap = {
-      pdf: { color: "text-red-500", size: 28 },
-      docx: { color: "text-blue-500", size: 28 },
-      xlsx: { color: "text-green-500", size: 28 },
-      pptx: { color: "text-orange-500", size: 28 },
-      default: { color: "text-gray-500", size: 28 }
-    };
-
-    const style = typeMap[type as keyof typeof typeMap] || typeMap.default;
-    return <FileText size={style.size} className={style.color} />;
+    
+    switch (type) {
+      case "pdf":
+        return <FileText size={28} className="text-red-500" />;
+      case "docx":
+        return <FileText size={28} className="text-blue-500" />;
+      case "xlsx":
+        return <FileText size={28} className="text-green-500" />;
+      case "pptx":
+        return <FileText size={28} className="text-orange-500" />;
+      default:
+        return <FileText size={28} className="text-gray-500" />;
+    }
   };
 
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return format(date, "dd MMM", { locale: fr });
+  // Fonction modifiée pour utiliser date_document (timestamp) au lieu de date_ajout (string)
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      return format(date, "dd MMM", { locale: fr });
+    } catch (err) {
+      console.error("Erreur de formatage de date:", err);
+      return dateString.split('T')[0]; // Retourne juste la partie date si le parsing échoue
+    }
   };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return format(date, "HH:mm", { locale: fr });
+  
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      return format(date, "HH:mm", { locale: fr });
+    } catch (err) {
+      console.error("Erreur de formatage d'heure:", err);
+      return dateString.split('T')[1]?.substring(0, 5) || "-"; // Retourne juste l'heure si le parsing échoue
+    }
   };
 
   return (
@@ -180,7 +202,7 @@ const ModernDocumentGrid: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <div>
             <h1 className="text-xl font-bold text-gray-800">
-              Annuaire des documents
+              Annuaire des documents des Comptabilités
             </h1>
             <p className="text-sm text-gray-500">
               {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} disponible{filteredDocuments.length !== 1 ? 's' : ''}
@@ -189,9 +211,9 @@ const ModernDocumentGrid: React.FC = () => {
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="flex border rounded-md overflow-hidden">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
+              <Button 
+                variant={viewMode === "grid" ? "default" : "ghost"} 
+                size="sm" 
                 className="rounded-none h-8"
                 onClick={() => setViewMode("grid")}
               >
@@ -202,9 +224,9 @@ const ModernDocumentGrid: React.FC = () => {
                   <rect x="14" y="14" width="7" height="7" />
                 </svg>
               </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
+              <Button 
+                variant={viewMode === "list" ? "default" : "ghost"} 
+                size="sm" 
                 className="rounded-none h-8"
                 onClick={() => setViewMode("list")}
               >
@@ -260,22 +282,22 @@ const ModernDocumentGrid: React.FC = () => {
               >
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-2">
-                    {getFileIcon(document.lien_document || "")}
+                    {getFileIcon(document.lien_document)}
                     <Badge
-                      className={`text-xs font-normal ${getFileTypeColor(getFileType(document.lien_document || ""))}`}
+                      className={`text-xs font-normal ${getFileTypeColor(document.lien_document)}`}
                     >
-                      {getFileType(document.lien_document || "")}
+                      {getFileType(document.lien_document)}
                     </Badge>
                   </div>
-
+                  
                   <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-1 h-10">
                     {document.libele_document}
                   </h3>
-
+                  
                   <div className="flex justify-between items-center text-xs text-gray-500">
                     <div className="flex items-center">
                       <Calendar size={12} className="mr-1" />
-                      <span>{formatDate(document.date_document || "")}</span>
+                      <span>{formatDate(document.date_document)}</span>
                     </div>
                     <div className="flex">
                       <DropdownMenu>
@@ -315,7 +337,7 @@ const ModernDocumentGrid: React.FC = () => {
                       </DropdownMenu>
                     </div>
                   </div>
-
+                  
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </CardContent>
               </Card>
@@ -336,13 +358,13 @@ const ModernDocumentGrid: React.FC = () => {
               </thead>
               <tbody>
                 {filteredDocuments.map((document, index) => (
-                  <tr
-                    key={document.id_document}
+                  <tr 
+                    key={document.id_document} 
                     className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                   >
                     <td className="p-3">
                       <div className="flex items-center">
-                        {getFileIcon(document.lien_document || "")}
+                        {getFileIcon(document.lien_document)}
                         <div className="ml-2">
                           <p className="text-sm font-medium text-gray-800">{document.libele_document}</p>
                           <p className="text-xs text-gray-500 md:hidden">{document.lien_document}</p>
@@ -351,18 +373,20 @@ const ModernDocumentGrid: React.FC = () => {
                     </td>
                     <td className="p-3 text-sm text-gray-600 hidden md:table-cell">{document.lien_document}</td>
                     <td className="p-3 hidden sm:table-cell">
-                      <Badge className={`text-xs font-normal ${getFileTypeColor(getFileType(document.lien_document || ""))}`}>
-                        {getFileType(document.lien_document || "")}
+                      <Badge className={`text-xs font-normal ${getFileTypeColor(document.lien_document)}`}>
+                        {getFileType(document.lien_document)}
                       </Badge>
                     </td>
                     <td className="p-3 text-sm text-gray-600 hidden lg:table-cell">
-                      {formatDate(document.date_document || "")} à {formatTime(document.date_document || "")}
+                      {document.date_document ? 
+                      `${formatDate(document.date_document)} à ${formatTime(document.date_document)}` 
+                      : "-"}
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
                           className="h-7 w-7 p-0"
                           onClick={() => handleViewDocument(document.id_document)}
                         >
@@ -414,4 +438,4 @@ const ModernDocumentGrid: React.FC = () => {
   );
 };
 
-export default ModernDocumentGrid;
+export default ComptabiliteGrid;

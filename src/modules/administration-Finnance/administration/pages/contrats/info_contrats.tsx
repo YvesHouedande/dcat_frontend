@@ -15,30 +15,28 @@ import {
   Building,
   FileSignature,
   File,
-  FilePlus,
   Users,
   ChevronRight,
   AlarmClock,
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
+import { Contrat, Document } from "../../types/interfaces";
 
 const InfoContract: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [showFilePreview, setShowFilePreview] = useState(false);
 
-  const contractInfo = {
-    id_contrat: "CONT-2025-0042",
+  const contractInfo: Contrat = {
+    id_contrat: 20250042, // Changé de string à number
     nom_contrat: "Accord de maintenance IT",
     duree_Contrat: "24 mois",
     date_debut: "01/03/2025",
     date_fin: "28/02/2027",
-    Id_partenaire: 1,
-    fichier: "contrat_maintenance_it.pdf",
-    statut: "Actif",
-    valeur: "145 000 €",
-    type_contrat: "Service",
+    id_partenaire: 1,
+    type_de_contrat: "Service",
+    status: "Actif",
   };
 
   const partnerInfo = {
@@ -48,6 +46,33 @@ const InfoContract: React.FC = () => {
     Email_partenaire: "contact@ecotech-solutions.ci",
     specialite: "Solutions Numériques Durables",
   };
+
+  const documents: Document[] = [
+    {
+      id_document: 1,
+      libele_document: "Contrat Principal",
+      date_document: "01/03/2025",
+      lien_document: "contrat_maintenance_it.pdf",
+      id_contrat: 20250042, // Changé de string à number
+      id_nature_document: 1,
+    },
+    {
+      id_document: 2,
+      libele_document: "Annexe 1 - Tarifs",
+      date_document: "01/03/2025",
+      lien_document: "annexe_1_tarifs.pdf",
+      id_contrat: 20250042, // Changé de string à number
+      id_nature_document: 2,
+    },
+    {
+      id_document: 3,
+      libele_document: "Conditions Générales",
+      date_document: "01/03/2025",
+      lien_document: "conditions_generales.pdf",
+      id_contrat: 20250042, // Changé de string à number
+      id_nature_document: 3,
+    },
+  ];
 
   const amendments = [
     {
@@ -152,10 +177,6 @@ const InfoContract: React.FC = () => {
 
   const progress = calculateProgress();
 
-  function handleAddAmendmentClick(): void {
-    navigate(`/administration/contrats/${contractInfo.id_contrat}/ajouter_avenant`);
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -180,7 +201,7 @@ const InfoContract: React.FC = () => {
                   variant="outline"
                   className="mt-2 md:mt-0 bg-emerald-500/20 text-white border-emerald-200 self-center"
                 >
-                  {contractInfo.statut}
+                  {contractInfo.status}
                 </Badge>
               </div>
 
@@ -222,10 +243,9 @@ const InfoContract: React.FC = () => {
       {/* Navigation tabs */}
       <div className="container mx-auto px-4 -mt-4 rounded-lg shadow-md">
         <Tabs defaultValue="details" className="mb-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="details">Détails</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="amendments">Avenants</TabsTrigger>
             <TabsTrigger disabled value="calendar">Échéances</TabsTrigger>
           </TabsList>
 
@@ -310,22 +330,10 @@ const InfoContract: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Type de contrat</p>
                         <p className="font-medium">
-                          {contractInfo.type_contrat}
+                          {contractInfo.type_de_contrat}
                         </p>
                       </div>
                     </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
-                        <File size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Fichier</p>
-                        <p className="font-medium">{contractInfo.fichier}</p>
-                      </div>
-                    </div>
-
-                    
                   </div>
                 </CardContent>
               </Card>
@@ -385,17 +393,6 @@ const InfoContract: React.FC = () => {
                       />
                       Ajouter une échéance
                     </Button>
-                    <Button
-                      disabled
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-emerald-600 hover:border-emerald-200 group"
-                    >
-                      <FilePlus
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-emerald-500"
-                      />
-                      Créer un avenant
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -403,16 +400,6 @@ const InfoContract: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="amendments" className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                Avenants au contrat
-              </h2>
-              <Button onClick={()=> handleAddAmendmentClick()} className="bg-emerald-600 hover:bg-emerald-700">
-                <FilePlus size={16} className="mr-2" />
-                Nouvel avenant
-              </Button>
-            </div>
-
             <div className="space-y-4">
               {amendments.map((amendment) => (
                 <Card
@@ -536,133 +523,62 @@ const InfoContract: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="bg-gray-50 p-4 border-b">
-                  <div className="flex justify-between">
-                    <Badge className="bg-emerald-100 text-emerald-800">
-                      Principal
-                    </Badge>
-                    <span className="text-xs text-gray-500">
-                      {contractInfo.date_debut}
-                    </span>
-                  </div>
-                  <div className="mt-6 mb-4 flex justify-center">
-                    <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
-                      <FileText size={24} className="text-gray-400" />
+              {documents.map((document) => (
+                <Card
+                  key={document.id_document}
+                  className="overflow-hidden hover:shadow-md transition-shadow"
+                >
+                  <div className="bg-gray-50 p-4 border-b">
+                    <div className="flex justify-between">
+                      <Badge className="bg-emerald-100 text-emerald-800">
+                        {document.id_nature_document === 1
+                          ? "Principal"
+                          : document.id_nature_document === 2
+                          ? "Annexe"
+                          : "Juridique"}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {document.date_document}
+                      </span>
+                    </div>
+                    <div className="mt-6 mb-4 flex justify-center">
+                      <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
+                        <FileText size={24} className="text-gray-400" />
+                      </div>
                     </div>
                   </div>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-medium text-gray-800 mb-1">
-                    {contractInfo.fichier}
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Contrat principal
-                  </p>
-                  <div className="flex justify-between">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-gray-600 text-xs"
-                    >
-                      <FileText size={14} className="mr-1" />
-                      Voir
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-emerald-600 text-xs"
-                    >
-                      <Download size={14} className="mr-1" />
-                      Télécharger
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="bg-gray-50 p-4 border-b">
-                  <div className="flex justify-between">
-                    <Badge className="bg-blue-100 text-blue-800">Annexe</Badge>
-                    <span className="text-xs text-gray-500">
-                      {contractInfo.date_debut}
-                    </span>
-                  </div>
-                  <div className="mt-6 mb-4 flex justify-center">
-                    <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
-                      <FileText size={24} className="text-gray-400" />
+                  <CardContent className="p-4">
+                    <h3 className="font-medium text-gray-800 mb-1">
+                      {document.libele_document}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      {document.id_nature_document === 1
+                        ? "Contrat principal"
+                        : document.id_nature_document === 2
+                        ? "Grille tarifaire"
+                        : "Conditions générales"}
+                    </p>
+                    <div className="flex justify-between">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-gray-600 text-xs"
+                      >
+                        <FileText size={14} className="mr-1" />
+                        Voir
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-emerald-600 text-xs"
+                      >
+                        <Download size={14} className="mr-1" />
+                        Télécharger
+                      </Button>
                     </div>
-                  </div>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-medium text-gray-800 mb-1">
-                    annexe_1_tarifs.pdf
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">Grille tarifaire</p>
-                  <div className="flex justify-between">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-gray-600 text-xs"
-                    >
-                      <FileText size={14} className="mr-1" />
-                      Voir
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-emerald-600 text-xs"
-                    >
-                      <Download size={14} className="mr-1" />
-                      Télécharger
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="bg-gray-50 p-4 border-b">
-                  <div className="flex justify-between">
-                    <Badge className="bg-purple-100 text-purple-800">
-                      Juridique
-                    </Badge>
-                    <span className="text-xs text-gray-500">
-                      {contractInfo.date_debut}
-                    </span>
-                  </div>
-                  <div className="mt-6 mb-4 flex justify-center">
-                    <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
-                      <FileText size={24} className="text-gray-400" />
-                    </div>
-                  </div>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-medium text-gray-800 mb-1">
-                    conditions_generales.pdf
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Conditions générales
-                  </p>
-                  <div className="flex justify-between">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-gray-600 text-xs"
-                    >
-                      <FileText size={14} className="mr-1" />
-                      Voir
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-emerald-600 text-xs"
-                    >
-                      <Download size={14} className="mr-1" />
-                      Télécharger
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
         </Tabs>
@@ -689,7 +605,7 @@ const InfoContract: React.FC = () => {
                 <div className="text-center p-8">
                   <FileText size={64} className="mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500">
-                    Aperçu du document {contractInfo.fichier}
+                    Aperçu du document {documents[0].libele_document}
                   </p>
                   <p className="text-gray-400 text-sm mt-2">
                     Dans une application réelle, le PDF serait affiché ici

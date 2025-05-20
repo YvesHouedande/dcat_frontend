@@ -14,20 +14,16 @@ export const TechniqueMenu: MenuItem[] = [
         url: "/technique/Projets",
       },
       {
+        title: "Gestion des tâches",
+        url: "/technique/taches",
+      },
+      {
+        title: "Livrables",
+        url: "/technique/livrable",
+      },
+      {
         title: "Gestion des interventions",
         url: "/technique/intervention",
-      },
-      {
-        title: "Gestion des tâches",
-        url: "/technique/Taches",
-      },
-      {
-        title: "Documents",
-        url: "/technique/Documents",
-      },
-      {
-        title: "rapports",
-        url: "/technique/Rapports",
       },
     ],
   },
