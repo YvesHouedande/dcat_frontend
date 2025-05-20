@@ -25,14 +25,39 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Interlocuteur } from "../../types/interfaces";
-import { fetchPartnerById, updatePartner } from '@/modules/administration-Finnance/services/partenaireService'; // Assurez-vous que le chemin est correct
+import { fetchPartnerById, updatePartner } from '@/modules/administration-Finnance/services/partenaireService';
+
+// Mis à jour pour correspondre au service
+interface Interlocuteur {
+  id_interlocuteur: number;
+  nom_interlocuteur: string;
+  prenom_interlocuteur: string;
+  fonction_interlocuteur: string;
+  contact_interlocuteur: string;
+  mail_interlocuteur: string;
+}
+
+interface Partenaires {
+  id_partenaire: number;  // Ajouté pour correspondre au service
+  nom_partenaire: string;
+  specialite: string;
+  status: string;
+  type_partenaire: string;
+  Entite: string;
+  id_entite: number;  // Ajouté pour correspondre au service
+  localisation: string;
+  Email_partenaire: string; // Gardé tel quel (mais notez la différence avec email_partenaire)
+  email_partenaire: string; // Ajouté pour correspondre au service
+  telephone_partenaire: string;
+  interlocuteurs: Interlocuteur[];
+  logo: null;  // Ajouté avec null comme valeur par défaut
+}
 
 const ModernPartnerProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  const [partnerInfo, setPartnerInfo] = useState<any>(null);
+  const [partnerInfo, setPartnerInfo] = useState<Partenaires | null>(null);
   const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur'>>({
     nom_interlocuteur: "",
     prenom_interlocuteur: "",
@@ -51,6 +76,18 @@ const ModernPartnerProfile: React.FC = () => {
 
       try {
         const data = await fetchPartnerById(id);
+        // S'assurer que toutes les propriétés requises sont présentes
+        if (data) {
+          // Si email_partenaire n'existe pas, utilisez Email_partenaire
+          if (!data.email_partenaire && data.Email_partenaire) {
+            data.email_partenaire = data.Email_partenaire;
+          }
+          
+          // Si logo n'existe pas, ajoutez-le avec null
+          if (data.logo === undefined) {
+            data.logo = null;
+          }
+        }
         setPartnerInfo(data);
       } catch (error) {
         console.error('Error fetching partner info:', error);
@@ -134,8 +171,8 @@ const ModernPartnerProfile: React.FC = () => {
   };
 
   const addInterlocuteur = async () => {
-    if (id === undefined) {
-      console.error("ID is undefined");
+    if (id === undefined || !partnerInfo) {
+      console.error("ID is undefined or partner info not loaded");
       return;
     }
 
@@ -148,10 +185,13 @@ const ModernPartnerProfile: React.FC = () => {
       return;
     }
 
-    const newId = Math.max(...partnerInfo.interlocuteurs.map((i: { id_interlocuteur: number; }) => i.id_interlocuteur)) + 1;
+    const maxId = partnerInfo.interlocuteurs.length > 0 
+      ? Math.max(...partnerInfo.interlocuteurs.map(i => i.id_interlocuteur)) 
+      : 0;
+    
     const newInterlocuteurWithId = {
       ...newInterlocuteur,
-      id_interlocuteur: newId,
+      id_interlocuteur: maxId + 1,
     };
 
     try {
@@ -176,14 +216,14 @@ const ModernPartnerProfile: React.FC = () => {
   };
 
   const removeInterlocuteur = async (id_interlocuteur: number) => {
-    if (id === undefined) {
-      console.error("ID is undefined");
+    if (id === undefined || !partnerInfo) {
+      console.error("ID is undefined or partner info not loaded");
       return;
     }
 
     try {
       const updatedInterlocuteurs = partnerInfo.interlocuteurs.filter(
-        (i: { id_interlocuteur: number; }) => i.id_interlocuteur !== id_interlocuteur
+        i => i.id_interlocuteur !== id_interlocuteur
       );
 
       const updatedPartnerData = {
@@ -531,7 +571,7 @@ const ModernPartnerProfile: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {partnerInfo.interlocuteurs.map((interlocuteur: { id_interlocuteur: number; prenom_interlocuteur: string; nom_interlocuteur: string; fonction_interlocuteur: string; mail_interlocuteur: string; contact_interlocuteur: string; }) => (
+              {partnerInfo.interlocuteurs.map((interlocuteur) => (
                 <Card key={interlocuteur.id_interlocuteur}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">

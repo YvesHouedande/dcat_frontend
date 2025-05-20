@@ -47,6 +47,8 @@ import { fr } from "date-fns/locale";
 import { Demande, Document } from "../../types/interfaces";
 import { naturesDocuments, employes } from "./data";
 
+// Définition du type pour les valeurs possibles dans handleChange
+type DemandeValue = string | number | Date | Document[] | undefined;
 
 const NouvelleDemandePage = () => {
   // State pour stocker les données du formulaire
@@ -73,8 +75,8 @@ const NouvelleDemandePage = () => {
     }
   }, [demande.date_debut, demande.date_fin]);
 
-  // Gestion des changements de valeurs
-  const handleChange = (field: keyof Demande, value: any) => {
+  // Gestion des changements de valeurs - Remplacé 'any' par 'DemandeValue'
+  const handleChange = (field: keyof Demande, value: DemandeValue) => {
     setDemande(prev => ({ ...prev, [field]: value }));
     
     // Effacer l'erreur pour ce champ si elle existe

@@ -11,11 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, FileText, Download, Eye, Pencil, Trash2, ArrowLeft, File } from "lucide-react";
-import {Document} from "../administration/types/interfaces"
+import { Document } from "../administration/types/interfaces";
 import { documents } from "./comptabilite";
-
-// Mock data import (à adapter selon votre structure de fichiers)
-
 
 const ComptabiliteDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,8 +36,9 @@ const ComptabiliteDetailPage: React.FC = () => {
           }
           setLoading(false);
         }, 800);
-      } catch (err) {
+      } catch (error) {
         setError("Erreur lors du chargement du document");
+        console.error("Erreur de chargement:", error);
         setLoading(false);
       }
     };

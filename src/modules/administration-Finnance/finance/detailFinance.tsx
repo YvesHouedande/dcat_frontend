@@ -11,11 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, FileText, Download, Eye, Pencil, Trash2, ArrowLeft, File } from "lucide-react";
-import {Document} from "../administration/types/interfaces"
+import { Document } from "../administration/types/interfaces";
 import { documents } from "./finances";
-
-
-
 
 const FinanceDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +36,9 @@ const FinanceDetailPage: React.FC = () => {
           }
           setLoading(false);
         }, 800);
-      } catch (err) {
+      } catch (error) {
+        // Fixed: Use the error parameter instead of unused 'err'
+        console.error("Error fetching document:", error);
         setError("Erreur lors du chargement du document");
         setLoading(false);
       }
@@ -103,8 +102,8 @@ const FinanceDetailPage: React.FC = () => {
         hour: '2-digit',
         minute: '2-digit'
       });
-    } catch (err) {
-      console.error("Erreur de formatage de date:", err);
+    } catch (error) {
+      console.error("Erreur de formatage de date:", error);
       return dateString; // Retourne la string originale si le formatage échoue
     }
   };
