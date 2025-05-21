@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,48 +22,57 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Contrat, Document } from "../../types/interfaces";
-
-// Interfaces
-
+import { addContrat, fetchNaturesDocument } from "../../../services/contratService"; // Importation du nouveau service
+import { fetchPartners } from "../../../services/partenaireService"; // Importation du service existant
 
 const NouveauContrat: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [partenaires, setPartenaires] = useState<Array<{ id: number; nom: string }>>([]);
+  const [naturesDocument, setNaturesDocument] = useState<Array<{ id_nature_document: number; libelle_td: string }>>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
 
   // États du formulaire
-  const [formData, setFormData] = useState<Contrat>({
-    id_contrat: 0, // Changé de string vide à 0
+  const [formData, setFormData] = useState<Omit<Contrat, 'id_contrat'>>({
     nom_contrat: "",
     duree_Contrat: "",
     date_debut: "",
     date_fin: "",
     Reference: "",
-    type_de_contrat: "",
-    status: "",
+    type_de_contrat: "standard", // Valeur par défaut
+    status: "actif", // Valeur par défaut
     id_partenaire: undefined,
   });
 
   const [documentData, setDocumentData] = useState<Document>({
     id_document: 0,
     libele_document: "",
-    date_document: "",
+    date_document: new Date().toISOString().split('T')[0], // Date du jour
     lien_document: "",
-    id_contrat: undefined, // Changé de string vide à undefined
+    id_contrat: undefined,
     id_nature_document: undefined,
   });
 
-  // Liste des partenaires et des natures de document
-  const partenaires = [
-    { id: 1, nom: "Systèmes IT Pro" },
-    { id: 2, nom: "TechSupport Plus" },
-    // Ajoutez d'autres partenaires ici
-  ];
+  // Chargement des partenaires et des natures de document depuis l'API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Chargement des partenaires
+        const partenairesData = await fetchPartners();
+        setPartenaires(partenairesData);
+        
+        // Chargement des natures de document
+        const naturesDocumentData = await fetchNaturesDocument();
+        setNaturesDocument(naturesDocumentData);
+      } catch (error) {
+        console.error("Erreur lors du chargement des données:", error);
+      }
+    };
 
-  const naturesDocument = [
-    { id_nature_document: 1, libelle_td: "Contrat Principal" },
-    { id_nature_document: 2, libelle_td: "Annexe" },
-    // Ajoutez d'autres natures de document ici
-  ];
+    loadData();
+  }, []);
 
   // Gérer les changements des champs de texte
   const handleInputChange = (
@@ -79,27 +88,50 @@ const NouveauContrat: React.FC = () => {
   // Gérer le changement de fichier
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setUploadedFile(file);
+      
+      // Créer une URL locale pour prévisualisation si nécessaire
+      const objectUrl = URL.createObjectURL(file);
       setDocumentData({
         ...documentData,
-        lien_document: URL.createObjectURL(e.target.files[0]),
+        lien_document: objectUrl,
       });
     }
   };
 
   // Soumission du formulaire
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    // Simuler une soumission API
-    setTimeout(() => {
-      setIsSubmitting(false);
-
-      // Rediriger après affichage du message de succès
+    setSubmitError(null);
+  
+    try {
+      // Préparation des données à envoyer
+      const contratToSubmit = {
+        ...formData,
+        date_debut: new Date(formData.date_debut).toISOString().split('T')[0],
+        date_fin: new Date(formData.date_fin).toISOString().split('T')[0],
+      };
+  
+      // Appel à l'API pour ajouter le contrat
+      const newContrat = await addContrat(contratToSubmit, uploadedFile || undefined);
+      
+      // Utilisation de la réponse
+      console.log('Contrat créé avec ID:', newContrat.id_contrat);
+      
+      setSubmitSuccess(true);
+      
+      // Rediriger vers la page de détail du nouveau contrat
       setTimeout(() => {
-        navigate("/administration/contrats");
+        navigate(`/administration/contrats/${newContrat.id_contrat}`);
       }, 1500);
-    }, 1000);
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du contrat:", error);
+      setSubmitError(error instanceof Error ? error.message : "Une erreur est survenue lors de l'enregistrement du contrat.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Calculer automatiquement la date de fin en fonction de la date de début et de la durée
@@ -130,6 +162,21 @@ const NouveauContrat: React.FC = () => {
             </h1>
           </div>
         </div>
+
+        {/* Message de succès */}
+        {submitSuccess && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+            <span className="block sm:inline">Contrat enregistré avec succès!</span>
+          </div>
+        )}
+
+        {/* Message d'erreur */}
+        {submitError && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            <span className="block sm:inline">{submitError}</span>
+          </div>
+        )}
+
         {/* Formulaire */}
         <form onSubmit={handleSubmit}>
           <Card>
@@ -188,10 +235,12 @@ const NouveauContrat: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="duree">
+                      <Label htmlFor="duree_Contrat">
                         Durée du contrat <span className="text-red-500">*</span>
                       </Label>
                       <Input
+                        id="duree_Contrat"
+                        name="duree_Contrat"
                         onChange={(e) => {
                           setFormData({
                             ...formData,
@@ -205,8 +254,9 @@ const NouveauContrat: React.FC = () => {
                           }
                         }}
                         type="number"
+                        value={formData.duree_Contrat}
                         required
-                      ></Input>
+                      />
                       <p className="text-xs text-gray-500 italic">
                         La durée du contrat doit s'exprimer en mois
                       </p>
@@ -237,7 +287,7 @@ const NouveauContrat: React.FC = () => {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={new Date(formData.date_debut)}
+                            selected={formData.date_debut ? new Date(formData.date_debut) : undefined}
                             onSelect={(date) => {
                               if (date) {
                                 setFormData({
@@ -277,7 +327,7 @@ const NouveauContrat: React.FC = () => {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={new Date(formData.date_fin)}
+                            selected={formData.date_fin ? new Date(formData.date_fin) : undefined}
                             onSelect={(date) =>
                               date &&
                               setFormData({
@@ -293,6 +343,60 @@ const NouveauContrat: React.FC = () => {
                         La date de fin est calculée à partir de la date de début
                         et de la durée
                       </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="type_de_contrat">
+                        Type de contrat <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            type_de_contrat: value,
+                          })
+                        }
+                        defaultValue="standard"
+                        required
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionner un type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="standard">Standard</SelectItem>
+                          <SelectItem value="cadre">Contrat cadre</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="support">Support</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="status">
+                        Statut <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            status: value,
+                          })
+                        }
+                        defaultValue="actif"
+                        required
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionner un statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="actif">Actif</SelectItem>
+                          <SelectItem value="inactif">Inactif</SelectItem>
+                          <SelectItem value="en_attente">En attente</SelectItem>
+                          <SelectItem value="expire">Expiré</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>
@@ -385,10 +489,10 @@ const NouveauContrat: React.FC = () => {
 
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="notes">Notes ou commentaires</Label>
+                      <Label htmlFor="Reference">Notes ou commentaires</Label>
                       <Textarea
-                        id="notes"
-                        name="notes"
+                        id="Reference"
+                        name="Reference"
                         placeholder="Ajoutez des notes ou commentaires sur ce contrat..."
                         rows={4}
                         value={formData.Reference || ""}

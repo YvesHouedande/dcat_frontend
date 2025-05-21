@@ -37,6 +37,7 @@
     specialite: string;
     localisation: string;
     type_partenaire: string;
+    statut: string;
     id_entite: number; // Clé étrangère vers la table Entite
     interlocuteurs: Interlocuteur[]; // Liste des interlocuteurs associés
   }
