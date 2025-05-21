@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MoyensFilters } from "../types/moyens-de-travail.types";
+import { MoyensFilters } from "../types/maitenance.types";
 import { Search, X } from "lucide-react";
 
 interface MoyensDesTravailFilterProps {
@@ -17,7 +17,7 @@ interface MoyensDesTravailFilterProps {
   onFiltersChange: (filters: Partial<MoyensFilters>) => void;
 }
 
-export function MoyensDesTravailFilter({
+export function Maintenanceilter({
   filters,
   sections,
   onFiltersChange,
@@ -41,12 +41,17 @@ export function MoyensDesTravailFilter({
       section: undefined,
       dateStart: undefined,
       dateEnd: undefined,
+      type_maintenance: undefined,
       page: 1,
     });
   };
 
   const hasFilters =
-    filters.search || filters.section || filters.dateStart || filters.dateEnd;
+    filters.search ||
+    filters.section ||
+    filters.dateStart ||
+    filters.dateEnd ||
+    filters.type_maintenance;
 
   return (
     <div className="space-y-4">
@@ -62,11 +67,26 @@ export function MoyensDesTravailFilter({
             />
           </div>
         </div>
+        <Select
+          value={filters.type_maintenance ?? "all"}
+          onValueChange={(value) =>
+            onFiltersChange({ type_maintenance: value || "all" })
+          }
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue defaultValue={"all"} placeholder="Maintenance" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les maintenaces</SelectItem>
+            <SelectItem value={"prevventive"}>Préventive</SelectItem>
+            <SelectItem value={"corrective"}>Corrective</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Select
-          value={filters.section ?? undefined}
+          value={filters.section ?? "all"}
           onValueChange={(value) =>
-            onFiltersChange({ section: value || undefined })
+            onFiltersChange({ section: value || "all" })
           }
         >
           <SelectTrigger className="w-[180px]">

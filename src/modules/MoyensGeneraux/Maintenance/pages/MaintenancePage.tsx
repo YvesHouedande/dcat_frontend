@@ -1,7 +1,7 @@
-import { MoyensDesTravailTable } from "../components/MoyensDesTravailTable";
-import { useMoyensDeTravail } from "../hooks/moyens-de-travail/use-moyens-de-travail";
+import { MaintenanceTable } from "../components/MaintenanceTable";
+import { useMoyensDeTravail } from "../hooks/moyens-de-travail/use-maintenance";
 
-export function MoyensDesTravailPage() {
+export function MaintenancePage() {
   const {
     moyens,
     pagination,
@@ -19,7 +19,7 @@ export function MoyensDesTravailPage() {
 
   return (
     <div className="container py-6">
-      <MoyensDesTravailTable
+      <MaintenanceTable
         moyens={moyens}
         sections={sections}
         filters={filters}

@@ -1,11 +1,11 @@
 import { Demande, Employe, NatureDocument } from "../../types/interfaces";
 
 export const employes: Employe[] = [
-  { id_employe: 101, nom_employes: "Dubois", prenom_employes: "Thomas" },
-  { id_employe: 102, nom_employes: "Dupont", prenom_employes: "Marie" },
-  { id_employe: 103, nom_employes: "Martin", prenom_employes: "Sophie" },
-  { id_employe: 104, nom_employes: "Bernard", prenom_employes: "Lucas" },
-  { id_employe: 105, nom_employes: "Petit", prenom_employes: "Emma" },
+  { id_employe: 101, nom_employes: "Dubois", prenom_employes: "Thomas",id_fonction: 1 },
+  { id_employe: 102, nom_employes: "Dupont", prenom_employes: "Marie",id_fonction: 2 },
+  { id_employe: 103, nom_employes: "Martin", prenom_employes: "Sophie",id_fonction: 3 },
+  { id_employe: 104, nom_employes: "Bernard", prenom_employes: "Lucas",id_fonction: 4 },
+  { id_employe: 105, nom_employes: "Leroy", prenom_employes: "Chloé",id_fonction: 5 },
 ];
 
 // Exemple de données pour les natures de documents

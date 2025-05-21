@@ -9,6 +9,7 @@ import CataloguePage from "./Outils/pages/cataloguePage.tsx";
 import ReferenceEditForm from "./Outils/pages/referenceRegistration.tsx";
 import EntreeSortie from "./Outils/pages/EntreeSortie.tsx";
 import { MoyensDesTravailPage } from "./Outils/moyens_de_travail/pages/MoyensDesTravailPage.tsx";
+import { MaintenancePage } from "./Maintenance/pages/MaintenancePage.tsx";
 const MoyenGenerauxgRoutes: React.FC = () => {
   return (
     <Routes>
@@ -21,7 +22,7 @@ const MoyenGenerauxgRoutes: React.FC = () => {
         <Route path="sorties" element={<EntreeSortie />} />
       </Route>
       <Route path="/maitenance-entretients" element={<MoyensGenerauxLayout />}>
-        <Route index element={<MoyenGeneraux />} />
+        <Route index element={<MaintenancePage />} />
       </Route>
       <Route
         path="/Equipements-moyens-travail"
