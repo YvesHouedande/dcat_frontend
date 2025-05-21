@@ -14,14 +14,23 @@ import EditPartnerForm from "./pages/partenaires/editer_partenaire";
 import Contrats from "./pages/contrats/contrats";
 import InfoContract from "./pages/contrats/info_contrats";
 import NouveauContrat from "./pages/contrats/NouveauContrat";
-import AjoutAvenant from "./pages/contrats/AjoutAvenant";
 import EditerContrat from "./pages/contrats/editerContrat";
 import DocumentDirectory from "./pages/documents/documents";
 import AddDocumentPage from "./pages/documents/AddDocumentPage";
 import DemandesAnnuaire from "./pages/demandes/demandes";
-import DemandesPage from "./pages/demandes/info_demandes";
 import NouvelleDemandePage from "./pages/demandes/nouveau";
 import ModifierDemandePage from "./pages/demandes/modifier_demande";
+import AddFinance from "../finance/addFinance";
+import FinanceGrid from "../finance/finances";
+import DocumentDetailPage from "./pages/documents/documentDetails";
+import FinanceDetailPage from "../finance/detailFinance";
+import EditFinance from "../finance/editFinance";
+import EditDocumentPage from "./pages/documents/editDocumentPage";
+import AddComptabilite from "../comptabilite/addComptabilite";
+import ComptabiliteGrid from "../comptabilite/comptabilite";
+import ComptabiliteDetailPage from "../comptabilite/detailComptabilite";
+import EditComptabilite from "../comptabilite/editComptabilite";
+import DemandeDetailPage from "./pages/demandes/info_demandes";
 const AdministrationRoutes: React.FC = () => {
   return (
     <Routes>
@@ -40,22 +49,40 @@ const AdministrationRoutes: React.FC = () => {
         <Route path="profil/:id" element={<ModernPartnerProfile />} />
         <Route path=":id/editer" element={<EditPartnerForm />} />
       </Route>
+      {/* Routes /contrats */}
       <Route path="/contrats" element={<AdministrationLayout />}>
         <Route index element={<Contrats />} />
-        <Route path="details/:id" element={<InfoContract />} />
-        <Route path="nouveau_contrat" element={<NouveauContrat />} />
+        <Route path=":id/details" element={<InfoContract />} />
+        <Route path="nouveau" element={<NouveauContrat />} />
         <Route path=":id/editer" element={<EditerContrat />} />
-        <Route path=":id/ajouter_avenant" element={<AjoutAvenant />} />
       </Route>
+      {/* Routes /demandes */}
       <Route path="/demandes" element={<AdministrationLayout />}>
         <Route index element={<DemandesAnnuaire />} />
-        <Route path=":id" element={<DemandesPage />} />
+        <Route path=":id/details" element={<DemandeDetailPage />} />
         <Route path="nouvelle" element={<NouvelleDemandePage />} />
         <Route path=":id/editer" element={<ModifierDemandePage />} />
       </Route>
+      {/* Routes /documents */}
       <Route path="/documents" element={<AdministrationLayout />}>
         <Route index element={<DocumentDirectory />} />
+        <Route path=":id/details" element={<DocumentDetailPage />} />
+        <Route path=":id/editer" element={<EditDocumentPage />} />
         <Route path="nouveau" element={<AddDocumentPage />} />
+      </Route>
+      {/* Routes /finance */}
+      <Route path="/finance" element={<AdministrationLayout />}>
+        <Route index element={<FinanceGrid />} />
+        <Route path=":id/details" element={<FinanceDetailPage />} />
+        <Route path="nouveau" element={<AddFinance />} />
+        <Route path=":id/editer" element={<EditFinance />} />
+      </Route>
+      {/* Routes /comptabilité */}
+      <Route path="/comptabilite" element={<AdministrationLayout />}>
+        <Route index element={<ComptabiliteGrid />} />
+        <Route path=":id/details" element={<ComptabiliteDetailPage />} />
+        <Route path="nouveau" element={<AddComptabilite />} />
+        <Route path=":id/editer" element={<EditComptabilite />} />
       </Route>
       <Route path="/*" element={<NotFound />} />
     </Routes>

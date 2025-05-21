@@ -22,17 +22,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { UploadCloud, File, X, AlertCircle } from "lucide-react";
-import { Document } from "../../types/interfaces";
+import { Document } from "../administration/types/interfaces";
 
-// Fonction utilitaire pour fusionner les classes conditionnellement
-const cn = (...classes: (string | boolean | undefined)[]) => {
-  return classes.filter(Boolean).join(" ");
-};
 interface Errors {
   [key: string]: string | undefined;
 }
 
-const AddDocumentPage: React.FC = () => {
+const cn = (...classes: (string | boolean | undefined)[]) => {
+  return classes.filter(Boolean).join(" ");
+};
+
+const AddFinance: React.FC = () => {
   const navigate = useNavigate();
   const [errors, setErrors] = useState<Errors>({});
   const [file, setFile] = useState<File | null>(null);
@@ -41,9 +41,9 @@ const AddDocumentPage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [documentInfo, setDocumentInfo] = useState<Partial<Document>>({
     libele_document: "",
-    classification_document: "",
     etat_document: "private",
     id_nature_document: 0,
+    date_document: new Date().toISOString().split("T")[0], // Format YYYY-MM-DD pour l'input date
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,30 +65,26 @@ const AddDocumentPage: React.FC = () => {
     e.stopPropagation();
     setDragOver(false);
 
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    if (droppedFiles.length > 0) {
-      addFile(droppedFiles[0]); // Prendre seulement le premier fichier
+    if (e.dataTransfer.files.length > 0) {
+      addFile(e.dataTransfer.files[0]);
     }
   };
 
-  // Gestion de la sélection de fichier via le bouton
+  // Gestion de la sélection de fichiers via le bouton
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const selectedFile = e.target.files[0]; // Prendre seulement le premier fichier
-      addFile(selectedFile);
-      e.target.value = ""; // Réinitialiser l'input pour permettre la sélection du même fichier
+      addFile(e.target.files[0]);
+      e.target.value = "";
     }
   };
 
-  // Ajout d'un seul fichier
+  // Fonction pour ajouter un seul fichier
   const addFile = (newFile: File) => {
     setFile(newFile);
-
-    // Si aucun libellé n'est défini, utiliser le nom du fichier
-    if (!documentInfo.libele_document) {
-      const fileName = newFile.name.split(".")[0]; // Enlever l'extension
-      syncDocumentNames(fileName);
-    }
+    setDocumentInfo(prev => ({
+      ...prev,
+      libele_document: newFile.name.split(".")[0],
+    }));
   };
 
   // Supprimer le fichier
@@ -100,15 +96,16 @@ const AddDocumentPage: React.FC = () => {
   const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setDocumentInfo((prev) => ({ ...prev, [name]: value }));
+    
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
   };
 
-  // Simuler l'envoi du document au backend
+  // Simuler le téléchargement
   const handleUpload = () => {
+    if (!file) return;
     const newErrors: Errors = {};
-
-    if (!documentInfo.classification_document) {
-      newErrors.classification_document = "La classification est obligatoire";
-    }
 
     if (!documentInfo.libele_document) {
       newErrors.libele_document = "Le libellé est obligatoire";
@@ -118,9 +115,8 @@ const AddDocumentPage: React.FC = () => {
       newErrors.id_nature_document = "La nature du document est obligatoire";
     }
 
-    // Vérifier si nous avons un fichier
-    if (!file) {
-      newErrors.file = "Veuillez sélectionner un fichier";
+    if (!documentInfo.date_document) {
+      newErrors.date_document = "La date du document est obligatoire";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -131,69 +127,43 @@ const AddDocumentPage: React.FC = () => {
     setUploading(true);
     setUploadProgress(0);
 
-    // Préparation des données à envoyer au backend
-    const formData = new FormData();
-
-    // Ajouter les informations du document
-    formData.append('libele_document', documentInfo.libele_document || '');
-    formData.append('classification_document', documentInfo.classification_document || '');
-    formData.append('etat_document', documentInfo.etat_document || 'private');
-    formData.append('id_nature_document', documentInfo.id_nature_document?.toString() || '0');
-
-    // Ajouter le fichier
-    if (file) {
-      formData.append('file', file);
-    }
-
-    // Simulation de l'envoi au backend
-    // En production, remplacer par un vrai appel API
-    const simulateUpload = () => {
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setTimeout(() => {
-              setUploading(false);
-              // Redirection après succès
-              navigate("/administration/documents");
-            }, 500);
-            return 100;
-          }
-          return prev + 5;
-        });
-      }, 150);
+    // Utiliser la date saisie par l'utilisateur
+    const finalDocumentInfo = {
+      ...documentInfo
     };
 
-    simulateUpload();
+    // Simulation de l'envoi du fichier au backend
+    console.log("Envoi du fichier au backend:", {
+      file: file.name,
+      type: file.type,
+      ...finalDocumentInfo,
+      lien_document: "À générer côté serveur"
+    });
 
-    // Code pour API réelle (à décommenter en production)
-    /*
-    fetch('/api/documents', {
-      method: 'POST',
-      body: formData,
-    })
-      .then(response => {
-        if (!response.ok) throw new Error('Erreur lors de l\'envoi du document');
-        return response.json();
-      })
-      .then(data => {
-        setUploading(false);
-        navigate("/administration/documents");
-      })
-      .catch(error => {
-        setUploading(false);
-        setErrors({ api: "Une erreur est survenue lors de l'envoi du document" });
-        console.error('Erreur:', error);
+    // Simulation de progression d'upload
+    const interval = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          
+          setTimeout(() => {
+            setUploading(false);
+            navigate("/administration/finance");
+          }, 500);
+
+          return 100;
+        }
+        return prev + 5;
       });
-    */
+    }, 150);
   };
 
-  // Synchroniser les noms de document
-  const syncDocumentNames = (name: string) => {
-    setDocumentInfo((prev) => ({
-      ...prev,
-      libele_document: name,
-    }));
+  // Fonction pour déterminer si le formulaire est valide
+  const isFormValid = () => {
+    return !!file && 
+           !!documentInfo.libele_document && 
+           !!documentInfo.id_nature_document &&
+           !!documentInfo.date_document;
   };
 
   // Fonction pour déterminer l'icône du type de fichier
@@ -214,25 +184,25 @@ const AddDocumentPage: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8 max-w-3xl">
-      <h1 className="text-2xl font-bold mb-6">Ajouter un document</h1>
+      <h1 className="text-2xl font-bold mb-6">Ajouter un fichier</h1>
 
       <Card>
         <CardHeader>
           <CardTitle>Nouveau document</CardTitle>
           <CardDescription>
-            Téléchargez un document et ajoutez les informations nécessaires
+            Charger un fichier et ajoutez les informations nécessaires
           </CardDescription>
         </CardHeader>
 
         <CardContent>
           <Tabs defaultValue="upload" className="mb-6">
             <TabsList className="grid grid-cols-2 mb-4">
-              <TabsTrigger value="upload">Document</TabsTrigger>
+              <TabsTrigger value="upload">Chargement</TabsTrigger>
               <TabsTrigger value="info">Informations</TabsTrigger>
             </TabsList>
 
             <TabsContent value="upload">
-              {/* Zone de drag & drop pour un fichier */}
+              {/* Zone de drag & drop */}
               <div
                 className={cn(
                   "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
@@ -279,7 +249,7 @@ const AddDocumentPage: React.FC = () => {
                     <div className="ml-3 flex-1">
                       <p className="font-medium truncate">{file.name}</p>
                       <p className="text-xs text-gray-500">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                        {(file.size / 1024 / 1024).toFixed(2)} MB - {file.type}
                       </p>
                     </div>
                     <Button
@@ -294,10 +264,6 @@ const AddDocumentPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-              )}
-
-              {errors.file && (
-                <p className="text-sm text-red-500 mt-2">{errors.file}</p>
               )}
             </TabsContent>
 
@@ -319,36 +285,9 @@ const AddDocumentPage: React.FC = () => {
                 </div>
 
                 <div className="grid w-full items-center gap-2">
-                  <Label htmlFor="classification_document">Classification*</Label>
-                  <Select
-                    value={documentInfo.classification_document || ""}
-                    onValueChange={(value) => {
-                      setDocumentInfo((prev) => ({ ...prev, classification_document: value }));
-                      setErrors((prev) => ({ ...prev, classification_document: undefined }));
-                    }}
-                  >
-                    <SelectTrigger
-                      className={errors.classification_document ? "border-red-500" : ""}
-                    >
-                      <SelectValue placeholder="Sélectionnez une classification" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="confidentiel">Confidentiel</SelectItem>
-                      <SelectItem value="interne">Interne</SelectItem>
-                      <SelectItem value="public">Public</SelectItem>
-                      <SelectItem value="personnel">Personnel</SelectItem>
-                      <SelectItem value="restreint">Restreint</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.classification_document && (
-                    <p className="text-sm text-red-500">{errors.classification_document}</p>
-                  )}
-                </div>
-
-                <div className="grid w-full items-center gap-2">
                   <Label htmlFor="id_nature_document">Nature du document*</Label>
                   <Select
-                  value={documentInfo.id_nature_document? documentInfo.id_nature_document.toString() : ""}
+                    value={documentInfo.id_nature_document? documentInfo.id_nature_document.toString() : ""}
                     onValueChange={(value) => {
                       setDocumentInfo((prev) => ({ ...prev, id_nature_document: parseInt(value) }));
                       setErrors((prev) => ({ ...prev, id_nature_document: undefined }));
@@ -369,6 +308,21 @@ const AddDocumentPage: React.FC = () => {
                   </Select>
                   {errors.id_nature_document && (
                     <p className="text-sm text-red-500">{errors.id_nature_document}</p>
+                  )}
+                </div>
+
+                <div className="grid w-full items-center gap-2">
+                  <Label htmlFor="date_document">Date du document*</Label>
+                  <Input
+                    type="date"
+                    id="date_document"
+                    name="date_document"
+                    value={documentInfo.date_document || ""}
+                    onChange={handleInfoChange}
+                    className={errors.date_document ? "border-red-500" : ""}
+                  />
+                  {errors.date_document && (
+                    <p className="text-sm text-red-500">{errors.date_document}</p>
                   )}
                 </div>
 
@@ -403,7 +357,7 @@ const AddDocumentPage: React.FC = () => {
           {uploading && (
             <div className="my-4">
               <div className="flex justify-between text-sm mb-1">
-                <span>Téléchargement en cours...</span>
+                <span>Enregistrement en cours...</span>
                 <span>{uploadProgress}%</span>
               </div>
               <Progress value={uploadProgress} className="h-2" />
@@ -417,15 +371,10 @@ const AddDocumentPage: React.FC = () => {
           </Button>
           <Button
             onClick={handleUpload}
-            disabled={
-              uploading ||  !documentInfo.classification_document ||
-              !documentInfo.libele_document ||
-              !documentInfo.id_nature_document ||
-              !file
-            }
+            disabled={uploading || !isFormValid()}
             className="ml-2"
           >
-            {uploading ? "Téléchargement..." : "Télécharger"}
+            {uploading ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </CardFooter>
       </Card>
@@ -447,4 +396,4 @@ const AddDocumentPage: React.FC = () => {
   );
 };
 
-export default AddDocumentPage;
+export default AddFinance;

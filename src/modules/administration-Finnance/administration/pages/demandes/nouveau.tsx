@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -45,142 +44,151 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { Demande, Document } from "../../types/interfaces";
+import { naturesDocuments, employes } from "./data";
 
-// Types pour le formulaire
-interface DemandeFormData {
-  type_demande: string;
-  date_debut: Date | undefined;
-  date_fin: Date | undefined;
-  motif: string;
-  Id_employes: number;
-}
+// Définition du type pour les valeurs possibles dans handleChange
+type DemandeValue = string | number | Date | Document[] | undefined;
 
-// Type pour les employés
-interface Employe {
-  Id_employes: number;
-  nom: string;
-  prenom: string;
-  departement: string;
-}
-
-// Type pour les fichiers joints
-interface FichierJoint {
-  id: number;
-  nom: string;
-  taille: string;
-  type: string;
-}
-
-// Données d'exemple pour les employés
-const employes: Employe[] = [
-  {
-    Id_employes: 101,
-    nom: "Dubois",
-    prenom: "Thomas",
-    departement: "Marketing",
-  },
-  {
-    Id_employes: 102,
-    nom: "Dupont",
-    prenom: "Marie",
-    departement: "Informatique",
-  },
-  {
-    Id_employes: 103,
-    nom: "Martin",
-    prenom: "Sophie",
-    departement: "Ressources Humaines",
-  },
-  { Id_employes: 104, nom: "Bernard", prenom: "Lucas", departement: "Finance" },
-  { Id_employes: 105, nom: "Petit", prenom: "Emma", departement: "Ventes" },
-];
-
-const NouvelleDemandePage: React.FC = () => {
-  // États du formulaire
-  const [dateDebut, setDateDebut] = useState<Date | undefined>(undefined);
-  const [dateFin, setDateFin] = useState<Date | undefined>(undefined);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [fichiers, setFichiers] = useState<FichierJoint[]>([]);
-  const navigate = useNavigate();
-
-  // Initialiser le formulaire
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    setValue,
-    watch,
-  } = useForm<DemandeFormData>({
-    defaultValues: {
-      type_demande: "",
-      date_debut: undefined,
-      date_fin: undefined,
-      motif: "",
-      Id_employes: 0,
-    },
+const NouvelleDemandePage = () => {
+  // State pour stocker les données du formulaire
+  const [demande, setDemande] = useState<Partial<Demande>>({
+    status: "En attente",
+    documents: [],
   });
 
-  // Surveiller les valeurs pour validation
-  const typeDemandeValue = watch("type_demande");
-  const motifValue = watch("motif");
-  const employeValue = watch("Id_employes");
+  // States pour gérer l'interface utilisateur
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [documentName, setDocumentName] = useState("");
+  const [documentNature, setDocumentNature] = useState<number | undefined>(undefined);
+  const [showAddDocumentDialog, setShowAddDocumentDialog] = useState(false);
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
 
-  // Fonction pour soumettre le formulaire
-  const onSubmit = (data: DemandeFormData) => {
-    console.log("Données soumises:", data);
-    console.log("Fichiers joints:", fichiers);
-    // Vous implémenteriez ici l'appel API pour enregistrer la demande
-    setShowSuccessDialog(true);
-  };
+  // Mise à jour de la durée lorsqu'une des dates change
+  useEffect(() => {
+    if (demande.date_debut && demande.date_fin) {
+      const diffTime = demande.date_fin.getTime() - demande.date_debut.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      setDemande(prev => ({ ...prev, duree: diffDays.toString() }));
+    }
+  }, [demande.date_debut, demande.date_fin]);
 
-  // Fonction pour réinitialiser le formulaire
-  const resetForm = () => {
-    reset();
-    setDateDebut(undefined);
-    setDateFin(undefined);
-    setFichiers([]);
-    setShowCancelDialog(false);
-  };
-
-  // Fonction pour vérifier si le formulaire est complet
-  const isFormComplete = () => {
-    return (
-      typeDemandeValue && dateDebut && dateFin && motifValue && employeValue > 0
-    );
-  };
-
-  // Fonction pour gérer l'upload de fichiers
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      // Ajouter les nouveaux fichiers à la liste
-      const newFiles: FichierJoint[] = Array.from(e.target.files).map(
-        (file, index) => {
-          return {
-            id: Date.now() + index,
-            nom: file.name,
-            taille: formatFileSize(file.size),
-            type: file.type,
-          };
-        }
-      );
-
-      setFichiers((prev) => [...prev, ...newFiles]);
+  // Gestion des changements de valeurs - Remplacé 'any' par 'DemandeValue'
+  const handleChange = (field: keyof Demande, value: DemandeValue) => {
+    setDemande(prev => ({ ...prev, [field]: value }));
+    
+    // Effacer l'erreur pour ce champ si elle existe
+    if (formErrors[field]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
-  // Fonction pour supprimer un fichier
-  const supprimerFichier = (id: number) => {
-    setFichiers((prev) => prev.filter((fichier) => fichier.id !== id));
+  // Validation du formulaire
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!demande.type_demande) errors.type_demande = "Ce champ est obligatoire";
+    if (!demande.id_employe) errors.id_employe = "Ce champ est obligatoire";
+    if (!demande.motif || demande.motif.trim() === "") errors.motif = "Ce champ est obligatoire";
+    if (!demande.date_debut) errors.date_debut = "Ce champ est obligatoire";
+    if (!demande.date_fin) errors.date_fin = "Ce champ est obligatoire";
+    if (!demande.date_absence) errors.date_absence = "Ce champ est obligatoire";
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  // Fonction pour formater la taille des fichiers
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + " octets";
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " Ko";
-    else return (bytes / 1048576).toFixed(1) + " Mo";
+  // Soumission du formulaire
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm()) {
+      console.log("Demande soumise:", demande);
+      setShowSuccessDialog(true);
+    }
+  };
+
+  // Réinitialisation du formulaire
+  const resetForm = () => {
+    setDemande({
+      status: "En attente",
+      documents: [],
+    });
+    setFormErrors({});
+    setShowCancelDialog(false);
+  };
+
+  // Vérifie si le formulaire est complet pour activer le bouton de soumission
+  const isFormComplete = (): boolean => {
+    return !!(
+      demande.type_demande && 
+      demande.motif && 
+      demande.motif.trim() !== "" && 
+      demande.id_employe &&
+      demande.date_debut && 
+      demande.date_fin &&
+      demande.date_absence
+    );
+  };
+
+  // Gestion des documents
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      setDocumentName(file.name);
+      setShowAddDocumentDialog(true);
+    }
+  };
+
+  const ajouterDocument = () => {
+    if (selectedFile && documentName.trim() !== "") {
+      const nouveauDocument: Document = {
+        id_document: Date.now(),
+        libele_document: documentName.trim(),
+        id_nature_document: documentNature,
+        lien_document: URL.createObjectURL(selectedFile),
+      };
+
+      setDemande(prev => ({ 
+        ...prev, 
+        documents: [...(prev.documents || []), nouveauDocument] 
+      }));
+      
+      setSelectedFile(null);
+      setDocumentName("");
+      setDocumentNature(undefined);
+      setShowAddDocumentDialog(false);
+    }
+  };
+
+  const supprimerDocument = (id_document: number) => {
+    setDemande(prev => ({
+      ...prev,
+      documents: prev.documents?.filter(doc => doc.id_document !== id_document) || []
+    }));
+  };
+
+  // Formater les dates pour l'affichage
+  const formatDate = (date: Date | undefined): string => {
+    return date ? format(date, "dd MMMM yyyy", { locale: fr }) : "Sélectionner une date";
+  };
+
+  // Annuler la navigation
+  const handleCancel = () => {
+    setShowCancelDialog(true);
+  };
+
+  // Naviguer en arrière après annulation
+  const confirmCancel = () => {
+    resetForm();
+    // Navigation en arrière serait ici si react-router était disponible
+    console.log("Navigation en arrière");
   };
 
   return (
@@ -193,7 +201,7 @@ const NouvelleDemandePage: React.FC = () => {
           </CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
             {/* Type de demande */}
             <div className="space-y-2">
@@ -201,35 +209,34 @@ const NouvelleDemandePage: React.FC = () => {
                 Type de demande <span className="text-red-500">*</span>
               </Label>
               <Select
-                onValueChange={(value) => setValue("type_demande", value)}
-                value={typeDemandeValue}
+                onValueChange={(value) => handleChange("type_demande", value)}
+                value={demande.type_demande}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionnez un type de demande" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Congé">Congé</SelectItem>
-                  <SelectItem value="Congé maladie">Congé maladie</SelectItem>
                   <SelectItem value="Formation">Formation</SelectItem>
                   <SelectItem value="Télétravail">Télétravail</SelectItem>
-                  <SelectItem value="Autres">Autres</SelectItem>
+                  <SelectItem value="Remboursement">Remboursement</SelectItem>
+                  <SelectItem value="Matériel">Matériel</SelectItem>
+                  <SelectItem value="Autre">Autre</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.type_demande && (
-                <p className="text-sm text-red-500">Ce champ est obligatoire</p>
+              {formErrors.type_demande && (
+                <p className="text-sm text-red-500">{formErrors.type_demande}</p>
               )}
             </div>
 
             {/* Sélection de l'employé */}
             <div className="space-y-2">
-              <Label htmlFor="Id_employes" className="text-base">
+              <Label htmlFor="id_employe" className="text-base">
                 Employé concerné <span className="text-red-500">*</span>
               </Label>
               <Select
-                onValueChange={(value) =>
-                  setValue("Id_employes", parseInt(value))
-                }
-                value={employeValue ? employeValue.toString() : ""}
+                onValueChange={(value) => handleChange("id_employe", parseInt(value))}
+                value={demande.id_employe?.toString()}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionnez un employé" />
@@ -237,20 +244,88 @@ const NouvelleDemandePage: React.FC = () => {
                 <SelectContent>
                   {employes.map((employe) => (
                     <SelectItem
-                      key={employe.Id_employes}
-                      value={employe.Id_employes.toString()}
+                      key={employe.id_employe}
+                      value={employe.id_employe.toString()}
                     >
-                      {employe.prenom} {employe.nom} - {employe.departement}
+                      {employe.prenom_employes} {employe.nom_employes}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.Id_employes && (
-                <p className="text-sm text-red-500">Ce champ est obligatoire</p>
+              {formErrors.id_employe && (
+                <p className="text-sm text-red-500">{formErrors.id_employe}</p>
               )}
             </div>
 
-            {/* Sélection des dates */}
+            {/* Date d'absence */}
+            <div className="space-y-2">
+              <Label className="text-base">
+                Date d'absence <span className="text-red-500">*</span>
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start text-left font-normal ${
+                      !demande.date_absence && "text-gray-400"
+                    }`}
+                    type="button"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formatDate(demande.date_absence)}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={demande.date_absence}
+                    onSelect={(date) => date && handleChange("date_absence", date)}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              {formErrors.date_absence && (
+                <p className="text-sm text-red-500">{formErrors.date_absence}</p>
+              )}
+            </div>
+
+            {/* Date de retour */}
+            <div className="space-y-2">
+              <Label className="text-base">
+                Date de retour
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start text-left font-normal ${
+                      !demande.date_retour && "text-gray-400"
+                    }`}
+                    disabled={!demande.date_absence}
+                    type="button"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formatDate(demande.date_retour)}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={demande.date_retour}
+                    onSelect={(date) => date && handleChange("date_retour", date)}
+                    disabled={(date) =>
+                      !demande.date_absence || date < demande.date_absence
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Période de la demande */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-base">
@@ -261,25 +336,19 @@ const NouvelleDemandePage: React.FC = () => {
                     <Button
                       variant="outline"
                       className={`w-full justify-start text-left font-normal ${
-                        !dateDebut && "text-gray-400"
+                        !demande.date_debut && "text-gray-400"
                       }`}
+                      type="button"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateDebut ? (
-                        format(dateDebut, "dd MMMM yyyy", { locale: fr })
-                      ) : (
-                        <span>Sélectionner une date</span>
-                      )}
+                      {formatDate(demande.date_debut)}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
                     <Calendar
                       mode="single"
-                      selected={dateDebut}
-                      onSelect={(date) => {
-                        setDateDebut(date);
-                        setValue("date_debut", date);
-                      }}
+                      selected={demande.date_debut}
+                      onSelect={(date) => date && handleChange("date_debut", date)}
                       disabled={(date) =>
                         date < new Date(new Date().setHours(0, 0, 0, 0))
                       }
@@ -287,6 +356,9 @@ const NouvelleDemandePage: React.FC = () => {
                     />
                   </PopoverContent>
                 </Popover>
+                {formErrors.date_debut && (
+                  <p className="text-sm text-red-500">{formErrors.date_debut}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -298,41 +370,33 @@ const NouvelleDemandePage: React.FC = () => {
                     <Button
                       variant="outline"
                       className={`w-full justify-start text-left font-normal ${
-                        !dateFin && "text-gray-400"
+                        !demande.date_fin && "text-gray-400"
                       }`}
-                      disabled={!dateDebut}
+                      disabled={!demande.date_debut}
+                      type="button"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFin ? (
-                        format(dateFin, "dd MMMM yyyy", { locale: fr })
-                      ) : (
-                        <span>Sélectionner une date</span>
-                      )}
+                      {formatDate(demande.date_fin)}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
                     <Calendar
                       mode="single"
-                      selected={dateFin}
-                      onSelect={(date) => {
-                        setDateFin(date);
-                        setValue("date_fin", date);
-                      }}
+                      selected={demande.date_fin}
+                      onSelect={(date) => date && handleChange("date_fin", date)}
                       disabled={(date) =>
-                        dateDebut?.getTime() !== undefined && date < dateDebut
+                        !demande.date_debut || date < demande.date_debut
                       }
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
-                {dateDebut && dateFin && (
+                {formErrors.date_fin && (
+                  <p className="text-sm text-red-500">{formErrors.date_fin}</p>
+                )}
+                {demande.date_debut && demande.date_fin && (
                   <p className="text-sm text-gray-500">
-                    Durée:{" "}
-                    {Math.ceil(
-                      (dateFin.getTime() - dateDebut.getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    ) + 1}{" "}
-                    jours
+                    Durée: {demande.duree} jours
                   </p>
                 )}
               </div>
@@ -347,13 +411,15 @@ const NouvelleDemandePage: React.FC = () => {
                 id="motif"
                 placeholder="Décrivez le motif de votre demande..."
                 className="min-h-32 resize-none"
-                {...register("motif", { required: "Ce champ est obligatoire" })}
+                value={demande.motif || ""}
+                onChange={(e) => handleChange("motif", e.target.value)}
+                maxLength={500}
               />
-              {errors.motif && (
-                <p className="text-sm text-red-500">{errors.motif.message}</p>
+              {formErrors.motif && (
+                <p className="text-sm text-red-500">{formErrors.motif}</p>
               )}
               <p className="text-sm text-gray-500">
-                {motifValue ? motifValue.length : 0}/500 caractères
+                {(demande.motif?.length || 0)}/500 caractères
               </p>
             </div>
 
@@ -367,33 +433,34 @@ const NouvelleDemandePage: React.FC = () => {
                     id="file-upload"
                     className="hidden"
                     onChange={handleFileChange}
-                    multiple
                   />
                   <Label
                     htmlFor="file-upload"
                     className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-md cursor-pointer hover:bg-blue-100 transition-colors"
                   >
                     <FileUp className="mr-2 h-4 w-4" />
-                    Ajouter des fichiers
+                    Ajouter un fichier
                   </Label>
                 </div>
               </div>
 
-            
-              {/* Liste des fichiers joints */}
               <div className="space-y-2">
-                {fichiers.length > 0 ? (
-                  fichiers.map((fichier) => (
+                {demande.documents && demande.documents.length > 0 ? (
+                  demande.documents.map((document) => (
                     <div
-                      key={fichier.id}
+                      key={document.id_document}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
                     >
                       <div className="flex items-center space-x-3">
                         <Paperclip className="h-4 w-4 text-gray-500" />
                         <div>
-                          <p className="font-medium">{fichier.nom}</p>
+                          <p className="font-medium">{document.libele_document}</p>
                           <p className="text-xs text-gray-500">
-                            {fichier.taille} • {fichier.type.split("/")[1]}
+                            {document.id_nature_document && (
+                              <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                {naturesDocuments.find(n => n.id_nature_document === document.id_nature_document)?.libelle_td || 'Non défini'}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -401,7 +468,7 @@ const NouvelleDemandePage: React.FC = () => {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => supprimerFichier(fichier.id)}
+                        onClick={() => supprimerDocument(document.id_document)}
                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
                       >
                         <XCircle className="h-4 w-4" />
@@ -410,14 +477,13 @@ const NouvelleDemandePage: React.FC = () => {
                   ))
                 ) : (
                   <p className="text-sm text-gray-500">
-                    Aucun fichier joint. Vous pouvez ajouter des documents à
-                    votre demande.
+                    Aucun document joint. Vous pouvez ajouter des documents à
+                    votre demande si nécessaire.
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Explication des champs obligatoires */}
             <div className="text-sm text-gray-500">
               <span className="text-red-500">*</span> Champs obligatoires
             </div>
@@ -427,7 +493,7 @@ const NouvelleDemandePage: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setShowCancelDialog(true)}
+              onClick={handleCancel}
             >
               <X className="mr-2 h-4 w-4" />
               Annuler
@@ -444,7 +510,7 @@ const NouvelleDemandePage: React.FC = () => {
         </form>
       </Card>
 
-      {/* Dialogue de confirmation d'annulation */}
+      {/* Dialogues */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -456,7 +522,7 @@ const NouvelleDemandePage: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Continuer la saisie</AlertDialogCancel>
-            <AlertDialogAction onClick={()=>{resetForm(); navigate(-1)}}>
+            <AlertDialogAction onClick={confirmCancel}>
               Oui, annuler
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -481,6 +547,75 @@ const NouvelleDemandePage: React.FC = () => {
               }}
             >
               Fermer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialogue d'ajout de document */}
+      <AlertDialog open={showAddDocumentDialog} onOpenChange={setShowAddDocumentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ajouter un document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Veuillez saisir les informations du document
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="documentName">Nom du document</Label>
+              <Input
+                id="documentName"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                placeholder="Entrez un nom pour ce document"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="documentType">Type de document</Label>
+              <Select
+                onValueChange={(value) => setDocumentNature(Number(value))}
+                value={documentNature?.toString()}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un type de document" />
+                </SelectTrigger>
+                <SelectContent>
+                  {naturesDocuments.map((nature) => (
+                    <SelectItem
+                      key={nature.id_nature_document}
+                      value={nature.id_nature_document.toString()}
+                    >
+                      {nature.libelle_td}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {selectedFile && (
+              <div className="text-sm text-gray-500">
+                Fichier sélectionné: {selectedFile.name}
+              </div>
+            )}
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setSelectedFile(null);
+              setDocumentName("");
+              setDocumentNature(undefined);
+              setShowAddDocumentDialog(false);
+            }}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={ajouterDocument} 
+              disabled={!selectedFile || documentName.trim() === "" || !documentNature}
+            >
+              Ajouter
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

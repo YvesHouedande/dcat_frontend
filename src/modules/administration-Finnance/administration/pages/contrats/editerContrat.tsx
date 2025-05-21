@@ -11,11 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Calendar as CalendarIcon,
-  Save,
-  Upload,
-} from "lucide-react";
+import { Calendar as CalendarIcon, Save, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,33 +21,48 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Contrat, Document } from "../../types/interfaces";
+// Interfaces
+
+
 const EditerContrat: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // États du formulaire
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Contrat>({
+    id_contrat: 0, // Changé de string vide à 0
     nom_contrat: "",
-    Id_partenaire: "",
     duree_Contrat: "",
-    date_debut: undefined as Date | undefined,
-    date_fin: undefined as Date | undefined,
-    notes: "",
-    fichier: null as File | null,
+    date_debut: "",
+    date_fin: "",
+    Reference: "",
+    type_de_contrat: "",
+    status: "",
+    id_partenaire: undefined,
   });
 
-  // Liste des partenaires (à remplacer par une vraie API)
+  const [documentData, setDocumentData] = useState<Document>({
+    id_document: 0,
+    libele_document: "",
+    date_document: "",
+    lien_document: "",
+    id_contrat: undefined, // Changé de string vide à undefined
+    id_nature_document: undefined,
+  });
+
+  // Liste des partenaires et des natures de document
   const partenaires = [
-    { id: "P001", nom: "Systèmes IT Pro" },
-    { id: "P002", nom: "TechSupport Plus" },
-    { id: "P003", nom: "ConseilJuridique SA" },
-    { id: "P004", nom: "FourniPro SARL" },
-    { id: "P005", nom: "AgenceCom Digital" },
-    { id: "P006", nom: "SoftwareSolutions" },
-    { id: "P007", nom: "PartenairesAssociés" },
-    { id: "P008", nom: "DistribExpress" },
+    { id: 1, nom: "Systèmes IT Pro" },
+    { id: 2, nom: "TechSupport Plus" },
+    // Ajoutez d'autres partenaires ici
   ];
 
+  const naturesDocument = [
+    { id_nature_document: 1, libelle_td: "Contrat Principal" },
+    { id_nature_document: 2, libelle_td: "Annexe" },
+    // Ajoutez d'autres natures de document ici
+  ];
 
   // Gérer les changements des champs de texte
   const handleInputChange = (
@@ -67,9 +78,9 @@ const EditerContrat: React.FC = () => {
   // Gérer le changement de fichier
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFormData({
-        ...formData,
-        fichier: e.target.files[0],
+      setDocumentData({
+        ...documentData,
+        lien_document: URL.createObjectURL(e.target.files[0]),
       });
     }
   };
@@ -103,7 +114,7 @@ const EditerContrat: React.FC = () => {
 
     setFormData({
       ...formData,
-      date_fin: endDate,
+      date_fin: format(endDate, "yyyy-MM-dd"),
     });
   };
 
@@ -152,7 +163,10 @@ const EditerContrat: React.FC = () => {
                       </Label>
                       <Select
                         onValueChange={(value) =>
-                          setFormData({ ...formData, Id_partenaire: value })
+                          setFormData({
+                            ...formData,
+                            id_partenaire: parseInt(value),
+                          })
                         }
                         required
                       >
@@ -163,7 +177,7 @@ const EditerContrat: React.FC = () => {
                           {partenaires.map((partenaire) => (
                             <SelectItem
                               key={partenaire.id}
-                              value={partenaire.id}
+                              value={partenaire.id.toString()}
                             >
                               {partenaire.nom}
                             </SelectItem>
@@ -183,14 +197,17 @@ const EditerContrat: React.FC = () => {
                             duree_Contrat: e.target.value,
                           });
                           if (formData.date_debut) {
-                            updateEndDate(e.target.value, formData.date_debut);
+                            updateEndDate(
+                              e.target.value,
+                              new Date(formData.date_debut)
+                            );
                           }
                         }}
                         type="number"
                         required
                       ></Input>
                       <p className="text-xs text-gray-500 italic">
-                        la durée du contract doit s'exprimer en mois
+                        La durée du contrat doit s'exprimer en mois
                       </p>
                     </div>
                   </div>
@@ -208,7 +225,7 @@ const EditerContrat: React.FC = () => {
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {formData.date_debut ? (
-                              format(formData.date_debut, "dd MMMM yyyy", {
+                              format(new Date(formData.date_debut), "dd MMMM yyyy", {
                                 locale: fr,
                               })
                             ) : (
@@ -219,10 +236,13 @@ const EditerContrat: React.FC = () => {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={formData.date_debut}
+                            selected={new Date(formData.date_debut)}
                             onSelect={(date) => {
                               if (date) {
-                                setFormData({ ...formData, date_debut: date });
+                                setFormData({
+                                  ...formData,
+                                  date_debut: format(date, "yyyy-MM-dd"),
+                                });
                                 if (formData.duree_Contrat) {
                                   updateEndDate(formData.duree_Contrat, date);
                                 }
@@ -245,7 +265,7 @@ const EditerContrat: React.FC = () => {
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {formData.date_fin ? (
-                              format(formData.date_fin, "dd MMMM yyyy", {
+                              format(new Date(formData.date_fin), "dd MMMM yyyy", {
                                 locale: fr,
                               })
                             ) : (
@@ -256,10 +276,13 @@ const EditerContrat: React.FC = () => {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={formData.date_fin}
+                            selected={new Date(formData.date_fin)}
                             onSelect={(date) =>
                               date &&
-                              setFormData({ ...formData, date_fin: date })
+                              setFormData({
+                                ...formData,
+                                date_fin: format(date, "yyyy-MM-dd"),
+                              })
                             }
                             initialFocus
                           />
@@ -280,6 +303,54 @@ const EditerContrat: React.FC = () => {
                   </h2>
 
                   <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="libele_document">
+                        Libellé du document <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="libele_document"
+                        name="libele_document"
+                        placeholder="Entrez le libellé du document"
+                        value={documentData.libele_document}
+                        onChange={(e) =>
+                          setDocumentData({
+                            ...documentData,
+                            libele_document: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="id_nature_document">
+                        Nature du document <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          setDocumentData({
+                            ...documentData,
+                            id_nature_document: parseInt(value),
+                          })
+                        }
+                        required
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionner la nature du document" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {naturesDocument.map((nature) => (
+                            <SelectItem
+                              key={nature.id_nature_document}
+                              value={nature.id_nature_document.toString()}
+                            >
+                              {nature.libelle_td}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="fichier">
                         Fichier du contrat (PDF){" "}
@@ -319,7 +390,7 @@ const EditerContrat: React.FC = () => {
                         name="notes"
                         placeholder="Ajoutez des notes ou commentaires sur ce contrat..."
                         rows={4}
-                        value={formData.notes}
+                        value={formData.Reference || ""}
                         onChange={handleInputChange}
                       />
                     </div>
@@ -334,7 +405,7 @@ const EditerContrat: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              className=" cursor-pointer"
+              className="cursor-pointer"
               onClick={() => navigate(-1)}
             >
               Annuler

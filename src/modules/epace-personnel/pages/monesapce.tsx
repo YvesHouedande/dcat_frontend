@@ -27,14 +27,14 @@ export default function UserProfile() {
   // Données de l'utilisateur (à remplacer par vos données réelles)
   const userData = {
     id: 1,
-    nom: "Dupont",
-    prenom: "Jean",
-    email: "jean.dupont@example.com",
+    nom: "YAO",
+    prenom: "Alle emmanuel",
+    email: "alle.yao@example.com",
     contact: "0123456789",
-    adresse: "123 Rue de Paris, 75001",
+    adresse: "ABidjan, Côte d'Ivoire",
     status: "Actif",
-    dateEmbauche: "15/01/2020",
-    dateNaissance: "05/05/1985",
+    dateEmbauche: "10/03/2025",
+    dateNaissance: "15/04/2005",
     contrat: "CDI",
     fonction: "Développeur",
   };

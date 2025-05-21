@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,22 +23,35 @@ import {
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
+import { Employe } from "../../types/interfaces"; // Import the Employe interface
+import { profilesList } from "./employe"; // Import the profilesList
+
+export const jobFunctions: Record<number, string> = {
+  1: "Développeur",
+  2: "Technicien Réseau",
+  3: "Directeur Général",
+  4: "Comptable",
+  5: "Agent Commercial",
+  6: "Directeur Technique",
+  7: "Administrateur Réseau",
+};
+
+export const getJobFunction = (id_fonction: number | undefined): string => {
+  if (id_fonction !== undefined && id_fonction in jobFunctions) {
+    return jobFunctions[id_fonction];
+  }
+  return "Non spécifié";
+};
 
 const ModernUserProfile: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const [userInfo, setUserInfo] = useState<Employe | null>(null);
 
-  const userInfo = {
-    name: "YAO",
-    firstName: "biskoty",
-    position: "Ingénieur Logiciel Senior",
-    mission: "Développement Frontend",
-    email: "yao.biskoty@dcat.ci",
-    phone: "01 23 45 67 89",
-    location: "Abidjan, Côte d'ivoire",
-    status: "Actif",
-  };
+  // Define job functions with type safety
 
+
+  // Example data for documents
   const documents = [
     {
       id: "1",
@@ -63,6 +76,16 @@ const ModernUserProfile: React.FC = () => {
     },
   ];
 
+  useEffect(() => {
+    // Fetch profile data based on the ID
+    const fetchProfileData = () => {
+      const profile = profilesList.find((p) => p.id_employe === Number(id));
+      setUserInfo(profile || null);
+    };
+
+    fetchProfileData();
+  }, [id]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "En cours":
@@ -80,23 +103,30 @@ const ModernUserProfile: React.FC = () => {
     navigate(`/administration/employers/${id}/editer`);
   };
 
+  // Helper function to safely get job function name
+
+
+  if (!userInfo) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header avec photo et nom */}
+      {/* Header with photo and name */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <Avatar className="w-24 h-24 border-4 border-white">
               <AvatarFallback className="bg-gray-800 text-xl">
-                YB
+                {userInfo.nom_employes.charAt(0) + userInfo.prenom_employes.charAt(0)}
               </AvatarFallback>
             </Avatar>
 
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-2xl font-bold">
-                {userInfo.firstName} {userInfo.name}
+                {userInfo.prenom_employes} {userInfo.nom_employes}
               </h1>
-              <p className="text-blue-100">{userInfo.position}</p>
+              <p className="text-blue-100">{getJobFunction(userInfo.id_fonction)}</p>
               <div className="mt-2">
                 <Badge
                   variant="outline"
@@ -121,8 +151,8 @@ const ModernUserProfile: React.FC = () => {
       <div className="container mx-auto px-4 -mt-4 rounded-lg shadow-md">
         <Tabs defaultValue="profil" className="mb-6">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="profil"> Profil</TabsTrigger>
-            <TabsTrigger value="documents">documents</TabsTrigger>
+            <TabsTrigger value="profil">Profil</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
           <TabsContent value="profil" className="p-6">
@@ -152,7 +182,7 @@ const ModernUserProfile: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Nom complet</p>
                         <p className="font-medium">
-                          {userInfo.firstName} {userInfo.name}
+                          {userInfo.prenom_employes} {userInfo.nom_employes}
                         </p>
                       </div>
                     </div>
@@ -163,7 +193,7 @@ const ModernUserProfile: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Poste</p>
-                        <p className="font-medium">{userInfo.position}</p>
+                        <p className="font-medium">{getJobFunction(userInfo.id_fonction)}</p>
                       </div>
                     </div>
 
@@ -172,8 +202,8 @@ const ModernUserProfile: React.FC = () => {
                         <Calendar size={16} />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Mission</p>
-                        <p className="font-medium">{userInfo.mission}</p>
+                        <p className="text-sm text-gray-500">Date d'embauche</p>
+                        <p className="font-medium">{userInfo.date_embauche_employes}</p>
                       </div>
                     </div>
 
@@ -182,8 +212,8 @@ const ModernUserProfile: React.FC = () => {
                         <MapPin size={16} />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Domicile</p>
-                        <p className="font-medium">{userInfo.location}</p>
+                        <p className="text-sm text-gray-500">Adresse</p>
+                        <p className="font-medium">{userInfo.adresse_employes}</p>
                       </div>
                     </div>
 
@@ -193,7 +223,7 @@ const ModernUserProfile: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium">{userInfo.email}</p>
+                        <p className="font-medium">{userInfo.email_employes}</p>
                       </div>
                     </div>
 
@@ -203,7 +233,7 @@ const ModernUserProfile: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Téléphone</p>
-                        <p className="font-medium">{userInfo.phone}</p>
+                        <p className="font-medium">{userInfo.contact_employes}</p>
                       </div>
                     </div>
                   </div>

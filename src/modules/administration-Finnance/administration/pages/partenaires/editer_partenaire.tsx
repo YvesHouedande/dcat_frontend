@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,30 +12,46 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Save, Building, Camera } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Save, Building, Camera, X } from "lucide-react";
+import { Interlocuteur, Partenaires } from "../../types/interfaces";
+import { updatePartner, fetchEntites, addEntite, deleteEntite, fetchPartnerById } from '@/modules/administration-Finnance/services/partenaireService';
 
 const EditPartnerForm: React.FC = () => {
-  const router = useNavigate();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partenaires>({
+    id_partenaire: 0,
     nom_partenaire: "",
     telephone_partenaire: "",
-    Email_partenaire: "",
+    email_partenaire: "",
     specialite: "",
     localisation: "",
     type_partenaire: "",
-    Entite: "",
+    id_entite: 0,
+    interlocuteurs: [],
   });
 
   const [logo, setLogo] = useState<string | null>(null);
-
-  // États pour la validation et la soumission
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [interlocuteurErrors, setInterlocuteurErrors] = useState<Record<number, Record<string, string>>>({});
+  const [newInterlocuteur, setNewInterlocuteur] = useState<Interlocuteur>({
+    id_interlocuteur: 0,
+    nom_interlocuteur: "",
+    prenom_interlocuteur: "",
+    fonction_interlocuteur: "",
+    contact_interlocuteur: "",
+    mail_interlocuteur: "",
+  });
 
-  // Options pour les listes déroulantes
+  const [entites, setEntites] = useState<{id: number, nom: string}[]>([]);
+  const [newEntiteNom, setNewEntiteNom] = useState("");
+  const [showAddEntite, setShowAddEntite] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [loadingEntites, setLoadingEntites] = useState(true);
+
   const types_partenaire = [
     "Fournisseur",
     "Client",
@@ -56,9 +73,34 @@ const EditPartnerForm: React.FC = () => {
     "Autres",
   ];
 
-  const entites = ["Societé", "Prestataire", "Freelance"];
+  useEffect(() => {
+    const loadPartnerData = async () => {
+      try {
+        if (id) {
+          const partnerData = await fetchPartnerById(id); // Changé ici
+          setFormData(partnerData);
+          setLogo(partnerData.logo || null);
+        }
+      } catch (error) {
+        console.error("Failed to load partner data", error);
+      }
+    };
+  
+    const loadEntites = async () => {
+      try {
+        const data = await fetchEntites();
+        setEntites(data);
+        setLoadingEntites(false);
+      } catch (error) {
+        console.error("Failed to load entites", error);
+        setLoadingEntites(false);
+      }
+    };
+  
+    loadPartnerData();
+    loadEntites();
+  }, [id]);
 
-  // Générer les initiales à partir du nom
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -68,7 +110,6 @@ const EditPartnerForm: React.FC = () => {
       .substring(0, 2);
   };
 
-  // Gérer le téléchargement du logo
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -80,17 +121,14 @@ const EditPartnerForm: React.FC = () => {
     }
   };
 
-  // Déclencher le clic sur l'input file
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
 
-  // Mettre à jour les données du formulaire
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Effacer l'erreur si l'utilisateur modifie le champ
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -100,8 +138,7 @@ const EditPartnerForm: React.FC = () => {
     }
   };
 
-  // Gérer les changements de sélection
-  const handleSelectChange = (field: string, value: string) => {
+  const handleSelectChange = (field: string, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
@@ -112,7 +149,107 @@ const EditPartnerForm: React.FC = () => {
     }
   };
 
-  // Valider le formulaire
+  const handleAddEntite = async () => {
+    if (!newEntiteNom.trim()) return;
+
+    try {
+      const newEntite = await addEntite({ nom: newEntiteNom });
+      setEntites([...entites, newEntite]);
+      setFormData(prev => ({ ...prev, id_entite: newEntite.id }));
+      setNewEntiteNom("");
+      setShowAddEntite(false);
+    } catch (error) {
+      console.error("Failed to add entite", error);
+      alert("Erreur lors de l'ajout de l'entité");
+    }
+  };
+
+  const handleDeleteEntite = async (id: number) => {
+    if (formData.id_entite === id) {
+      alert("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
+      return;
+    }
+
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement cette entité ?`)) {
+      try {
+        await deleteEntite(id);
+        setEntites(entites.filter(entite => entite.id !== id));
+        setDeleteMode(false);
+      } catch (error) {
+        console.error("Failed to delete entite", error);
+        alert("Erreur lors de la suppression de l'entité");
+      }
+    }
+  };
+
+  const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewInterlocuteur(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addInterlocuteur = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!newInterlocuteur.nom_interlocuteur.trim()) {
+      newErrors.nom_interlocuteur = "Le nom est obligatoire";
+    }
+
+    if (!newInterlocuteur.prenom_interlocuteur.trim()) {
+      newErrors.prenom_interlocuteur = "Le prénom est obligatoire";
+    }
+
+    if (!newInterlocuteur.mail_interlocuteur.trim()) {
+      newErrors.mail_interlocuteur = "L'email est obligatoire";
+    } else if (!/^\S+@\S+\.\S+$/.test(newInterlocuteur.mail_interlocuteur)) {
+      newErrors.mail_interlocuteur = "Format d'email invalide";
+    }
+
+    if (!newInterlocuteur.contact_interlocuteur.trim()) {
+      newErrors.contact_interlocuteur = "Le contact est obligatoire";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setInterlocuteurErrors(prev => ({
+        ...prev,
+        [formData.interlocuteurs.length]: newErrors
+      }));
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      interlocuteurs: [...prev.interlocuteurs, newInterlocuteur]
+    }));
+
+    setNewInterlocuteur({
+      id_interlocuteur: 0,
+      nom_interlocuteur: "",
+      prenom_interlocuteur: "",
+      fonction_interlocuteur: "",
+      contact_interlocuteur: "",
+      mail_interlocuteur: "",
+    });
+
+    setInterlocuteurErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[formData.interlocuteurs.length];
+      return newErrors;
+    });
+  };
+
+  const removeInterlocuteur = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      interlocuteurs: prev.interlocuteurs.filter((_, i) => i !== index)
+    }));
+
+    setInterlocuteurErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[index];
+      return newErrors;
+    });
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -124,10 +261,10 @@ const EditPartnerForm: React.FC = () => {
       newErrors.telephone_partenaire = "Le numéro de téléphone est obligatoire";
     }
 
-    if (!formData.Email_partenaire.trim()) {
-      newErrors.Email_partenaire = "L'email est obligatoire";
-    } else if (!/^\S+@\S+\.\S+$/.test(formData.Email_partenaire)) {
-      newErrors.Email_partenaire = "Format d'email invalide";
+    if (!formData.email_partenaire.trim()) {
+      newErrors.email_partenaire = "L'email est obligatoire";
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email_partenaire)) {
+      newErrors.email_partenaire = "Format d'email invalide";
     }
 
     if (!formData.specialite) {
@@ -142,52 +279,48 @@ const EditPartnerForm: React.FC = () => {
       newErrors.type_partenaire = "Le type de partenaire est obligatoire";
     }
 
-    if (!formData.Entite) {
-      newErrors.Entite = "L'entité est obligatoire";
+    if (!formData.id_entite) {
+      newErrors.id_entite = "L'entité est obligatoire";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Soumettre le formulaire
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (!validateForm()) {
       return;
     }
-
+  
     setIsSubmitting(true);
-
-    // Simulation d'une soumission à une API
-    setTimeout(() => {
-      // Ici, vous pourriez envoyer les données à votre backend
-      console.log("Données soumises:", { ...formData, logo });
-
-      // Redirection vers la liste des partenaires après ajout
-      alert("Partenaire ajouté avec succès !");
-      router("/administration/partenaires"); // Redirection vers la liste des partenaires
-
+  
+    try {
+      const response = await updatePartner(formData.id_partenaire, { ...formData, logo });
+      console.log("Partner updated successfully:", response);
+      alert("Partenaire mis à jour avec succès !");
+      navigate("/administration/partenaires");
+    } catch (error) {
+      console.error("Error details:", error);
+      alert("Erreur lors de la mise à jour du partenaire.");
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (
     <div className="bg-gray-50 p-6 min-h-screen">
       <div className="max-w-3xl mx-auto">
-        {/* En-tête */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">
-            Modifier les informations d'un partenaire
+            Éditer un partenaire
           </h1>
           <p className="text-gray-500">
-            Remplissez le formulaire pour modifier les informations d'un
-            partenaire
+            Modifiez le formulaire pour mettre à jour le partenaire
           </p>
         </div>
 
-        {/* Formulaire */}
         <form onSubmit={handleSubmit}>
           <Card className="mb-6">
             <CardHeader>
@@ -196,7 +329,6 @@ const EditPartnerForm: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Section téléchargement logo */}
               <div className="flex flex-col items-center mb-6">
                 <div className="relative mb-4">
                   <Avatar className="h-20 w-20 border-2 border-gray-200">
@@ -244,7 +376,6 @@ const EditPartnerForm: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Nom partenaire */}
               <div className="space-y-2">
                 <Label htmlFor="nom_partenaire">Nom du partenaire</Label>
                 <Input
@@ -262,7 +393,6 @@ const EditPartnerForm: React.FC = () => {
                 )}
               </div>
 
-              {/* Type partenaire */}
               <div className="space-y-2">
                 <Label htmlFor="type_partenaire">Type de partenaire</Label>
                 <Select
@@ -292,7 +422,6 @@ const EditPartnerForm: React.FC = () => {
                 )}
               </div>
 
-              {/* Spécialité */}
               <div className="space-y-2">
                 <Label htmlFor="specialite">Spécialité</Label>
                 <Select
@@ -320,100 +449,227 @@ const EditPartnerForm: React.FC = () => {
                 )}
               </div>
 
-              {/* Entité */}
               <div className="space-y-2">
-                <Label htmlFor="Entite">Entité</Label>
-                <Select
-                  value={formData.Entite}
-                  onValueChange={(value) => handleSelectChange("Entite", value)}
-                >
-                  <SelectTrigger
-                    id="Entite"
-                    className={errors.Entite ? "border-red-500" : ""}
+                <Label htmlFor="entite">Entité</Label>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.id_entite ? formData.id_entite.toString() : ""}
+                    onValueChange={(value) => {
+                      if (value === "__add__") {
+                        setShowAddEntite(true);
+                        setDeleteMode(false);
+                      } else if (value === "__delete__") {
+                        setDeleteMode(!deleteMode);
+                      } else {
+                        if (deleteMode) {
+                          handleDeleteEntite(parseInt(value, 10));
+                        } else {
+                          handleSelectChange("id_entite", parseInt(value, 10));
+                        }
+                      }
+                    }}
                   >
-                    <SelectValue placeholder="Sélectionner une entité" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entites.map((entite) => (
-                      <SelectItem key={entite} value={entite}>
-                        {entite}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.Entite && (
-                  <p className="text-red-500 text-sm">{errors.Entite}</p>
+                    <SelectTrigger
+                      id="entite"
+                      className={errors.id_entite ? "border-red-500" : ""}
+                      disabled={loadingEntites}
+                    >
+                      <SelectValue
+                        placeholder={
+                          loadingEntites ? "Chargement..." :
+                          deleteMode ? "Choisir une entité à supprimer" :
+                          "Sélectionner une entité"
+                        }
+                      />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      {loadingEntites ? (
+                        <div className="py-2 text-center text-sm text-gray-500">
+                          Chargement des entités...
+                        </div>
+                      ) : (
+                        <>
+                          {entites.map((entite) => (
+                            <SelectItem
+                              key={entite.id}
+                              value={entite.id.toString()}
+                              className={deleteMode ? "text-red-500 hover:bg-red-50" : ""}
+                            >
+                              {entite.nom}
+                            </SelectItem>
+                          ))}
+
+                          <SelectItem value="__add__" className="text-blue-600 font-medium">
+                            + Ajouter une entité
+                          </SelectItem>
+
+                          {entites.length > 0 && (
+                            <SelectItem
+                              value="__delete__"
+                              className={deleteMode ? "bg-gray-100 font-medium" : "text-red-600 font-medium"}
+                            >
+                              {deleteMode ? "✕ Annuler la suppression" : "− Supprimer une entité"}
+                            </SelectItem>
+                          )}
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {showAddEntite && (
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      placeholder="Nom de la nouvelle entité"
+                      value={newEntiteNom}
+                      onChange={(e) => setNewEntiteNom(e.target.value)}
+                    />
+                    <Button
+                      onClick={handleAddEntite}
+                      disabled={!newEntiteNom.trim()}
+                    >
+                      Ajouter
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowAddEntite(false)}>
+                      Annuler
+                    </Button>
+                  </div>
+                )}
+
+                {errors.id_entite && (
+                  <p className="text-red-500 text-sm">{errors.id_entite}</p>
                 )}
               </div>
+
             </CardContent>
           </Card>
 
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-lg">Localisation et contact</CardTitle>
+              <CardTitle className="text-lg">
+                Interlocuteurs (facultatif)
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Localisation */}
-              <div className="space-y-2">
-                <Label htmlFor="localisation">Localisation</Label>
-                <Input
-                  id="localisation"
-                  name="localisation"
-                  placeholder="ex: Abidjan, Côte d'Ivoire"
-                  value={formData.localisation}
-                  onChange={handleChange}
-                  className={errors.localisation ? "border-red-500" : ""}
-                />
-                {errors.localisation && (
-                  <p className="text-red-500 text-sm">{errors.localisation}</p>
-                )}
-              </div>
+              {formData.interlocuteurs.map((interlocuteur, index) => (
+                <div key={index} className="border rounded-lg p-4 relative">
+                  <button
+                    type="button"
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                    onClick={() => removeInterlocuteur(index)}
+                  >
+                    <X size={16} />
+                  </button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-medium">{interlocuteur.prenom_interlocuteur} {interlocuteur.nom_interlocuteur}</p>
+                      <p className="text-sm text-gray-500">{interlocuteur.fonction_interlocuteur}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm">{interlocuteur.mail_interlocuteur}</p>
+                      <p className="text-sm">{interlocuteur.contact_interlocuteur}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
 
-              {/* Téléphone */}
-              <div className="space-y-2">
-                <Label htmlFor="telephone_partenaire">
-                  Numéro de téléphone
-                </Label>
-                <Input
-                  id="telephone_partenaire"
-                  name="telephone_partenaire"
-                  placeholder="ex: +225 01 23 45 67 34"
-                  value={formData.telephone_partenaire}
-                  onChange={handleChange}
-                  className={
-                    errors.telephone_partenaire ? "border-red-500" : ""
-                  }
-                />
-                {errors.telephone_partenaire && (
-                  <p className="text-red-500 text-sm">
-                    {errors.telephone_partenaire}
-                  </p>
-                )}
-              </div>
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="font-medium">Ajouter un interlocuteur</h3>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="Email_partenaire">Adresse email</Label>
-                <Input
-                  id="Email_partenaire"
-                  name="Email_partenaire"
-                  type="email"
-                  placeholder="ex: contact@entreprise-abc.com"
-                  value={formData.Email_partenaire}
-                  onChange={handleChange}
-                  className={errors.Email_partenaire ? "border-red-500" : ""}
-                />
-                {errors.Email_partenaire && (
-                  <p className="text-red-500 text-sm">
-                    {errors.Email_partenaire}
-                  </p>
-                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="prenom_interlocuteur">Prénom</Label>
+                    <Input
+                      id="prenom_interlocuteur"
+                      name="prenom_interlocuteur"
+                      value={newInterlocuteur.prenom_interlocuteur}
+                      onChange={handleInterlocuteurChange}
+                      className={interlocuteurErrors[formData.interlocuteurs.length]?.prenom_interlocuteur ? "border-red-500" : ""}
+                    />
+                    {interlocuteurErrors[formData.interlocuteurs.length]?.prenom_interlocuteur && (
+                      <p className="text-red-500 text-sm">
+                        {interlocuteurErrors[formData.interlocuteurs.length].prenom_interlocuteur}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nom_interlocuteur">Nom</Label>
+                    <Input
+                      id="nom_interlocuteur"
+                      name="nom_interlocuteur"
+                      value={newInterlocuteur.nom_interlocuteur}
+                      onChange={handleInterlocuteurChange}
+                      className={interlocuteurErrors[formData.interlocuteurs.length]?.nom_interlocuteur ? "border-red-500" : ""}
+                    />
+                    {interlocuteurErrors[formData.interlocuteurs.length]?.nom_interlocuteur && (
+                      <p className="text-red-500 text-sm">
+                        {interlocuteurErrors[formData.interlocuteurs.length].nom_interlocuteur}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fonction_interlocuteur">Fonction</Label>
+                  <Input
+                    id="fonction_interlocuteur"
+                    name="fonction_interlocuteur"
+                    value={newInterlocuteur.fonction_interlocuteur}
+                    onChange={handleInterlocuteurChange}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="mail_interlocuteur">Email</Label>
+                    <Input
+                      id="mail_interlocuteur"
+                      name="mail_interlocuteur"
+                      type="email"
+                      value={newInterlocuteur.mail_interlocuteur}
+                      onChange={handleInterlocuteurChange}
+                      className={interlocuteurErrors[formData.interlocuteurs.length]?.mail_interlocuteur ? "border-red-500" : ""}
+                    />
+                    {interlocuteurErrors[formData.interlocuteurs.length]?.mail_interlocuteur && (
+                      <p className="text-red-500 text-sm">
+                        {interlocuteurErrors[formData.interlocuteurs.length].mail_interlocuteur}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_interlocuteur">Contact</Label>
+                    <Input
+                      id="contact_interlocuteur"
+                      name="contact_interlocuteur"
+                      value={newInterlocuteur.contact_interlocuteur}
+                      onChange={handleInterlocuteurChange}
+                      className={interlocuteurErrors[formData.interlocuteurs.length]?.contact_interlocuteur ? "border-red-500" : ""}
+                    />
+                    {interlocuteurErrors[formData.interlocuteurs.length]?.contact_interlocuteur && (
+                      <p className="text-red-500 text-sm">
+                        {interlocuteurErrors[formData.interlocuteurs.length].contact_interlocuteur}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addInterlocuteur}
+                  className="mt-2"
+                >
+                  Ajouter l'interlocuteur
+                </Button>
               </div>
             </CardContent>
           </Card>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => router(-1)}>
+            <Button type="button" variant="outline" onClick={() => navigate(-1)}>
               Annuler
             </Button>
             <Button

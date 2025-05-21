@@ -28,31 +28,7 @@ import { useNavigate } from "react-router-dom";
 import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useState } from "react";
-
-interface Employe {
-  id_employe: number;
-  nom: string;
-  prenom: string;
-  departement: string;
-  avatar?: string;
-}
-
-interface Demande {
-  id_demande: number;
-  date_debut: string;
-  status: "En attente" | "Approuvée" | "Refusée" | "En cours" | "Terminée";
-  date_fin: string;
-  motif: string;
-  type_demande:
-    | "Congé"
-    | "Formation"
-    | "Matériel"
-    | "Autre"
-    | "Télétravail"
-    | "Remboursement";
-  id_employe: number;
-  employe: Employe;
-}
+import { employes, demandes } from "./data"; 
 
 const DemandesAnnuaire: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,130 +37,14 @@ const DemandesAnnuaire: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Données d'exemple pour les employés
-  const employes: Employe[] = [
-    {
-      id_employe: 1,
-      nom: "Dupont",
-      prenom: "Marie",
-      departement: "Ressources Humaines",
-    },
-    {
-      id_employe: 2,
-      nom: "Martin",
-      prenom: "Thomas",
-      departement: "Informatique",
-    },
-    { id_employe: 3, nom: "Leroy", prenom: "Julie", departement: "Marketing" },
-    { id_employe: 4, nom: "Petit", prenom: "Lucas", departement: "Finance" },
-    {
-      id_employe: 5,
-      nom: "Robert",
-      prenom: "Sophie",
-      departement: "Développement",
-    },
-    {
-      id_employe: 6,
-      nom: "Moreau",
-      prenom: "Alexandre",
-      departement: "Commercial",
-    },
-  ];
-
-  // Données d'exemple pour les demandes
-  const demandes: Demande[] = [
-    {
-      id_demande: 1,
-      date_debut: "2025-04-15T09:00:00",
-      status: "En attente",
-      date_fin: "2025-04-20T18:00:00",
-      motif: "Vacances annuelles",
-      type_demande: "Congé",
-      id_employe: 1,
-      employe: employes[0],
-    },
-    {
-      id_demande: 2,
-      date_debut: "2025-04-10T09:00:00",
-      status: "Approuvée",
-      date_fin: "2025-04-12T18:00:00",
-      motif: "Formation Excel avancé",
-      type_demande: "Formation",
-      id_employe: 2,
-      employe: employes[1],
-    },
-    {
-      id_demande: 3,
-      date_debut: "2025-04-05T09:00:00",
-      status: "Refusée",
-      date_fin: "2025-04-07T18:00:00",
-      motif: "Urgence familiale",
-      type_demande: "Congé",
-      id_employe: 3,
-      employe: employes[2],
-    },
-    {
-      id_demande: 4,
-      date_debut: "2025-04-12T09:00:00",
-      status: "En cours",
-      date_fin: "2025-05-12T18:00:00",
-      motif: "Achat d'un nouvel ordinateur",
-      type_demande: "Matériel",
-      id_employe: 4,
-      employe: employes[3],
-    },
-    {
-      id_demande: 5,
-      date_debut: "2025-04-18T09:00:00",
-      status: "En attente",
-      date_fin: "2025-04-22T18:00:00",
-      motif: "Congé parental",
-      type_demande: "Congé",
-      id_employe: 5,
-      employe: employes[4],
-    },
-    {
-      id_demande: 6,
-      date_debut: "2025-04-08T09:00:00",
-      status: "Terminée",
-      date_fin: "2025-04-10T18:00:00",
-      motif: "Remboursement frais de déplacement",
-      type_demande: "Remboursement",
-      id_employe: 6,
-      employe: employes[5],
-    },
-    {
-      id_demande: 7,
-      date_debut: "2025-04-16T09:00:00",
-      status: "Approuvée",
-      date_fin: "2025-04-23T18:00:00",
-      motif: "Raison personnelle",
-      type_demande: "Congé",
-      id_employe: 1,
-      employe: employes[0],
-    },
-    {
-      id_demande: 8,
-      date_debut: "2025-04-22T09:00:00",
-      status: "En attente",
-      date_fin: "2025-04-29T18:00:00",
-      motif: "Travail à distance",
-      type_demande: "Télétravail",
-      id_employe: 2,
-      employe: employes[1],
-    },
-  ];
-
   // Filtrage des demandes
   const filteredDemandes = demandes.filter((demande) => {
     // Recherche par texte
     const matchSearch =
       searchQuery === "" ||
       demande.motif.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      demande.employe.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      demande.employe.prenom
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
+      employes.find(e => e.id_employe === demande.id_employe)?.nom_employes.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      employes.find(e => e.id_employe === demande.id_employe)?.prenom_employes.toLowerCase().includes(searchQuery.toLowerCase()) ||
       demande.type_demande.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Filtre par statut
@@ -203,18 +63,15 @@ const DemandesAnnuaire: React.FC = () => {
   };
 
   const handleViewDemande = (id: number) => {
-    navigate(`/administration/demandes/${id}`);
+    navigate(`/administration/demandes/${id}/details`);
   };
 
-  const formatShortDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatShortDate = (date: Date) => {
     return format(date, "dd MMM", { locale: fr });
   };
 
-  const calculateDuration = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = differenceInDays(end, start) + 1;
+  const calculateDuration = (startDate: Date, endDate: Date) => {
+    const days = differenceInDays(endDate, startDate) + 1;
     return days === 1 ? "1 jour" : `${days} jours`;
   };
 
@@ -291,7 +148,7 @@ const DemandesAnnuaire: React.FC = () => {
   };
 
   const getInitials = (nom: string, prenom: string) => {
-    return `${prenom[0]}${nom[0]}.toUpperCase()`;
+    return `${prenom[0]}${nom[0]}`.toUpperCase();
   };
 
   const getAvatarColor = (id: number) => {
@@ -334,7 +191,7 @@ const DemandesAnnuaire: React.FC = () => {
               Gérez et suivez les demandes des employés
             </p>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               onClick={handleAddDemande}
@@ -537,9 +394,9 @@ const DemandesAnnuaire: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {filteredDemandes.map((demande) => (
               <Card
-                key={demande.id_demande}
+                key={demande.Id_demandes}
                 className="overflow-hidden hover:shadow-md transition-all duration-200 group cursor-pointer bg-white"
-                onClick={() => handleViewDemande(demande.id_demande)}
+                onClick={() => handleViewDemande(demande.Id_demandes)}
               >
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-3">
@@ -571,12 +428,12 @@ const DemandesAnnuaire: React.FC = () => {
                         )}`}
                       >
                         {getInitials(
-                          demande.employe.nom,
-                          demande.employe.prenom
+                          employes.find(e => e.id_employe === demande.id_employe)?.nom_employes || "",
+                          employes.find(e => e.id_employe === demande.id_employe)?.prenom_employes || ""
                         )}
                       </div>
                       <span className="ml-2 text-sm text-gray-700 truncate max-w-[120px]">
-                        {demande.employe.prenom} {demande.employe.nom}
+                        {employes.find(e => e.id_employe === demande.id_employe)?.prenom_employes} {employes.find(e => e.id_employe === demande.id_employe)?.nom_employes}
                       </span>
                     </div>
                     <DropdownMenu>
@@ -596,7 +453,7 @@ const DemandesAnnuaire: React.FC = () => {
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleViewDemande(demande.id_demande);
+                            handleViewDemande(demande.Id_demandes);
                           }}
                           className="cursor-pointer text-xs py-1"
                         >
@@ -673,14 +530,14 @@ const DemandesAnnuaire: React.FC = () => {
               <tbody>
                 {filteredDemandes.map((demande, index) => (
                   <tr
-                    key={demande.id_demande}
+                    key={demande.Id_demandes}
                     className={`border-b hover:bg-gray-50 ${
                       index % 2 === 0 ? "bg-white" : "bg-gray-50"
                     } cursor-pointer`}
-                    onClick={() => handleViewDemande(demande.id_demande)}
+                    onClick={() => handleViewDemande(demande.Id_demandes)}
                   >
                     <td className="p-3 text-sm font-medium text-gray-700">
-                      #{demande.id_demande}
+                      #{demande.Id_demandes}
                     </td>
                     <td className="p-3">
                       <div className="flex items-center">
@@ -690,13 +547,13 @@ const DemandesAnnuaire: React.FC = () => {
                           )}`}
                         >
                           {getInitials(
-                            demande.employe.nom,
-                            demande.employe.prenom
+                            employes.find(e => e.id_employe === demande.id_employe)?.nom_employes || "",
+                            employes.find(e => e.id_employe === demande.id_employe)?.prenom_employes || ""
                           )}
                         </div>
                         <div className="ml-2">
                           <p className="text-sm font-medium text-gray-800">
-                            {demande.employe.prenom} {demande.employe.nom}
+                            {employes.find(e => e.id_employe === demande.id_employe)?.prenom_employes} {employes.find(e => e.id_employe === demande.id_employe)?.nom_employes}
                           </p>
                           <p className="text-xs text-gray-500 hidden sm:block md:hidden">
                             {demande.type_demande}
@@ -746,7 +603,7 @@ const DemandesAnnuaire: React.FC = () => {
                           className="h-7 w-7 p-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleViewDemande(demande.id_demande);
+                            handleViewDemande(demande.Id_demandes);
                           }}
                         >
                           <Eye size={14} />
@@ -768,7 +625,7 @@ const DemandesAnnuaire: React.FC = () => {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleViewDemande(demande.id_demande);
+                                handleViewDemande(demande.Id_demandes);
                               }}
                               className="cursor-pointer text-xs py-1"
                             >

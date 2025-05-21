@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   CalendarIcon,
   FileText,
@@ -19,59 +19,15 @@ import {
   XCircle,
   CheckCircle,
   ClockIcon,
+  Paperclip,
 } from "lucide-react";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { employes, naturesDocuments, demandes } from "./data";
+import { Employe, Demande } from "../../types/interfaces";
 
-// Définition du type Demande
-interface Demande {
-  Id_demandes: number;
-  date_debut: Date;
-  status: string;
-  date_fin: Date;
-  motif: string;
-  type_demande: string;
-  Id_employes: number;
-}
-
-// Informations supplémentaires sur l'employé
-interface EmployeInfo {
-  Id_employes: number;
-  nom: string;
-  prenom: string;
-  departement: string;
-  poste: string;
-  email: string;
-}
-
-// Informations d'historique
-interface HistoriqueItem {
-  date: Date;
-  action: string;
-  utilisateur: string;
-  commentaire: string;
-}
-
-// Données d'exemple
-const demande: Demande = {
-  Id_demandes: 2,
-  date_debut: new Date("2025-04-10"),
-  status: "Approuvé",
-  date_fin: new Date("2025-04-15"),
-  motif: "Formation professionnelle en développement web avancé",
-  type_demande: "Formation",
-  Id_employes: 102,
-};
-
-const employe: EmployeInfo = {
-  Id_employes: 102,
-  nom: "Dupont",
-  prenom: "Marie",
-  departement: "Informatique",
-  poste: "Développeuse Full-Stack",
-  email: "marie.dupont@entreprise.com",
-};
-
-const historique: HistoriqueItem[] = [
+// Définir une structure simple pour l'historique sans créer de nouveau type
+const historique = [
   {
     date: new Date("2025-04-01T09:15:00"),
     action: "Création",
@@ -98,15 +54,22 @@ const historique: HistoriqueItem[] = [
   },
 ];
 
-// Fonction pour calculer la durée en jours
-const calculerDuree = (dateDebut: Date, dateFin: Date): number => {
-  const differenceMs = dateFin.getTime() - dateDebut.getTime();
-  return Math.ceil(differenceMs / (1000 * 60 * 60 * 24)) + 1; // +1 pour inclure le jour de fin
-};
-
 const DemandeDetailPage: React.FC = () => {
-  // État pour gérer l'onglet actif
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  // Trouver la demande et l'employé correspondant à l'id de la demande
+  const demande: Demande | undefined = demandes.find(
+    (d) => d.Id_demandes.toString() === id
+  );
+
+  const employe: Employe | undefined = employes.find(
+    (e) => e.id_employe === demande?.id_employe
+  );
+
+  if (!demande || !employe) {
+    return <div>Demande ou employé non trouvé.</div>;
+  }
 
   // Fonction pour obtenir la couleur et l'icône du badge selon le statut
   const getStatusInfo = (status: string) => {
@@ -135,7 +98,11 @@ const DemandeDetailPage: React.FC = () => {
   };
 
   const statusInfo = getStatusInfo(demande.status);
-  const duree = calculerDuree(demande.date_debut, demande.date_fin);
+
+  // Fonction pour naviguer vers la page de modification
+  const handleEdit = () => {
+    navigate(`/administration/demandes/${id}/editer`);
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -150,7 +117,7 @@ const DemandeDetailPage: React.FC = () => {
                 </CardTitle>
                 <CardDescription className="mt-1">
                   {demande.type_demande} - Créée le{" "}
-                  {format(historique[0].date, "dd/MM/yyyy")}
+                  {format(historique[0].date, "dd/MM/yyyy", { locale: fr })}
                 </CardDescription>
               </div>
               <Badge className={`flex items-center ${statusInfo.color}`}>
@@ -172,20 +139,24 @@ const DemandeDetailPage: React.FC = () => {
                     <div className="text-sm font-medium text-gray-500">
                       Durée
                     </div>
-                    <div className="text-base">{duree} jours</div>
+                    <div className="text-base">{demande.duree} jours</div>
                   </div>
                 </div>
 
                 <Separator />
 
-                <div className=" grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <div className="text-sm font-medium text-gray-500">
                       Date de début
                     </div>
                     <div className="flex items-center">
                       <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                      <span>{format(demande.date_debut, "dd MMMM yyyy")}</span>
+                      <span>
+                        {format(demande.date_debut, "dd MMMM yyyy", {
+                          locale: fr,
+                        })}
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -194,7 +165,40 @@ const DemandeDetailPage: React.FC = () => {
                     </div>
                     <div className="flex items-center">
                       <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                      <span>{format(demande.date_fin, "dd MMMM yyyy")}</span>
+                      <span>
+                        {format(demande.date_fin, "dd MMMM yyyy", { locale: fr })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium text-gray-500">
+                      Date d'absence
+                    </div>
+                    <div className="flex items-center">
+                      <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
+                      <span>
+                        {format(demande.date_absence, "dd MMMM yyyy", {
+                          locale: fr,
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium text-gray-500">
+                      Date de retour
+                    </div>
+                    <div className="flex items-center">
+                      <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
+                      <span>
+                        {format(demande.date_retour, "dd MMMM yyyy", {
+                          locale: fr,
+                        })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -207,7 +211,56 @@ const DemandeDetailPage: React.FC = () => {
                     {demande.motif}
                   </div>
                 </div>
+
+                {/* Section pour les documents joints */}
+                {demande.documents.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-500">
+                        Documents joints
+                      </div>
+                      <div className="space-y-2">
+                        {demande.documents.map((document) => (
+                          <div
+                            key={document.id_document}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <Paperclip className="h-4 w-4 text-gray-500" />
+                              <div>
+                                <p className="font-medium">
+                                  {document.libele_document}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {document.id_nature_document && (
+                                    <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
+                                      {naturesDocuments.find(
+                                        (n) =>
+                                          n.id_nature_document ===
+                                          document.id_nature_document
+                                      )?.libelle_td || "Non défini"}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              Télécharger
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
+
               <div className="space-y-4 mt-6">
                 <div className="flex items-center space-x-4">
                   <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
@@ -215,28 +268,11 @@ const DemandeDetailPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-medium">
-                      {employe.prenom} {employe.nom}
+                      {employe.prenom_employes} {employe.nom_employes}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      {employe.poste} - {employe.departement}
+                      Employé #{employe.id_employe}
                     </p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-gray-500">
-                      ID Employé
-                    </div>
-                    <div className="text-base">{employe.Id_employes}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-gray-500">
-                      Email
-                    </div>
-                    <div className="text-base">{employe.email}</div>
                   </div>
                 </div>
               </div>
@@ -258,7 +294,7 @@ const DemandeDetailPage: React.FC = () => {
                   </Button>
                 </>
               )}
-              <Button>
+              <Button onClick={handleEdit}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Modifier
               </Button>
@@ -266,8 +302,8 @@ const DemandeDetailPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Carte latérale avec résumé et actions rapides */}
-        <div className="md:col-span-1">
+        {/* Carte latérale avec résumé et historique */}
+        <div className="md:col-span-1 space-y-6">
           <Card className="w-full">
             <CardHeader>
               <CardTitle className="text-lg font-medium">
@@ -295,13 +331,13 @@ const DemandeDetailPage: React.FC = () => {
                   Employé
                 </span>
                 <span>
-                  {employe.prenom} {employe.nom}
+                  {employe.prenom_employes} {employe.nom_employes}
                 </span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-500">Durée</span>
-                <span>{duree} jours</span>
+                <span>{demande.duree} jours</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -309,20 +345,48 @@ const DemandeDetailPage: React.FC = () => {
                   Période
                 </span>
                 <span className="text-sm">
-                  {format(demande.date_debut, "dd/MM")} -{" "}
-                  {format(demande.date_fin, "dd/MM/yyyy")}
+                  {format(demande.date_debut, "dd/MM", { locale: fr })} -{" "}
+                  {format(demande.date_fin, "dd/MM/yyyy", { locale: fr })}
                 </span>
               </div>
             </CardContent>
 
-            <CardFooter className="flex flex-col space-y-2 border-t pt-4">
-              <Button variant="outline" className="w-full">
-                Télécharger le fichier joint
-              </Button>
-              <Button variant="outline" className="w-full">
-                Aperçu du fichier
-              </Button>
-            </CardFooter>
+            {demande.documents.length > 0 && (
+              <CardFooter className="flex flex-col space-y-2 border-t pt-4">
+                <Button variant="outline" className="w-full">
+                  Télécharger le fichier joint
+                </Button>
+                <Button variant="outline" className="w-full">
+                  Aperçu du fichier
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
+
+          {/* Carte d'historique */}
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle className="text-lg font-medium">
+                Historique
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {historique.map((item, index) => (
+                <div key={index} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{item.action}</span>
+                    <span className="text-xs text-gray-500">
+                      {format(item.date, "dd/MM/yyyy HH:mm", { locale: fr })}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Par {item.utilisateur}
+                  </div>
+                  <div className="text-sm">{item.commentaire}</div>
+                  {index < historique.length - 1 && <Separator />}
+                </div>
+              ))}
+            </CardContent>
           </Card>
         </div>
       </div>

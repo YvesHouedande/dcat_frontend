@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,6 +13,7 @@ import {
   Phone,
   MapPin,
   Building,
+  Users,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,118 +23,38 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
+import { Partenaires } from "../../types/interfaces";
+import { fetchPartners } from "@/modules/administration-Finnance/services/partenaireService" // Assurez-vous que le chemin est correct
 
-export interface PartenaireProfile {
-  id_partenaire: number;
-  nom_partenaire: string;
-  telephone_partenaire: string;
-  email_partenaire: string;
-  specialite: string;
-  localisation: string;
-  type_partenaire: string;
-  entite: string;
-  initials: string;
-}
+const getInitials = (name: string) => {
+  if (!name) return "";
 
-const partenaires: PartenaireProfile[] = [
-  {
-    id_partenaire: 1,
-    nom_partenaire: "Tech Solutions",
-    telephone_partenaire: "01 23 45 67 89",
-    email_partenaire: "contact@techsolutions.fr",
-    specialite: "Développement Web",
-    localisation: "Paris",
-    type_partenaire: "Technique",
-    entite: "SARL",
-    initials: "TS",
-  },
-  {
-    id_partenaire: 2,
-    nom_partenaire: "Marketing Pro",
-    telephone_partenaire: "01 98 76 54 32",
-    email_partenaire: "info@marketingpro.fr",
-    specialite: "Marketing Digital",
-    localisation: "Lyon",
-    type_partenaire: "Marketing",
-    entite: "SAS",
-    initials: "MP",
-  },
-  {
-    id_partenaire: 3,
-    nom_partenaire: "Design Studio",
-    telephone_partenaire: "03 45 67 89 01",
-    email_partenaire: "hello@designstudio.fr",
-    specialite: "UI/UX Design",
-    localisation: "Bordeaux",
-    type_partenaire: "Créatif",
-    entite: "EURL",
-    initials: "DS",
-  },
-  {
-    id_partenaire: 4,
-    nom_partenaire: "Logistique Express",
-    telephone_partenaire: "04 56 78 90 12",
-    email_partenaire: "contact@logistique-express.fr",
-    specialite: "Logistique",
-    localisation: "Marseille",
-    type_partenaire: "Logistique",
-    entite: "SA",
-    initials: "LE",
-  },
-  {
-    id_partenaire: 5,
-    nom_partenaire: "Finance Conseil",
-    telephone_partenaire: "05 67 89 01 23",
-    email_partenaire: "info@finance-conseil.fr",
-    specialite: "Comptabilité",
-    localisation: "Lille",
-    type_partenaire: "Finance",
-    entite: "SAS",
-    initials: "FC",
-  },
-  {
-    id_partenaire: 6,
-    nom_partenaire: "Formation Plus",
-    telephone_partenaire: "06 78 90 12 34",
-    email_partenaire: "contact@formation-plus.fr",
-    specialite: "Formation Professionnelle",
-    localisation: "Toulouse",
-    type_partenaire: "Formation",
-    entite: "Association",
-    initials: "FP",
-  },
-  {
-    id_partenaire: 7,
-    nom_partenaire: "Conseil RH",
-    telephone_partenaire: "07 89 01 23 45",
-    email_partenaire: "contact@conseil-rh.fr",
-    specialite: "Ressources Humaines",
-    localisation: "Nantes",
-    type_partenaire: "Conseil",
-    entite: "SARL",
-    initials: "CR",
-  },
-  {
-    id_partenaire: 8,
-    nom_partenaire: "Promo Events",
-    telephone_partenaire: "08 90 12 34 56",
-    email_partenaire: "info@promo-events.fr",
-    specialite: "Événementiel",
-    localisation: "Strasbourg",
-    type_partenaire: "Événementiel",
-    entite: "SAS",
-    initials: "PE",
-  },
-];
-export const partenairesList = partenaires
+  return name
+    .split(" ")
+    .map(part => part[0])
+    .join("")
+    .toUpperCase()
+    .substring(0, 2);
+};
 
 const ModernPartenaireGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [partenaires, setPartenaires] = useState<Partenaires[]>([]);
   const navigate = useNavigate();
-  // Données d'exemple pour les partenaires
 
+  useEffect(() => {
+    const getPartners = async () => {
+      try {
+        const data = await fetchPartners();
+        setPartenaires(data);
+      } catch (error) {
+        console.error('Error fetching partners:', error);
+      }
+    };
 
-  // Filtrage des partenaires basé sur la recherche
+    getPartners();
+  }, []);
+
   const filteredPartenaires = searchQuery
     ? partenaires.filter(
         (partenaire) =>
@@ -148,11 +69,16 @@ const ModernPartenaireGrid: React.FC = () => {
             .includes(searchQuery.toLowerCase()) ||
           partenaire.type_partenaire
             .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+            .includes(searchQuery.toLowerCase()) ||
+          partenaire.interlocuteurs.some(
+            (interlocuteur) =>
+              `${interlocuteur.prenom_interlocuteur} ${interlocuteur.nom_interlocuteur}`
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase())
+          )
       )
     : partenaires;
 
-  // Obtenir la couleur de l'avatar basée sur l'ID
   const getAvatarColor = (id: number) => {
     const colors = [
       "bg-blue-500 text-white",
@@ -167,12 +93,10 @@ const ModernPartenaireGrid: React.FC = () => {
       "bg-cyan-500 text-white",
     ];
 
-    // Utiliser l'ID pour attribuer une couleur de manière cohérente
     const colorIndex = (id - 1) % colors.length;
     return colors[colorIndex];
   };
 
-  // Obtenir la couleur du badge selon le type de partenaire
   const getTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
       case "technique":
@@ -195,6 +119,7 @@ const ModernPartenaireGrid: React.FC = () => {
         return "bg-gray-100 text-gray-800 hover:bg-gray-100";
     }
   };
+
   const handleClickVoirProfile = (id: string | number) => {
     navigate(`/administration/partenaires/profil/${id}`);
   };
@@ -202,7 +127,6 @@ const ModernPartenaireGrid: React.FC = () => {
   return (
     <div className="bg-gray-50 p-6 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        {/* Header avec titre et actions */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
@@ -228,7 +152,6 @@ const ModernPartenaireGrid: React.FC = () => {
           </div>
         </div>
 
-        {/* Barre de recherche */}
         <div className="mb-6">
           <div className="relative">
             <Search
@@ -236,7 +159,7 @@ const ModernPartenaireGrid: React.FC = () => {
               size={18}
             />
             <Input
-              placeholder="Rechercher par nom, spécialité, localisation ou type..."
+              placeholder="Rechercher par nom, spécialité, localisation, type ou interlocuteur..."
               className="pl-10 py-6 border-gray-300 rounded-lg"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -244,7 +167,6 @@ const ModernPartenaireGrid: React.FC = () => {
           </div>
         </div>
 
-        {/* Grille de partenaires */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filteredPartenaires.map((partenaire) => (
             <Card
@@ -255,19 +177,14 @@ const ModernPartenaireGrid: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
                     <Avatar
-                      className={`h-12 w-12 ${getAvatarColor(
-                        partenaire.id_partenaire
-                      )}`}
+                      className={`h-12 w-12 ${getAvatarColor(partenaire.id_partenaire)}`}
                     >
                       <AvatarFallback
-                        className={` ${getAvatarColor(
-                          partenaire.id_partenaire
-                        )}`}
+                        className={`${getAvatarColor(partenaire.id_partenaire)}`}
                       >
-                        {partenaire.initials}
+                        {getInitials(partenaire.nom_partenaire)}
                       </AvatarFallback>
                     </Avatar>
-
                     <div className="ml-3">
                       <h3
                         onClick={() =>
@@ -277,7 +194,6 @@ const ModernPartenaireGrid: React.FC = () => {
                       >
                         {partenaire.nom_partenaire}
                       </h3>
-
                       <p className="text-sm text-gray-500">
                         {partenaire.specialite}
                       </p>
@@ -328,7 +244,14 @@ const ModernPartenaireGrid: React.FC = () => {
                   </div>
                   <div className="flex items-center text-sm">
                     <Building size={14} className="mr-2 text-gray-500" />
-                    <p>{partenaire.entite}</p>
+                    <p>{partenaire.id_entite}</p>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <Users size={14} className="mr-2 text-gray-500" />
+                    <p>
+                      {partenaire.interlocuteurs.length} interlocuteur
+                      {partenaire.interlocuteurs.length > 1 ? "s" : ""}
+                    </p>
                   </div>
                   <div>
                     <Badge
@@ -350,7 +273,6 @@ const ModernPartenaireGrid: React.FC = () => {
                   className="text-gray-700 text-xs"
                 >
                   <Phone size={14} className="mr-1" />
-
                   <Link to={`tel:${partenaire.telephone_partenaire}`}>
                     {partenaire.telephone_partenaire}
                   </Link>
@@ -370,7 +292,6 @@ const ModernPartenaireGrid: React.FC = () => {
           ))}
         </div>
 
-        {/* Message si aucun résultat */}
         {filteredPartenaires.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-gray-600 mb-4">
