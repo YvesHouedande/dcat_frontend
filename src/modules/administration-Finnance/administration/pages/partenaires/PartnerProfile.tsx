@@ -5,15 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
-  Download,
   Upload,
-  ExternalLink,
   Edit,
   FileText,
   Mail,
   Phone,
   MapPin,
-  Briefcase,
   Calendar,
   Linkedin,
   Building,
@@ -26,38 +23,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchPartnerById, updatePartner } from '@/modules/administration-Finnance/services/partenaireService';
-
-// Mis à jour pour correspondre au service
-interface Interlocuteur {
-  id_interlocuteur: number;
-  nom_interlocuteur: string;
-  prenom_interlocuteur: string;
-  fonction_interlocuteur: string;
-  contact_interlocuteur: string;
-  mail_interlocuteur: string;
-}
-
-interface Partenaires {
-  id_partenaire: number;  // Ajouté pour correspondre au service
-  nom_partenaire: string;
-  specialite: string;
-  status: string;
-  type_partenaire: string;
-  Entite: string;
-  id_entite: number;  // Ajouté pour correspondre au service
-  localisation: string;
-  Email_partenaire: string; // Gardé tel quel (mais notez la différence avec email_partenaire)
-  email_partenaire: string; // Ajouté pour correspondre au service
-  telephone_partenaire: string;
-  interlocuteurs: Interlocuteur[];
-  logo: null;  // Ajouté avec null comme valeur par défaut
-}
+import { useApiCall } from "@/hooks/useAPiCall";
+import { Interlocuteur, Partenaires } from "../../types/interfaces";
 
 const ModernPartnerProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  const [partnerInfo, setPartnerInfo] = useState<Partenaires | null>(null);
   const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur'>>({
     nom_interlocuteur: "",
     prenom_interlocuteur: "",
@@ -67,69 +39,17 @@ const ModernPartnerProfile: React.FC = () => {
   });
   const [isAddingInterlocuteur, setIsAddingInterlocuteur] = useState(false);
 
+  const { data: partnerInfo, loading, error, call } = useApiCall<Partenaires>(() => fetchPartnerById(id));
+
   useEffect(() => {
-    const getPartnerInfo = async () => {
-      if (id === undefined) {
-        console.error("ID is undefined");
-        return;
-      }
+    if (id) {
+      call();
+    }
+  }, [id, call]);
 
-      try {
-        const data = await fetchPartnerById(id);
-        // S'assurer que toutes les propriétés requises sont présentes
-        if (data) {
-          // Si email_partenaire n'existe pas, utilisez Email_partenaire
-          if (!data.email_partenaire && data.Email_partenaire) {
-            data.email_partenaire = data.Email_partenaire;
-          }
-          
-          // Si logo n'existe pas, ajoutez-le avec null
-          if (data.logo === undefined) {
-            data.logo = null;
-          }
-        }
-        setPartnerInfo(data);
-      } catch (error) {
-        console.error('Error fetching partner info:', error);
-      }
-    };
-
-    getPartnerInfo();
-  }, [id]);
-
-  const projects = [
-    {
-      id: "1",
-      name: "Déploiement ERP",
-      type: "Projet IT",
-      date: "15/03/2025",
-      status: "En cours",
-    },
-    {
-      id: "2",
-      name: "Formation Développeurs",
-      type: "Formation",
-      date: "02/04/2025",
-      status: "Planifié",
-    },
-  ];
-
-  const documents = [
-    {
-      id: "1",
-      name: "Contrat de partenariat",
-      type: "Juridique",
-      date: "12/01/2025",
-      status: "Signé",
-    },
-    {
-      id: "2",
-      name: "Accord de confidentialité",
-      type: "Juridique",
-      date: "12/01/2025",
-      status: "Signé",
-    },
-  ];
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!partnerInfo) return <div>No partner data available.</div>;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -185,10 +105,10 @@ const ModernPartnerProfile: React.FC = () => {
       return;
     }
 
-    const maxId = partnerInfo.interlocuteurs.length > 0 
-      ? Math.max(...partnerInfo.interlocuteurs.map(i => i.id_interlocuteur)) 
+    const maxId = partnerInfo.interlocuteurs.length > 0
+      ? Math.max(...partnerInfo.interlocuteurs.map(i => i.id_interlocuteur))
       : 0;
-    
+
     const newInterlocuteurWithId = {
       ...newInterlocuteur,
       id_interlocuteur: maxId + 1,
@@ -201,7 +121,6 @@ const ModernPartnerProfile: React.FC = () => {
       };
 
       await updatePartner(id, updatedPartnerData);
-      setPartnerInfo(updatedPartnerData);
       setNewInterlocuteur({
         nom_interlocuteur: "",
         prenom_interlocuteur: "",
@@ -210,6 +129,7 @@ const ModernPartnerProfile: React.FC = () => {
         mail_interlocuteur: "",
       });
       setIsAddingInterlocuteur(false);
+      call();
     } catch (error) {
       console.error('Error updating partner:', error);
     }
@@ -232,15 +152,11 @@ const ModernPartnerProfile: React.FC = () => {
       };
 
       await updatePartner(id, updatedPartnerData);
-      setPartnerInfo(updatedPartnerData);
+      call();
     } catch (error) {
       console.error('Error updating partner:', error);
     }
   };
-
-  if (!partnerInfo) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -263,7 +179,7 @@ const ModernPartnerProfile: React.FC = () => {
                   variant="outline"
                   className="bg-indigo-500/20 text-white border-indigo-200"
                 >
-                  {partnerInfo.status}
+                  {partnerInfo.type_partenaire}
                 </Badge>
               </div>
             </div>
@@ -352,16 +268,6 @@ const ModernPartnerProfile: React.FC = () => {
 
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <Briefcase size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Entité</p>
-                        <p className="font-medium">{partnerInfo.Entite}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
                         <MapPin size={16} />
                       </div>
                       <div>
@@ -379,7 +285,7 @@ const ModernPartnerProfile: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Email</p>
                         <p className="font-medium">
-                          {partnerInfo.Email_partenaire}
+                          {partnerInfo.email_partenaire}
                         </p>
                       </div>
                     </div>
@@ -393,6 +299,18 @@ const ModernPartnerProfile: React.FC = () => {
                         <p className="font-medium">
                           {partnerInfo.telephone_partenaire}
                         </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
+                        <Tag size={16} />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Statut</p>
+                        <Badge className={getStatusColor(partnerInfo.statut)}>
+                          {partnerInfo.statut}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -631,53 +549,8 @@ const ModernPartnerProfile: React.FC = () => {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((project) => (
-                <Card
-                  key={project.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-gray-50 p-4 border-b">
-                    <div className="flex justify-between">
-                      <Badge className={getStatusColor(project.status)}>
-                        {project.status}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {project.date}
-                      </span>
-                    </div>
-                    <div className="mt-6 mb-4 flex justify-center">
-                      <div className="w-16 h-16 bg-indigo-100 rounded-full border shadow-sm flex items-center justify-center">
-                        <Briefcase size={24} className="text-indigo-600" />
-                      </div>
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-gray-800 mb-1">
-                      {project.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">{project.type}</p>
-                    <div className="flex justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-gray-600 text-xs"
-                      >
-                        <Edit size={14} className="mr-1" />
-                        Détails
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-indigo-600 text-xs"
-                      >
-                        <ExternalLink size={14} className="mr-1" />
-                        Voir le projet
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="text-center text-gray-500">
+              <p>Aucun projet trouvé pour ce partenaire</p>
             </div>
           </TabsContent>
 
@@ -690,51 +563,8 @@ const ModernPartnerProfile: React.FC = () => {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {documents.map((doc) => (
-                <Card
-                  key={doc.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-gray-50 p-4 border-b">
-                    <div className="flex justify-between">
-                      <Badge className={getStatusColor(doc.status)}>
-                        {doc.status}
-                      </Badge>
-                      <span className="text-xs text-gray-500">{doc.date}</span>
-                    </div>
-                    <div className="mt-6 mb-4 flex justify-center">
-                      <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
-                        <FileText size={24} className="text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-gray-800 mb-1">
-                      {doc.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">{doc.type}</p>
-                    <div className="flex justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-gray-600 text-xs"
-                      >
-                        <Edit size={14} className="mr-1" />
-                        Mettre à jour
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-indigo-600 text-xs"
-                      >
-                        <Download size={14} className="mr-1" />
-                        Télécharger
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="text-center text-gray-500">
+              <p>Aucun document trouvé pour ce partenaire</p>
             </div>
           </TabsContent>
         </Tabs>

@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
+import data from "../interventions/test/data.json";
 import VueGlobalPage from "./accueilpage/VueGlobal";
 import Index from "../interventions";
 import Nouvelle_fiche from "../interventions/Pages/nouvelle_fiche";
@@ -18,6 +19,8 @@ import LivrableDetails from "./livrables/LivrableDetail";
 import EditLivrable from "./livrables/LivrableEditPage";
 import NouveauLivrable from "./livrables/LivrableForm";
 import LivrablesPage from "./livrables/LivrablesPage";
+import InterventionsTable from "../interventions/Pages/historique";
+import { DataTable } from "../interventions/test/test";
 
 
 const ProjectsRoutes: React.FC = () => {
@@ -47,14 +50,13 @@ const ProjectsRoutes: React.FC = () => {
 
       {/* Route pour les interventions */}
       <Route path="/intervention" element={<Index />} />
-       <Route path="/" element={<Index />} />
         <Route path="/nouvelle_intervention" element={<Nouvelle_fiche />} />
         <Route path=":id" element={<Information_fiche />} />
         <Route path=":id/editer" element={<Modifier_intervention />} />
-        {/* <Route path="/historique" element={<DataTable data={data} />} /> */}
         <Route path="/historique" element={<ResizableHandleDemo />} />
-
-        {/* <Route path="/intervention" element={<InterventionsTable />} /> */}
+        <Route path="/historique" element={<DataTable data={data} />} />
+        <Route path="/interventions" element={<InterventionsTable />} />
+        <Route path="/interventionss" element={<InterventionsTable />} />
     </Routes>
   );
 };

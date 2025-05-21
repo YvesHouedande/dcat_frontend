@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { Partenaires } from "../../types/interfaces";
-import { fetchPartners } from "@/modules/administration-Finnance/services/partenaireService" // Assurez-vous que le chemin est correct
+import { fetchPartners } from "@/modules/administration-Finnance/services/partenaireService";
+import { useApiCall } from "@/hooks/useAPiCall";
 
 const getInitials = (name: string) => {
   if (!name) return "";
@@ -39,23 +40,16 @@ const getInitials = (name: string) => {
 
 const ModernPartenaireGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [partenaires, setPartenaires] = useState<Partenaires[]>([]);
   const navigate = useNavigate();
 
+  // Use the useApiCall hook to fetch partners
+  const { data: partenaires, error, call } = useApiCall<Partenaires[]>(fetchPartners);
+
   useEffect(() => {
-    const getPartners = async () => {
-      try {
-        const data = await fetchPartners();
-        setPartenaires(data);
-      } catch (error) {
-        console.error('Error fetching partners:', error);
-      }
-    };
+    call();
+  }, [call]);
 
-    getPartners();
-  }, []);
-
-  const filteredPartenaires = searchQuery
+  const filteredPartenaires = searchQuery && partenaires
     ? partenaires.filter(
         (partenaire) =>
           partenaire.nom_partenaire
@@ -77,7 +71,7 @@ const ModernPartenaireGrid: React.FC = () => {
                 .includes(searchQuery.toLowerCase())
           )
       )
-    : partenaires;
+    : partenaires || [];
 
   const getAvatarColor = (id: number) => {
     const colors = [
@@ -124,6 +118,172 @@ const ModernPartenaireGrid: React.FC = () => {
     navigate(`/administration/partenaires/profil/${id}`);
   };
 
+  const renderPartenairesList = () => {
+    if (error) {
+      return (
+        <div className="col-span-full flex flex-col items-center justify-center py-12">
+          <p className="text-red-600 mb-4">
+            Une erreur est survenue lors du chargement des partenaires
+          </p>
+          <Button variant="outline" onClick={() => call()}>
+            Réessayer
+          </Button>
+        </div>
+      );
+    }
+
+    if (filteredPartenaires.length === 0) {
+      const message = searchQuery 
+        ? "Aucun partenaire ne correspond à votre recherche" 
+        : "Aucun partenaire disponible pour le moment";
+      
+      return (
+        <div className="col-span-full flex flex-col items-center justify-center py-12">
+          <p className="text-gray-600 mb-4">{message}</p>
+          {searchQuery && (
+            <Button variant="outline" onClick={() => setSearchQuery("")}>
+              Réinitialiser la recherche
+            </Button>
+          )}
+          <Button 
+            onClick={() => navigate("/administration/partenaires/ajouter")}
+            className="bg-blue-600 hover:bg-blue-700 mt-4" 
+          >
+            <UserPlus size={16} className="mr-2" />
+            Ajouter un partenaire
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {filteredPartenaires.map((partenaire) => (
+          <Card
+            key={partenaire.id_partenaire}
+            className="overflow-hidden hover:shadow-md transition-all duration-200 group"
+          >
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <Avatar
+                    className={`h-12 w-12 ${getAvatarColor(partenaire.id_partenaire)}`}
+                  >
+                    <AvatarFallback
+                      className={`${getAvatarColor(partenaire.id_partenaire)}`}
+                    >
+                      {getInitials(partenaire.nom_partenaire)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="ml-3">
+                    <h3
+                      onClick={() =>
+                        handleClickVoirProfile(partenaire.id_partenaire)
+                      }
+                      className="font-semibold text-gray-800 hover:underline cursor-pointer"
+                    >
+                      {partenaire.nom_partenaire}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {partenaire.specialite}
+                    </p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                      >
+                        <MoreHorizontal size={16} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          handleClickVoirProfile(partenaire.id_partenaire)
+                        }
+                        className="cursor-pointer"
+                      >
+                        <Eye size={16} className="mr-2" />
+                        Voir profil
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer">
+                        <Mail size={16} className="mr-2" />
+                        <Link to={`mailto:${partenaire.email_partenaire}`}>
+                          Envoyer un email
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer">
+                        <Phone size={16} className="mr-2" />
+                        <Link to={`tel:${partenaire.telephone_partenaire}`}>
+                          Appeler
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center text-sm">
+                  <MapPin size={14} className="mr-2 text-gray-500" />
+                  <p>{partenaire.localisation}</p>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Building size={14} className="mr-2 text-gray-500" />
+                  <p>{partenaire.id_entite}</p>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Users size={14} className="mr-2 text-gray-500" />
+                  <p>
+                    {partenaire.interlocuteurs.length} interlocuteur
+                    {partenaire.interlocuteurs.length > 1 ? "s" : ""}
+                  </p>
+                </div>
+                <div>
+                  <Badge
+                    className={`mt-1 font-normal ${getTypeColor(
+                      partenaire.type_partenaire
+                    )}`}
+                  >
+                    {partenaire.type_partenaire}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </CardContent>
+            <CardFooter className="bg-gray-50 border-t p-3 flex justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-700 text-xs"
+              >
+                <Phone size={14} className="mr-1" />
+                <Link to={`tel:${partenaire.telephone_partenaire}`}>
+                  {partenaire.telephone_partenaire}
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-blue-600 text-xs"
+              >
+                <Mail size={14} className="mr-1" />
+                <Link to={`mailto:${partenaire.email_partenaire}`}>
+                  Contacter
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </>
+    );
+  };
+
   return (
     <div className="bg-gray-50 p-6 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -168,140 +328,8 @@ const ModernPartenaireGrid: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredPartenaires.map((partenaire) => (
-            <Card
-              key={partenaire.id_partenaire}
-              className="overflow-hidden hover:shadow-md transition-all duration-200 group"
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <Avatar
-                      className={`h-12 w-12 ${getAvatarColor(partenaire.id_partenaire)}`}
-                    >
-                      <AvatarFallback
-                        className={`${getAvatarColor(partenaire.id_partenaire)}`}
-                      >
-                        {getInitials(partenaire.nom_partenaire)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="ml-3">
-                      <h3
-                        onClick={() =>
-                          handleClickVoirProfile(partenaire.id_partenaire)
-                        }
-                        className="font-semibold text-gray-800 hover:underline cursor-pointer"
-                      >
-                        {partenaire.nom_partenaire}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {partenaire.specialite}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                        >
-                          <MoreHorizontal size={16} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleClickVoirProfile(partenaire.id_partenaire)
-                          }
-                          className="cursor-pointer"
-                        >
-                          <Eye size={16} className="mr-2" />
-                          Voir profil
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Mail size={16} className="mr-2" />
-                          <Link to={`mailto:${partenaire.email_partenaire}`}>
-                            Envoyer un email
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Phone size={16} className="mr-2" />
-                          <Link to={`tel:${partenaire.telephone_partenaire}`}>
-                            Appeler
-                          </Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm">
-                    <MapPin size={14} className="mr-2 text-gray-500" />
-                    <p>{partenaire.localisation}</p>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Building size={14} className="mr-2 text-gray-500" />
-                    <p>{partenaire.id_entite}</p>
-                  </div>
-                  <div className="flex items-center text-sm">
-                    <Users size={14} className="mr-2 text-gray-500" />
-                    <p>
-                      {partenaire.interlocuteurs.length} interlocuteur
-                      {partenaire.interlocuteurs.length > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                  <div>
-                    <Badge
-                      className={`mt-1 font-normal ${getTypeColor(
-                        partenaire.type_partenaire
-                      )}`}
-                    >
-                      {partenaire.type_partenaire}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </CardContent>
-              <CardFooter className="bg-gray-50 border-t p-3 flex justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-700 text-xs"
-                >
-                  <Phone size={14} className="mr-1" />
-                  <Link to={`tel:${partenaire.telephone_partenaire}`}>
-                    {partenaire.telephone_partenaire}
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-blue-600 text-xs"
-                >
-                  <Mail size={14} className="mr-1" />
-                  <Link to={`mailto:${partenaire.email_partenaire}`}>
-                    Contacter
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+          {renderPartenairesList()}
         </div>
-
-        {filteredPartenaires.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-gray-600 mb-4">
-              Aucun partenaire ne correspond à votre recherche
-            </p>
-            <Button variant="outline" onClick={() => setSearchQuery("")}>
-              Réinitialiser la recherche
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );

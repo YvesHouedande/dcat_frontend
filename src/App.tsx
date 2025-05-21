@@ -6,7 +6,6 @@ import PrivateRoute from "./helpers/PrivateRoute";
 import keycloak from "../KeycloakService";
 import DashboardRoutes from "./modules/dashboard/DashboardRoutes";
 import AdministrationRoutes from "./modules/administration-Finnance/administration/AdministrationRoutes";
-import InterventionsRoutes from "./modules/techniques/interventions/InterventionsRoutes";
 import StocksRoutes from "./modules/stocks/StocksRoutes";
 import ProjectsRoutes from "./modules/techniques/projects/ProjectsRoutes";
 import {QueryClientProvider } from "@tanstack/react-query";
@@ -35,10 +34,6 @@ const AppContent: React.FC = () => {
         <Route
           path="/administration/*"
           element={<PrivateRoute element={<AdministrationRoutes />} />}
-        />
-        <Route
-          path="/interventions/*"
-          element={<PrivateRoute element={<InterventionsRoutes />} />}
         />
         <Route
           path="/moyens-generaux/*"

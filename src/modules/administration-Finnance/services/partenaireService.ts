@@ -24,7 +24,7 @@ export const fetchPartnerById = async (id: string | undefined) => {
   }
 };
 
-export const addPartner = async (partnerData: Partenaires & { logo: string | null }) => {
+export const addPartner = async (partnerData: Partenaires) => {
   try {
     const response = await axios.post(`${API_URL}/administration/partenaires`, partnerData);
     return response.data;
@@ -34,7 +34,7 @@ export const addPartner = async (partnerData: Partenaires & { logo: string | nul
   }
 };
 
-export const updatePartner = async (id: string | number, partnerData: Partenaires & { logo: string | null }) => {
+export const updatePartner = async (id: string | number, partnerData: Partenaires) => {
   try {
     const response = await axios.put(`${API_URL}/administration/partenaires/${id}`, partnerData);
     return response.data;
@@ -102,8 +102,7 @@ export const deleteInterlocuteur = async (partnerId: string | number, interlocut
   }
 };
 
-
-// Services pour les entités (à ajouter dans votre fichier)
+// Services pour les entités
 export const fetchEntites = async () => {
   try {
     const response = await axios.get(`${API_URL}/administration/entites`);
