@@ -42,7 +42,7 @@ const AdministrationRoutes: React.FC = () => {
         <Route path="profil/:id" element={<UserProfile />} />
         <Route path=":id/editer" element={<EditEmployeForm />} />
       </Route>
-      {/* Routes /epartenaires */}
+      {/* Routes /partenaires */}
       <Route path="/partenaires" element={<AdministrationLayout />}>
         <Route index element={<ModernPartenaireGrid />} />
         <Route path="ajouter" element={<AddPartnerForm />} />
@@ -90,3 +90,18 @@ const AdministrationRoutes: React.FC = () => {
 };
 
 export default AdministrationRoutes;
+
+
+// {
+//   "id_partenaire": 24,
+//   "nom_partenaire": "Bisko",
+//   "telephone_partenaire": "0709749287",
+//   "email_partenaire": "kouamekouakou@gmail.com",
+//   "specialite": "Conseil",
+//   "localisation": "Abidjan",
+//   "type_partenaire": "Revendeur",
+//   "statut": "Actif",
+//   "id_entite": 17,
+//   "created_at": "2025-05-22T15:15:07.911Z",
+//   "updated_at": "2025-05-22T15:15:07.911Z"
+// }

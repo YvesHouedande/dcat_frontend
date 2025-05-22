@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+// src/components/EditPartnerForm.tsx
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +12,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Save, Building, Camera, X } from "lucide-react";
+import { Save, Building, X } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
-import { updatePartner, fetchEntites, addEntite, deleteEntite, fetchPartnerById } from '@/modules/administration-Finnance/services/partenaireService';
+import {
+  fetchPartnerById,
+  updatePartner,
+  fetchEntites,
+  addEntite,
+  deleteEntite,
+} from '@/modules/administration-Finnance/services/partenaireService';
+import { useApiCall } from '@/hooks/useAPiCall';
+
+interface Entite {
+  id: number;
+  nom: string;
+}
 
 const EditPartnerForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // États pour la gestion des entités
+  const { 
+    data: entites, 
+    loading: loadingEntites, 
+    error: entitesError, 
+    call: fetchEntitesData 
+  } = useApiCall<Entite[]>(fetchEntites);
+
+  // État pour la mise à jour du partenaire
+  const { 
+    call: submitPartnerData, 
+    loading: isSubmitting 
+  } = useApiCall<Partenaires, [string, Partenaires]>(updatePartner);
+
+  // État pour le chargement du partenaire existant
+  const { 
+    call: fetchPartnerData 
+  } = useApiCall<Partenaires, [string]>(fetchPartnerById);
 
   const [formData, setFormData] = useState<Partenaires>({
     id_partenaire: 0,
@@ -29,12 +60,11 @@ const EditPartnerForm: React.FC = () => {
     specialite: "",
     localisation: "",
     type_partenaire: "",
+    statut: "Actif", // Ajout du statut avec valeur par défaut
     id_entite: 0,
     interlocuteurs: [],
   });
 
-  const [logo, setLogo] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [interlocuteurErrors, setInterlocuteurErrors] = useState<Record<number, Record<string, string>>>({});
   const [newInterlocuteur, setNewInterlocuteur] = useState<Interlocuteur>({
@@ -46,11 +76,11 @@ const EditPartnerForm: React.FC = () => {
     mail_interlocuteur: "",
   });
 
-  const [entites, setEntites] = useState<{id: number, nom: string}[]>([]);
   const [newEntiteNom, setNewEntiteNom] = useState("");
   const [showAddEntite, setShowAddEntite] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
-  const [loadingEntites, setLoadingEntites] = useState(true);
+  const [localEntites, setLocalEntites] = useState<Entite[]>([]);
+  
 
   const types_partenaire = [
     "Fournisseur",
@@ -73,35 +103,40 @@ const EditPartnerForm: React.FC = () => {
     "Autres",
   ];
 
+  // Ajout des statuts possibles
+  const statuts = [
+    "Actif",
+    "Inactif",
+    "En pause",
+    "Suspendu",
+    "Résilié",
+    "En négociation"
+  ];
+
+  // Chargement initial des données
   useEffect(() => {
-    const loadPartnerData = async () => {
+    const loadData = async () => {
       try {
+        await fetchEntitesData();
         if (id) {
-          const partnerData = await fetchPartnerById(id); // Changé ici
-          setFormData(partnerData);
-          setLogo(partnerData.logo || null);
+          const partner = await fetchPartnerData(id);
+          if (partner) {
+            // Si le partenaire n'a pas de statut (données existantes), on initialise avec "Actif"
+            if (!partner.statut) {
+              partner.statut = "Actif";
+            }
+            setFormData(partner);
+          }
         }
       } catch (error) {
-        console.error("Failed to load partner data", error);
+        console.error("Error loading data:", error);
       }
     };
-  
-    const loadEntites = async () => {
-      try {
-        const data = await fetchEntites();
-        setEntites(data);
-        setLoadingEntites(false);
-      } catch (error) {
-        console.error("Failed to load entites", error);
-        setLoadingEntites(false);
-      }
-    };
-  
-    loadPartnerData();
-    loadEntites();
+
+    loadData();
   }, [id]);
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string): string => {
     return name
       .split(" ")
       .map((part) => part[0])
@@ -110,21 +145,7 @@ const EditPartnerForm: React.FC = () => {
       .substring(0, 2);
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setLogo(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
-
+  // Gestion des changements de formulaire (identique à AddPartnerForm)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -149,20 +170,21 @@ const EditPartnerForm: React.FC = () => {
     }
   };
 
+  // Gestion des entités (identique à AddPartnerForm)
   const handleAddEntite = async () => {
-    if (!newEntiteNom.trim()) return;
-
-    try {
-      const newEntite = await addEntite({ nom: newEntiteNom });
-      setEntites([...entites, newEntite]);
-      setFormData(prev => ({ ...prev, id_entite: newEntite.id }));
-      setNewEntiteNom("");
-      setShowAddEntite(false);
-    } catch (error) {
-      console.error("Failed to add entite", error);
-      alert("Erreur lors de l'ajout de l'entité");
-    }
-  };
+      if (!newEntiteNom.trim()) return;
+  
+      try {
+        const newEntite = await addEntite({ denomination: newEntiteNom });
+        setLocalEntites([...(localEntites || []), newEntite]);
+        setFormData(prev => ({ ...prev, id_entite: newEntite.id }));
+        setNewEntiteNom("");
+        setShowAddEntite(false);
+      } catch (error) {
+        console.error("Failed to add entite", error);
+        alert("Erreur lors de l'ajout de l'entité");
+      }
+    };
 
   const handleDeleteEntite = async (id: number) => {
     if (formData.id_entite === id) {
@@ -173,7 +195,6 @@ const EditPartnerForm: React.FC = () => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement cette entité ?`)) {
       try {
         await deleteEntite(id);
-        setEntites(entites.filter(entite => entite.id !== id));
         setDeleteMode(false);
       } catch (error) {
         console.error("Failed to delete entite", error);
@@ -182,6 +203,7 @@ const EditPartnerForm: React.FC = () => {
     }
   };
 
+  // Gestion des interlocuteurs (identique à AddPartnerForm)
   const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewInterlocuteur(prev => ({ ...prev, [name]: value }));
@@ -250,7 +272,8 @@ const EditPartnerForm: React.FC = () => {
     });
   };
 
-  const validateForm = () => {
+  // Validation (identique à AddPartnerForm)
+  const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.nom_partenaire.trim()) {
@@ -279,6 +302,10 @@ const EditPartnerForm: React.FC = () => {
       newErrors.type_partenaire = "Le type de partenaire est obligatoire";
     }
 
+    if (!formData.statut) {
+      newErrors.statut = "Le statut est obligatoire";
+    }
+
     if (!formData.id_entite) {
       newErrors.id_entite = "L'entité est obligatoire";
     }
@@ -287,40 +314,41 @@ const EditPartnerForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Soumission adaptée pour l'édition
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (!validateForm()) {
       return;
     }
-  
-    setIsSubmitting(true);
-  
+
     try {
-      const response = await updatePartner(formData.id_partenaire, { ...formData, logo });
-      console.log("Partner updated successfully:", response);
+      if (!id) {
+        throw new Error("ID du partenaire manquant");
+      }
+      
+      await submitPartnerData(id, formData);
       alert("Partenaire mis à jour avec succès !");
       navigate("/administration/partenaires");
     } catch (error) {
       console.error("Error details:", error);
-      alert("Erreur lors de la mise à jour du partenaire.");
-    } finally {
-      setIsSubmitting(false);
+      alert(error instanceof Error ? error.message : "Erreur lors de la mise à jour du partenaire.");
     }
   };
 
+  // JSX (identique à AddPartnerForm sauf pour les parties spécifiques)
   return (
     <div className="bg-gray-50 p-6 min-h-screen">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-800">
-            Éditer un partenaire
+            Modifier un partenaire
           </h1>
           <p className="text-gray-500">
-            Modifiez le formulaire pour mettre à jour le partenaire
+            Remplissez le formulaire pour modifier le partenaire
           </p>
         </div>
-
+  
         <form onSubmit={handleSubmit}>
           <Card className="mb-6">
             <CardHeader>
@@ -332,50 +360,17 @@ const EditPartnerForm: React.FC = () => {
               <div className="flex flex-col items-center mb-6">
                 <div className="relative mb-4">
                   <Avatar className="h-20 w-20 border-2 border-gray-200">
-                    {logo ? (
-                      <div className="h-full w-full overflow-hidden rounded-full">
-                        <img
-                          src={logo}
-                          alt="Logo du partenaire"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <AvatarFallback className="bg-blue-500 text-white text-lg">
-                        {formData.nom_partenaire ? (
-                          getInitials(formData.nom_partenaire)
-                        ) : (
-                          <Building size={24} />
-                        )}
-                      </AvatarFallback>
-                    )}
+                    <AvatarFallback className="bg-blue-500 text-white text-lg">
+                      {formData.nom_partenaire ? (
+                        getInitials(formData.nom_partenaire)
+                      ) : (
+                        <Building size={24} />
+                      )}
+                    </AvatarFallback>
                   </Avatar>
-                  <button
-                    type="button"
-                    className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 rounded-full p-1 text-white"
-                    onClick={triggerFileInput}
-                  >
-                    <Camera size={14} />
-                  </button>
                 </div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={triggerFileInput}
-                >
-                  Télécharger un logo
-                </Button>
               </div>
-
+  
               <div className="space-y-2">
                 <Label htmlFor="nom_partenaire">Nom du partenaire</Label>
                 <Input
@@ -387,12 +382,10 @@ const EditPartnerForm: React.FC = () => {
                   className={errors.nom_partenaire ? "border-red-500" : ""}
                 />
                 {errors.nom_partenaire && (
-                  <p className="text-red-500 text-sm">
-                    {errors.nom_partenaire}
-                  </p>
+                  <p className="text-red-500 text-sm">{errors.nom_partenaire}</p>
                 )}
               </div>
-
+  
               <div className="space-y-2">
                 <Label htmlFor="type_partenaire">Type de partenaire</Label>
                 <Select
@@ -416,12 +409,10 @@ const EditPartnerForm: React.FC = () => {
                   </SelectContent>
                 </Select>
                 {errors.type_partenaire && (
-                  <p className="text-red-500 text-sm">
-                    {errors.type_partenaire}
-                  </p>
+                  <p className="text-red-500 text-sm">{errors.type_partenaire}</p>
                 )}
               </div>
-
+  
               <div className="space-y-2">
                 <Label htmlFor="specialite">Spécialité</Label>
                 <Select
@@ -449,6 +440,34 @@ const EditPartnerForm: React.FC = () => {
                 )}
               </div>
 
+              {/* Ajout du champ statut */}
+              <div className="space-y-2">
+                <Label htmlFor="statut">Statut</Label>
+                <Select
+                  value={formData.statut}
+                  onValueChange={(value) =>
+                    handleSelectChange("statut", value)
+                  }
+                >
+                  <SelectTrigger
+                    id="statut"
+                    className={errors.statut ? "border-red-500" : ""}
+                  >
+                    <SelectValue placeholder="Sélectionner un statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuts.map((statut) => (
+                      <SelectItem key={statut} value={statut}>
+                        {statut}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.statut && (
+                  <p className="text-red-500 text-sm">{errors.statut}</p>
+                )}
+              </div>
+  
               <div className="space-y-2">
                 <Label htmlFor="entite">Entité</Label>
                 <div className="flex gap-2">
@@ -476,21 +495,27 @@ const EditPartnerForm: React.FC = () => {
                     >
                       <SelectValue
                         placeholder={
-                          loadingEntites ? "Chargement..." :
-                          deleteMode ? "Choisir une entité à supprimer" :
-                          "Sélectionner une entité"
+                          loadingEntites
+                            ? "Chargement..."
+                            : deleteMode
+                            ? "Choisir une entité à supprimer"
+                            : "Sélectionner une entité"
                         }
                       />
                     </SelectTrigger>
-
+  
                     <SelectContent>
                       {loadingEntites ? (
                         <div className="py-2 text-center text-sm text-gray-500">
                           Chargement des entités...
                         </div>
+                      ) : entitesError ? (
+                        <div className="py-2 text-center text-sm text-red-500">
+                          Erreur: Impossible de charger les entités
+                        </div>
                       ) : (
                         <>
-                          {entites.map((entite) => (
+                          {entites?.map((entite) => (
                             <SelectItem
                               key={entite.id}
                               value={entite.id.toString()}
@@ -499,17 +524,23 @@ const EditPartnerForm: React.FC = () => {
                               {entite.nom}
                             </SelectItem>
                           ))}
-
+  
                           <SelectItem value="__add__" className="text-blue-600 font-medium">
                             + Ajouter une entité
                           </SelectItem>
-
-                          {entites.length > 0 && (
+  
+                          {entites && entites.length > 0 && (
                             <SelectItem
                               value="__delete__"
-                              className={deleteMode ? "bg-gray-100 font-medium" : "text-red-600 font-medium"}
+                              className={
+                                deleteMode
+                                  ? "bg-gray-100 font-medium"
+                                  : "text-red-600 font-medium"
+                              }
                             >
-                              {deleteMode ? "✕ Annuler la suppression" : "− Supprimer une entité"}
+                              {deleteMode
+                                ? "✕ Annuler la suppression"
+                                : "− Supprimer une entité"}
                             </SelectItem>
                           )}
                         </>
@@ -517,7 +548,7 @@ const EditPartnerForm: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
+  
                 {showAddEntite && (
                   <div className="flex gap-2 mt-2">
                     <Input
@@ -531,20 +562,69 @@ const EditPartnerForm: React.FC = () => {
                     >
                       Ajouter
                     </Button>
-                    <Button variant="outline" onClick={() => setShowAddEntite(false)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAddEntite(false)}
+                    >
                       Annuler
                     </Button>
                   </div>
                 )}
-
+  
                 {errors.id_entite && (
                   <p className="text-red-500 text-sm">{errors.id_entite}</p>
                 )}
               </div>
-
+  
+              <div className="space-y-2">
+                <Label htmlFor="telephone_partenaire">Téléphone</Label>
+                <Input
+                  id="telephone_partenaire"
+                  name="telephone_partenaire"
+                  value={formData.telephone_partenaire}
+                  onChange={handleChange}
+                  className={
+                    errors.telephone_partenaire ? "border-red-500" : ""
+                  }
+                />
+                {errors.telephone_partenaire && (
+                  <p className="text-red-500 text-sm">
+                    {errors.telephone_partenaire}
+                  </p>
+                )}
+              </div>
+  
+              <div className="space-y-2">
+                <Label htmlFor="email_partenaire">Email</Label>
+                <Input
+                  id="email_partenaire"
+                  name="email_partenaire"
+                  type="email"
+                  value={formData.email_partenaire}
+                  onChange={handleChange}
+                  className={errors.email_partenaire ? "border-red-500" : ""}
+                />
+                {errors.email_partenaire && (
+                  <p className="text-red-500 text-sm">{errors.email_partenaire}</p>
+                )}
+              </div>
+  
+              <div className="space-y-2">
+                <Label htmlFor="localisation">Localisation</Label>
+                <Input
+                  id="localisation"
+                  name="localisation"
+                  value={formData.localisation}
+                  onChange={handleChange}
+                  className={errors.localisation ? "border-red-500" : ""}
+                />
+                {errors.localisation && (
+                  <p className="text-red-500 text-sm">{errors.localisation}</p>
+                )}
+              </div>
             </CardContent>
           </Card>
-
+  
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="text-lg">
@@ -563,20 +643,29 @@ const EditPartnerForm: React.FC = () => {
                   </button>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="font-medium">{interlocuteur.prenom_interlocuteur} {interlocuteur.nom_interlocuteur}</p>
-                      <p className="text-sm text-gray-500">{interlocuteur.fonction_interlocuteur}</p>
+                      <p className="font-medium">
+                        {interlocuteur.prenom_interlocuteur}{" "}
+                        {interlocuteur.nom_interlocuteur}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {interlocuteur.fonction_interlocuteur}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-sm">{interlocuteur.mail_interlocuteur}</p>
-                      <p className="text-sm">{interlocuteur.contact_interlocuteur}</p>
+                      <p className="text-sm">
+                        {interlocuteur.mail_interlocuteur}
+                      </p>
+                      <p className="text-sm">
+                        {interlocuteur.contact_interlocuteur}
+                      </p>
                     </div>
                   </div>
                 </div>
               ))}
-
+  
               <div className="space-y-4 border-t pt-4">
                 <h3 className="font-medium">Ajouter un interlocuteur</h3>
-
+  
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="prenom_interlocuteur">Prénom</Label>
@@ -585,15 +674,24 @@ const EditPartnerForm: React.FC = () => {
                       name="prenom_interlocuteur"
                       value={newInterlocuteur.prenom_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[formData.interlocuteurs.length]?.prenom_interlocuteur ? "border-red-500" : ""}
+                      className={
+                        interlocuteurErrors[formData.interlocuteurs.length]
+                          ?.prenom_interlocuteur
+                          ? "border-red-500"
+                          : ""
+                      }
                     />
-                    {interlocuteurErrors[formData.interlocuteurs.length]?.prenom_interlocuteur && (
+                    {interlocuteurErrors[formData.interlocuteurs.length]
+                      ?.prenom_interlocuteur && (
                       <p className="text-red-500 text-sm">
-                        {interlocuteurErrors[formData.interlocuteurs.length].prenom_interlocuteur}
+                        {
+                          interlocuteurErrors[formData.interlocuteurs.length]
+                            .prenom_interlocuteur
+                        }
                       </p>
                     )}
                   </div>
-
+  
                   <div className="space-y-2">
                     <Label htmlFor="nom_interlocuteur">Nom</Label>
                     <Input
@@ -601,16 +699,25 @@ const EditPartnerForm: React.FC = () => {
                       name="nom_interlocuteur"
                       value={newInterlocuteur.nom_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[formData.interlocuteurs.length]?.nom_interlocuteur ? "border-red-500" : ""}
+                      className={
+                        interlocuteurErrors[formData.interlocuteurs.length]
+                          ?.nom_interlocuteur
+                          ? "border-red-500"
+                          : ""
+                      }
                     />
-                    {interlocuteurErrors[formData.interlocuteurs.length]?.nom_interlocuteur && (
+                    {interlocuteurErrors[formData.interlocuteurs.length]
+                      ?.nom_interlocuteur && (
                       <p className="text-red-500 text-sm">
-                        {interlocuteurErrors[formData.interlocuteurs.length].nom_interlocuteur}
+                        {
+                          interlocuteurErrors[formData.interlocuteurs.length]
+                            .nom_interlocuteur
+                        }
                       </p>
                     )}
                   </div>
                 </div>
-
+  
                 <div className="space-y-2">
                   <Label htmlFor="fonction_interlocuteur">Fonction</Label>
                   <Input
@@ -620,7 +727,7 @@ const EditPartnerForm: React.FC = () => {
                     onChange={handleInterlocuteurChange}
                   />
                 </div>
-
+  
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="mail_interlocuteur">Email</Label>
@@ -630,15 +737,24 @@ const EditPartnerForm: React.FC = () => {
                       type="email"
                       value={newInterlocuteur.mail_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[formData.interlocuteurs.length]?.mail_interlocuteur ? "border-red-500" : ""}
+                      className={
+                        interlocuteurErrors[formData.interlocuteurs.length]
+                          ?.mail_interlocuteur
+                          ? "border-red-500"
+                          : ""
+                      }
                     />
-                    {interlocuteurErrors[formData.interlocuteurs.length]?.mail_interlocuteur && (
+                    {interlocuteurErrors[formData.interlocuteurs.length]
+                      ?.mail_interlocuteur && (
                       <p className="text-red-500 text-sm">
-                        {interlocuteurErrors[formData.interlocuteurs.length].mail_interlocuteur}
+                        {
+                          interlocuteurErrors[formData.interlocuteurs.length]
+                            .mail_interlocuteur
+                        }
                       </p>
                     )}
                   </div>
-
+  
                   <div className="space-y-2">
                     <Label htmlFor="contact_interlocuteur">Contact</Label>
                     <Input
@@ -646,16 +762,25 @@ const EditPartnerForm: React.FC = () => {
                       name="contact_interlocuteur"
                       value={newInterlocuteur.contact_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[formData.interlocuteurs.length]?.contact_interlocuteur ? "border-red-500" : ""}
+                      className={
+                        interlocuteurErrors[formData.interlocuteurs.length]
+                          ?.contact_interlocuteur
+                          ? "border-red-500"
+                          : ""
+                      }
                     />
-                    {interlocuteurErrors[formData.interlocuteurs.length]?.contact_interlocuteur && (
+                    {interlocuteurErrors[formData.interlocuteurs.length]
+                      ?.contact_interlocuteur && (
                       <p className="text-red-500 text-sm">
-                        {interlocuteurErrors[formData.interlocuteurs.length].contact_interlocuteur}
+                        {
+                          interlocuteurErrors[formData.interlocuteurs.length]
+                            .contact_interlocuteur
+                        }
                       </p>
                     )}
                   </div>
                 </div>
-
+  
                 <Button
                   type="button"
                   variant="outline"
@@ -667,9 +792,13 @@ const EditPartnerForm: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-
+  
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(-1)}
+            >
               Annuler
             </Button>
             <Button

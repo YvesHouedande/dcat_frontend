@@ -11,11 +11,11 @@ export const administrationFinanceMenu: MenuItem[] = [
     items: [
       
       {
-        title: "Gestion administrative",
+        title: "Gestion des partenaires",
         url: "/administration/partenaires",
       },
       {
-        title: "Ressources Humaines",
+        title: "Gestion des employés",
         url: "/administration/employers",
       },
       {

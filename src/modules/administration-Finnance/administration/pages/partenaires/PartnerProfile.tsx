@@ -5,15 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
-  Download,
   Upload,
-  ExternalLink,
   Edit,
   FileText,
   Mail,
   Phone,
   MapPin,
-  Briefcase,
   Calendar,
   Linkedin,
   Building,
@@ -26,38 +23,17 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchPartnerById, updatePartner } from '@/modules/administration-Finnance/services/partenaireService';
-
-// Mis à jour pour correspondre au service
-interface Interlocuteur {
-  id_interlocuteur: number;
-  nom_interlocuteur: string;
-  prenom_interlocuteur: string;
-  fonction_interlocuteur: string;
-  contact_interlocuteur: string;
-  mail_interlocuteur: string;
-}
-
-interface Partenaires {
-  id_partenaire: number;  // Ajouté pour correspondre au service
-  nom_partenaire: string;
-  specialite: string;
-  status: string;
-  type_partenaire: string;
-  Entite: string;
-  id_entite: number;  // Ajouté pour correspondre au service
-  localisation: string;
-  Email_partenaire: string; // Gardé tel quel (mais notez la différence avec email_partenaire)
-  email_partenaire: string; // Ajouté pour correspondre au service
-  telephone_partenaire: string;
-  interlocuteurs: Interlocuteur[];
-  logo: null;  // Ajouté avec null comme valeur par défaut
-}
+import { Interlocuteur, Partenaires } from "../../types/interfaces";
 
 const ModernPartnerProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
+  // États pour gérer les données et le loading
   const [partnerInfo, setPartnerInfo] = useState<Partenaires | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur'>>({
     nom_interlocuteur: "",
     prenom_interlocuteur: "",
@@ -67,69 +43,75 @@ const ModernPartnerProfile: React.FC = () => {
   });
   const [isAddingInterlocuteur, setIsAddingInterlocuteur] = useState(false);
 
+  // Fonction pour charger les données du partenaire
+  const loadPartnerData = async () => {
+    if (!id) {
+      setError("ID du partenaire manquant");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("Chargement du partenaire avec ID:", id);
+      
+      const data = await fetchPartnerById(id);
+      console.log("Données reçues:", data);
+      
+      setPartnerInfo(data);
+    } catch (err) {
+      console.error("Erreur lors du chargement:", err);
+      setError(err instanceof Error ? err.message : "Erreur lors du chargement des données");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Charger les données au montage du composant
   useEffect(() => {
-    const getPartnerInfo = async () => {
-      if (id === undefined) {
-        console.error("ID is undefined");
-        return;
-      }
-
-      try {
-        const data = await fetchPartnerById(id);
-        // S'assurer que toutes les propriétés requises sont présentes
-        if (data) {
-          // Si email_partenaire n'existe pas, utilisez Email_partenaire
-          if (!data.email_partenaire && data.Email_partenaire) {
-            data.email_partenaire = data.Email_partenaire;
-          }
-          
-          // Si logo n'existe pas, ajoutez-le avec null
-          if (data.logo === undefined) {
-            data.logo = null;
-          }
-        }
-        setPartnerInfo(data);
-      } catch (error) {
-        console.error('Error fetching partner info:', error);
-      }
-    };
-
-    getPartnerInfo();
+    loadPartnerData();
   }, [id]);
 
-  const projects = [
-    {
-      id: "1",
-      name: "Déploiement ERP",
-      type: "Projet IT",
-      date: "15/03/2025",
-      status: "En cours",
-    },
-    {
-      id: "2",
-      name: "Formation Développeurs",
-      type: "Formation",
-      date: "02/04/2025",
-      status: "Planifié",
-    },
-  ];
+  // Affichage des états de chargement et d'erreur
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement des informations du partenaire...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const documents = [
-    {
-      id: "1",
-      name: "Contrat de partenariat",
-      type: "Juridique",
-      date: "12/01/2025",
-      status: "Signé",
-    },
-    {
-      id: "2",
-      name: "Accord de confidentialité",
-      type: "Juridique",
-      date: "12/01/2025",
-      status: "Signé",
-    },
-  ];
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            Erreur: {error}
+          </div>
+          <Button onClick={loadPartnerData} className="bg-indigo-600 hover:bg-indigo-700">
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!partnerInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Aucune donnée de partenaire disponible.</p>
+          <Button onClick={() => navigate('/administration/partenaires')} variant="outline">
+            Retour à la liste
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -185,23 +167,23 @@ const ModernPartnerProfile: React.FC = () => {
       return;
     }
 
-    const maxId = partnerInfo.interlocuteurs.length > 0 
-      ? Math.max(...partnerInfo.interlocuteurs.map(i => i.id_interlocuteur)) 
+    const maxId = partnerInfo.interlocuteurs && partnerInfo.interlocuteurs.length > 0
+      ? Math.max(...partnerInfo.interlocuteurs.map(i => i.id_interlocuteur))
       : 0;
-    
+
     const newInterlocuteurWithId = {
       ...newInterlocuteur,
       id_interlocuteur: maxId + 1,
     };
 
     try {
+      setLoading(true);
       const updatedPartnerData = {
         ...partnerInfo,
-        interlocuteurs: [...partnerInfo.interlocuteurs, newInterlocuteurWithId],
+        interlocuteurs: [...(partnerInfo.interlocuteurs || []), newInterlocuteurWithId],
       };
 
       await updatePartner(id, updatedPartnerData);
-      setPartnerInfo(updatedPartnerData);
       setNewInterlocuteur({
         nom_interlocuteur: "",
         prenom_interlocuteur: "",
@@ -210,8 +192,12 @@ const ModernPartnerProfile: React.FC = () => {
         mail_interlocuteur: "",
       });
       setIsAddingInterlocuteur(false);
+      await loadPartnerData(); // Recharger les données
     } catch (error) {
       console.error('Error updating partner:', error);
+      setError("Erreur lors de l'ajout de l'interlocuteur");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -222,7 +208,8 @@ const ModernPartnerProfile: React.FC = () => {
     }
 
     try {
-      const updatedInterlocuteurs = partnerInfo.interlocuteurs.filter(
+      setLoading(true);
+      const updatedInterlocuteurs = (partnerInfo.interlocuteurs || []).filter(
         i => i.id_interlocuteur !== id_interlocuteur
       );
 
@@ -232,15 +219,14 @@ const ModernPartnerProfile: React.FC = () => {
       };
 
       await updatePartner(id, updatedPartnerData);
-      setPartnerInfo(updatedPartnerData);
+      await loadPartnerData(); // Recharger les données
     } catch (error) {
       console.error('Error updating partner:', error);
+      setError("Erreur lors de la suppression de l'interlocuteur");
+    } finally {
+      setLoading(false);
     }
   };
-
-  if (!partnerInfo) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -263,7 +249,7 @@ const ModernPartnerProfile: React.FC = () => {
                   variant="outline"
                   className="bg-indigo-500/20 text-white border-indigo-200"
                 >
-                  {partnerInfo.status}
+                  {partnerInfo.type_partenaire}
                 </Badge>
               </div>
             </div>
@@ -291,7 +277,9 @@ const ModernPartnerProfile: React.FC = () => {
         <Tabs defaultValue="profil" className="mb-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profil">Profil</TabsTrigger>
-            <TabsTrigger value="interlocuteurs">Interlocuteurs</TabsTrigger>
+            <TabsTrigger value="interlocuteurs">
+              Interlocuteurs ({partnerInfo.interlocuteurs?.length || 0})
+            </TabsTrigger>
             <TabsTrigger value="projects">Projets</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
           </TabsList>
@@ -352,16 +340,6 @@ const ModernPartnerProfile: React.FC = () => {
 
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <Briefcase size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Entité</p>
-                        <p className="font-medium">{partnerInfo.Entite}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
                         <MapPin size={16} />
                       </div>
                       <div>
@@ -379,7 +357,7 @@ const ModernPartnerProfile: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Email</p>
                         <p className="font-medium">
-                          {partnerInfo.Email_partenaire}
+                          {partnerInfo.email_partenaire}
                         </p>
                       </div>
                     </div>
@@ -393,6 +371,18 @@ const ModernPartnerProfile: React.FC = () => {
                         <p className="font-medium">
                           {partnerInfo.telephone_partenaire}
                         </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
+                        <Tag size={16} />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Statut</p>
+                        <Badge className={getStatusColor(partnerInfo.statut)}>
+                          {partnerInfo.statut}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -474,7 +464,7 @@ const ModernPartnerProfile: React.FC = () => {
           <TabsContent value="interlocuteurs" className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-800">
-                Interlocuteurs ({partnerInfo.interlocuteurs.length})
+                Interlocuteurs ({partnerInfo.interlocuteurs?.length || 0})
               </h2>
               <Button
                 className="bg-indigo-600 hover:bg-indigo-700"
@@ -571,7 +561,7 @@ const ModernPartnerProfile: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {partnerInfo.interlocuteurs.map((interlocuteur) => (
+              {partnerInfo.interlocuteurs?.map((interlocuteur) => (
                 <Card key={interlocuteur.id_interlocuteur}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
@@ -616,8 +606,14 @@ const ModernPartnerProfile: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )) || []}
             </div>
+
+            {(!partnerInfo.interlocuteurs || partnerInfo.interlocuteurs.length === 0) && (
+              <div className="text-center text-gray-500 py-8">
+                <p>Aucun interlocuteur trouvé pour ce partenaire</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="projects" className="p-6">
@@ -631,53 +627,8 @@ const ModernPartnerProfile: React.FC = () => {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((project) => (
-                <Card
-                  key={project.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-gray-50 p-4 border-b">
-                    <div className="flex justify-between">
-                      <Badge className={getStatusColor(project.status)}>
-                        {project.status}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {project.date}
-                      </span>
-                    </div>
-                    <div className="mt-6 mb-4 flex justify-center">
-                      <div className="w-16 h-16 bg-indigo-100 rounded-full border shadow-sm flex items-center justify-center">
-                        <Briefcase size={24} className="text-indigo-600" />
-                      </div>
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-gray-800 mb-1">
-                      {project.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">{project.type}</p>
-                    <div className="flex justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-gray-600 text-xs"
-                      >
-                        <Edit size={14} className="mr-1" />
-                        Détails
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-indigo-600 text-xs"
-                      >
-                        <ExternalLink size={14} className="mr-1" />
-                        Voir le projet
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="text-center text-gray-500">
+              <p>Aucun projet trouvé pour ce partenaire</p>
             </div>
           </TabsContent>
 
@@ -690,51 +641,8 @@ const ModernPartnerProfile: React.FC = () => {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {documents.map((doc) => (
-                <Card
-                  key={doc.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-gray-50 p-4 border-b">
-                    <div className="flex justify-between">
-                      <Badge className={getStatusColor(doc.status)}>
-                        {doc.status}
-                      </Badge>
-                      <span className="text-xs text-gray-500">{doc.date}</span>
-                    </div>
-                    <div className="mt-6 mb-4 flex justify-center">
-                      <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
-                        <FileText size={24} className="text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-gray-800 mb-1">
-                      {doc.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">{doc.type}</p>
-                    <div className="flex justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-gray-600 text-xs"
-                      >
-                        <Edit size={14} className="mr-1" />
-                        Mettre à jour
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-indigo-600 text-xs"
-                      >
-                        <Download size={14} className="mr-1" />
-                        Télécharger
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="text-center text-gray-500">
+              <p>Aucun document trouvé pour ce partenaire</p>
             </div>
           </TabsContent>
         </Tabs>

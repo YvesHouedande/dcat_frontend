@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,16 +22,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Contrat, Document } from "../../types/interfaces";
-// Interfaces
-
+import { useApiCall } from "@/hooks/useAPiCall";
+import {
+  fetchContratById,
+  updateContrat,
+  fetchNaturesDocument,
+  addDocumentToContrat,
+} from "../../../services/contratService";
+import { fetchPartners } from "../../../services/partenaireService";
 
 const EditerContrat: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // États du formulaire
   const [formData, setFormData] = useState<Contrat>({
-    id_contrat: 0, // Changé de string vide à 0
+    id_contrat: 0,
     nom_contrat: "",
     duree_Contrat: "",
     date_debut: "",
@@ -39,32 +45,56 @@ const EditerContrat: React.FC = () => {
     Reference: "",
     type_de_contrat: "",
     status: "",
-    id_partenaire: undefined,
+    id_partenaire: 0,
   });
 
   const [documentData, setDocumentData] = useState<Document>({
     id_document: 0,
     libele_document: "",
-    date_document: "",
+    date_document: new Date().toISOString().split('T')[0],
     lien_document: "",
-    id_contrat: undefined, // Changé de string vide à undefined
-    id_nature_document: undefined,
+    id_contrat: 0,
+    id_nature_document: 0,
   });
 
-  // Liste des partenaires et des natures de document
-  const partenaires = [
-    { id: 1, nom: "Systèmes IT Pro" },
-    { id: 2, nom: "TechSupport Plus" },
-    // Ajoutez d'autres partenaires ici
-  ];
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const naturesDocument = [
-    { id_nature_document: 1, libelle_td: "Contrat Principal" },
-    { id_nature_document: 2, libelle_td: "Annexe" },
-    // Ajoutez d'autres natures de document ici
-  ];
+  // Appels API avec useApiCall
+  const { call: fetchContrat } = useApiCall(fetchContratById);
+  const { call: updateContratCall, loading: updatingContrat } = useApiCall(updateContrat);
+  const { call: fetchPartnersCall } = useApiCall(fetchPartners);
+  const { call: fetchDocumentTypesCall } = useApiCall(fetchNaturesDocument);
+  const { call: addDocumentCall, loading: addingDocument } = useApiCall(addDocumentToContrat);
 
-  // Gérer les changements des champs de texte
+  const [partenaires, setPartenaires] = useState<Array<{ id: number; nom: string }>>([]);
+  const [naturesDocument, setNaturesDocument] = useState<Array<{ id_nature_document: number; libelle_td: string }>>([]);
+
+  // Chargement des données initiales
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Chargement des données du contrat
+        if (id) {
+          const contratData = await fetchContrat(id);
+          setFormData(contratData);
+        }
+
+        // Chargement des partenaires et natures de document
+        const [partenairesData, naturesData] = await Promise.all([
+          fetchPartnersCall(),
+          fetchDocumentTypesCall()
+        ]);
+        setPartenaires(partenairesData);
+        setNaturesDocument(naturesData);
+      } catch (error) {
+        console.error("Erreur lors du chargement des données:", error);
+      }
+    };
+
+    loadData();
+  }, [id, fetchContrat, fetchPartnersCall, fetchDocumentTypesCall]);
+
+  // Gérer les changements des champs
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -78,30 +108,16 @@ const EditerContrat: React.FC = () => {
   // Gérer le changement de fichier
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setUploadedFile(file);
       setDocumentData({
         ...documentData,
-        lien_document: URL.createObjectURL(e.target.files[0]),
+        lien_document: URL.createObjectURL(file),
       });
     }
   };
 
-  // Soumission du formulaire
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    // Simuler une soumission API
-    setTimeout(() => {
-      setIsSubmitting(false);
-
-      // Rediriger après affichage du message de succès
-      setTimeout(() => {
-        navigate("/administration/contrats");
-      }, 1500);
-    }, 1000);
-  };
-
-  // Calculer automatiquement la date de fin en fonction de la date de début et de la durée
+  // Calculer la date de fin
   const updateEndDate = (duree: string, startDate: Date) => {
     if (!startDate) return;
 
@@ -118,6 +134,44 @@ const EditerContrat: React.FC = () => {
     });
   };
 
+  // Soumission du formulaire
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+  
+    try {
+      // 1. Mise à jour du contrat
+      await updateContratCall(
+        formData.id_contrat,
+        {
+          ...formData,
+          date_debut: new Date(formData.date_debut).toISOString().split('T')[0],
+          date_fin: new Date(formData.date_fin).toISOString().split('T')[0],
+        }
+      );
+  
+      // 2. Si un nouveau document est uploadé
+      if (uploadedFile) {
+        await addDocumentCall(
+          formData.id_contrat,
+          {
+            libele_document: documentData.libele_document,
+            date_document: documentData.date_document,
+            id_nature_document: documentData.id_nature_document
+          },
+          uploadedFile
+        );
+      }
+  
+      // Redirection après succès
+      navigate(`/administration/contrats/${formData.id_contrat}`);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour:", error);
+    }
+  };
+  
+
+  const isSubmitting = updatingContrat || addingDocument;
+
   return (
     <div className="bg-gray-50 p-6 min-h-screen">
       <div className="max-w-3xl mx-auto">
@@ -125,11 +179,11 @@ const EditerContrat: React.FC = () => {
         <div className="mb-6">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-800">
-              Modifier les informations d'un contrat
+              Modifier le contrat: {formData.nom_contrat}
             </h1>
           </div>
         </div>
-        {/* Formulaire */}
+
         <form onSubmit={handleSubmit}>
           <Card>
             <CardContent className="pt-6">

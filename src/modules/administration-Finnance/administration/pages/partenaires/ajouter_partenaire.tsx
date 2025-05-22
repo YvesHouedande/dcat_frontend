@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+// src/components/AddPartnerForm.tsx
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +12,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Save, Building, Camera, X } from "lucide-react";
+import { Save, Building, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
-import { addPartner, fetchEntites, addEntite, deleteEntite } from '@/modules/administration-Finnance/services/partenaireService';
+import {
+  addPartner,
+  fetchEntites,
+  addEntite,
+  deleteEntite
+} from '@/modules/administration-Finnance/services/partenaireService';
+import { useApiCall } from '@/hooks/useAPiCall';
+
+interface Entite {
+  id_entite: number;
+  denomination: string;
+}
 
 const AddPartnerForm: React.FC = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    data: entites,
+    loading: loadingEntites,
+    error: entitesErrorData,
+    call: fetchEntitesData
+  } = useApiCall<Entite[]>(fetchEntites);
+
+  const {
+    call: submitPartnerData,
+    loading: isSubmitting
+  } = useApiCall<Partenaires, [Partenaires]>(addPartner);
 
   const [formData, setFormData] = useState<Partenaires>({
     id_partenaire: 0,
@@ -29,11 +52,10 @@ const AddPartnerForm: React.FC = () => {
     localisation: "",
     type_partenaire: "",
     id_entite: 0,
+    statut: "Actif",
     interlocuteurs: [],
   });
 
-  const [logo, setLogo] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [interlocuteurErrors, setInterlocuteurErrors] = useState<Record<number, Record<string, string>>>({});
   const [newInterlocuteur, setNewInterlocuteur] = useState<Interlocuteur>({
@@ -45,11 +67,16 @@ const AddPartnerForm: React.FC = () => {
     mail_interlocuteur: "",
   });
 
-  const [entites, setEntites] = useState<{id: number, nom: string}[]>([]);
   const [newEntiteNom, setNewEntiteNom] = useState("");
   const [showAddEntite, setShowAddEntite] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
-  const [loadingEntites, setLoadingEntites] = useState(true);
+  const [localEntites, setLocalEntites] = useState<Entite[]>([]);
+
+  useEffect(() => {
+    if (entites) {
+      setLocalEntites(entites);
+    }
+  }, [entites]);
 
   const types_partenaire = [
     "Fournisseur",
@@ -72,42 +99,25 @@ const AddPartnerForm: React.FC = () => {
     "Autres",
   ];
 
+  const statuts = [
+    "Actif",
+    "Inactif",
+    "En attente",
+    "Suspendu",
+    "Archivé"
+  ];
+
   useEffect(() => {
-    const loadEntites = async () => {
-      try {
-        const data = await fetchEntites();
-        setEntites(data);
-        setLoadingEntites(false);
-      } catch (error) {
-        console.error("Failed to load entites", error);
-        setLoadingEntites(false);
-      }
-    };
-    loadEntites();
+    fetchEntitesData();
   }, []);
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string): string => {
     return name
       .split(" ")
       .map((part) => part[0])
       .join("")
       .toUpperCase()
       .substring(0, 2);
-  };
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setLogo(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,6 +132,8 @@ const AddPartnerForm: React.FC = () => {
       });
     }
   };
+
+  
 
   const handleSelectChange = (field: string, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -138,8 +150,8 @@ const AddPartnerForm: React.FC = () => {
     if (!newEntiteNom.trim()) return;
 
     try {
-      const newEntite = await addEntite({ nom: newEntiteNom });
-      setEntites([...entites, newEntite]);
+      const newEntite = await addEntite({ denomination: newEntiteNom });
+      setLocalEntites([...(localEntites || []), newEntite]);
       setFormData(prev => ({ ...prev, id_entite: newEntite.id }));
       setNewEntiteNom("");
       setShowAddEntite(false);
@@ -149,20 +161,31 @@ const AddPartnerForm: React.FC = () => {
     }
   };
 
-  const handleDeleteEntite = async (id: number) => {
-    if (formData.id_entite === id) {
+  const handleDeleteEntite = async (id: number | string) => {
+    // Conversion explicite en number
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+  
+    if (isNaN(numericId) ){
+      console.error("ID invalide:", id);
+      alert("ID d'entité invalide");
+      return;
+    }
+  
+    if (formData.id_entite === numericId) {
       alert("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
       return;
     }
-
+  
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement cette entité ?`)) {
       try {
-        await deleteEntite(id);
-        setEntites(entites.filter(entite => entite.id !== id));
+        await deleteEntite(numericId);
+        setLocalEntites(prevEntites => prevEntites?.filter(entite => entite.id_entite !== numericId) || []);
         setDeleteMode(false);
+        // Recharger les entités après suppression
+        fetchEntitesData();
       } catch (error) {
-        console.error("Failed to delete entite", error);
-        alert("Erreur lors de la suppression de l'entité");
+        console.error("Échec de la suppression:", error);
+        alert(error instanceof Error ? error.message : "Erreur lors de la suppression de l'entité");
       }
     }
   };
@@ -235,7 +258,7 @@ const AddPartnerForm: React.FC = () => {
     });
   };
 
-  const validateForm = () => {
+  const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.nom_partenaire.trim()) {
@@ -268,6 +291,10 @@ const AddPartnerForm: React.FC = () => {
       newErrors.id_entite = "L'entité est obligatoire";
     }
 
+    if (!formData.statut) {
+      newErrors.statut = "Le statut est obligatoire";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -279,18 +306,16 @@ const AddPartnerForm: React.FC = () => {
       return;
     }
   
-    setIsSubmitting(true);
-  
     try {
-      const response = await addPartner({ ...formData, logo });
-      console.log("Partner added successfully:", response);
+      // Créer une copie des données en excluant l'id_partenaire pour laisser la BD le générer
+      const { id_partenaire, ...partenaireData } = formData;
+      
+      await submitPartnerData(partenaireData as Partenaires);
       alert("Partenaire ajouté avec succès !");
       navigate("/administration/partenaires");
     } catch (error) {
       console.error("Error details:", error);
       alert("Erreur lors de l'ajout du partenaire.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -315,50 +340,15 @@ const AddPartnerForm: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex flex-col items-center mb-6">
-                <div className="relative mb-4">
-                  <Avatar className="h-20 w-20 border-2 border-gray-200">
-                    {logo ? (
-                      <div className="h-full w-full overflow-hidden rounded-full">
-                        <img
-                          src={logo}
-                          alt="Logo du partenaire"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
+                <Avatar className="h-20 w-20 border-2 border-gray-200">
+                  <AvatarFallback className="bg-blue-500 text-white text-lg">
+                    {formData.nom_partenaire ? (
+                      getInitials(formData.nom_partenaire)
                     ) : (
-                      <AvatarFallback className="bg-blue-500 text-white text-lg">
-                        {formData.nom_partenaire ? (
-                          getInitials(formData.nom_partenaire)
-                        ) : (
-                          <Building size={24} />
-                        )}
-                      </AvatarFallback>
+                      <Building size={24} />
                     )}
-                  </Avatar>
-                  <button
-                    type="button"
-                    className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 rounded-full p-1 text-white"
-                    onClick={triggerFileInput}
-                  >
-                    <Camera size={14} />
-                  </button>
-                </div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={triggerFileInput}
-                >
-                  Télécharger un logo
-                </Button>
+                  </AvatarFallback>
+                </Avatar>
               </div>
 
               <div className="space-y-2">
@@ -435,61 +425,90 @@ const AddPartnerForm: React.FC = () => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="statut">Statut</Label>
+                <Select
+                  value={formData.statut}
+                  onValueChange={(value) =>
+                    handleSelectChange("statut", value)
+                  }
+                >
+                  <SelectTrigger
+                    id="statut"
+                    className={errors.statut ? "border-red-500" : ""}
+                  >
+                    <SelectValue placeholder="Sélectionner un statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuts.map((statut) => (
+                      <SelectItem key={statut} value={statut}>
+                        {statut}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.statut && (
+                  <p className="text-red-500 text-sm">{errors.statut}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="entite">Entité</Label>
                 <div className="flex gap-2">
-                  <Select
-                    value={formData.id_entite ? formData.id_entite.toString() : ""}
-                    onValueChange={(value) => {
-                      if (value === "__add__") {
-                        setShowAddEntite(true);
-                        setDeleteMode(false);
-                      } else if (value === "__delete__") {
-                        setDeleteMode(!deleteMode);
-                      } else {
-                        if (deleteMode) {
-                          handleDeleteEntite(parseInt(value, 10));
-                        } else {
-                          handleSelectChange("id_entite", parseInt(value, 10));
-                        }
-                      }
-                    }}
+              <Select
+                  value={formData.id_entite ? formData.id_entite.toString() : ""}
+                  onValueChange={(value) => {
+                    if (value === "__add__") {
+                      setShowAddEntite(true);
+                      setDeleteMode(false);
+                    } else if (value === "__delete__") {
+                      setDeleteMode(!deleteMode);
+                      setShowAddEntite(false);
+                    } else if (deleteMode) {
+                      handleDeleteEntite(value);
+                    } else {
+                      handleSelectChange("id_entite", parseInt(value, 10));
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    id="entite"
+                    className={errors.id_entite ? "border-red-500" : ""}
+                    disabled={loadingEntites}
                   >
-                    <SelectTrigger 
-                      id="entite" 
-                      className={errors.id_entite ? "border-red-500" : ""}
-                      disabled={loadingEntites}
-                    >
-                      <SelectValue 
-                        placeholder={
-                          loadingEntites ? "Chargement..." : 
-                          deleteMode ? "Choisir une entité à supprimer" : 
-                          "Sélectionner une entité"
-                        } 
-                      />
-                    </SelectTrigger>
-
-                    <SelectContent>
+                    <SelectValue
+                      placeholder={
+                        loadingEntites 
+                          ? "Chargement..." 
+                          : deleteMode 
+                              ? "Sélectionner une entité à supprimer" 
+                              : "Sélectionner une entité"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
                       {loadingEntites ? (
                         <div className="py-2 text-center text-sm text-gray-500">
                           Chargement des entités...
                         </div>
+                      ) : entitesErrorData ? (
+                        <div className="py-2 text-center text-sm text-red-500">
+                          Erreur: Impossible de charger les entités
+                        </div>
                       ) : (
                         <>
-                          {entites.map((entite) => (
+                          {localEntites?.map((entite) => (
                             <SelectItem
-                              key={entite.id}
-                              value={entite.id.toString()}
+                              key={entite.id_entite}
+                              value={entite.id_entite?.toString()}
                               className={deleteMode ? "text-red-500 hover:bg-red-50" : ""}
                             >
-                              {entite.nom}
+                              {entite.denomination}
                             </SelectItem>
                           ))}
-
                           <SelectItem value="__add__" className="text-blue-600 font-medium">
                             + Ajouter une entité
                           </SelectItem>
-
-                          {entites.length > 0 && (
+                          {localEntites && localEntites.length > 0 && (
                             <SelectItem
                               value="__delete__"
                               className={deleteMode ? "bg-gray-100 font-medium" : "text-red-600 font-medium"}
@@ -500,7 +519,7 @@ const AddPartnerForm: React.FC = () => {
                         </>
                       )}
                     </SelectContent>
-                  </Select>
+              </Select>
                 </div>
 
                 {showAddEntite && (
@@ -526,7 +545,49 @@ const AddPartnerForm: React.FC = () => {
                   <p className="text-red-500 text-sm">{errors.id_entite}</p>
                 )}
               </div>
-              
+
+              <div className="space-y-2">
+                <Label htmlFor="telephone_partenaire">Téléphone</Label>
+                <Input
+                  id="telephone_partenaire"
+                  name="telephone_partenaire"
+                  value={formData.telephone_partenaire}
+                  onChange={handleChange}
+                  className={errors.telephone_partenaire ? "border-red-500" : ""}
+                />
+                {errors.telephone_partenaire && (
+                  <p className="text-red-500 text-sm">{errors.telephone_partenaire}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email_partenaire">Email</Label>
+                <Input
+                  id="email_partenaire"
+                  name="email_partenaire"
+                  type="email"
+                  value={formData.email_partenaire}
+                  onChange={handleChange}
+                  className={errors.email_partenaire ? "border-red-500" : ""}
+                />
+                {errors.email_partenaire && (
+                  <p className="text-red-500 text-sm">{errors.email_partenaire}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="localisation">Localisation</Label>
+                <Input
+                  id="localisation"
+                  name="localisation"
+                  value={formData.localisation}
+                  onChange={handleChange}
+                  className={errors.localisation ? "border-red-500" : ""}
+                />
+                {errors.localisation && (
+                  <p className="text-red-500 text-sm">{errors.localisation}</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
