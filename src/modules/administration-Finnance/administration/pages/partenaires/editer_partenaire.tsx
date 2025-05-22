@@ -175,7 +175,7 @@ const EditPartnerForm: React.FC = () => {
       if (!newEntiteNom.trim()) return;
   
       try {
-        const newEntite = await addEntite({ nom: newEntiteNom });
+        const newEntite = await addEntite({ denomination: newEntiteNom });
         setLocalEntites([...(localEntites || []), newEntite]);
         setFormData(prev => ({ ...prev, id_entite: newEntite.id }));
         setNewEntiteNom("");

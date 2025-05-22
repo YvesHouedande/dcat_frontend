@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Interlocuteur, Partenaires } from '../administration/types/interfaces';
 
+
 const API_URL = import.meta.env.VITE_APP_API_URL;
 
 // Services des partenaires
@@ -106,6 +107,7 @@ export const deleteInterlocuteur = async (partnerId: string | number, interlocut
 export const fetchEntites = async () => {
   try {
     const response = await axios.get(`${API_URL}/administration/entites`);
+    // alert(JSON.stringify(response.data[0], null, 2));
     return response.data;
   } catch (error) {
     console.error("Erreur de récupération des entités:", error);
@@ -116,6 +118,7 @@ export const fetchEntites = async () => {
 export const fetchEntiteById = async (id: string | number) => {
   try {
     const response = await axios.get(`${API_URL}/administration/entites/${id}`);
+    
     return response.data;
   } catch (error) {
     console.error("Erreur de récupération d'une entité:", error);
@@ -123,8 +126,9 @@ export const fetchEntiteById = async (id: string | number) => {
   }
 };
 
-export const addEntite = async (entiteData: { nom: string }) => {
+export const addEntite = async (entiteData: { denomination: string }) => {
   try {
+    
     const response = await axios.post(`${API_URL}/administration/entites`, entiteData);
     return response.data;
   } catch (error) {
@@ -143,12 +147,21 @@ export const updateEntite = async (id: string | number, entiteData: { nom: strin
   }
 };
 
-export const deleteEntite = async (id: string | number) => {
+export const deleteEntite = async (id: number): Promise<void> => {
   try {
-    const response = await axios.delete(`${API_URL}/administration/entites/${id}`);
-    return response.data;
+    const response = await fetch(`${API_URL}/administration/entites/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Échec de la suppression');
+    }
   } catch (error) {
-    console.error("Erreur de suppression d'une entité:", error);
+    console.error('Error deleting entite:', error);
     throw error;
   }
 };

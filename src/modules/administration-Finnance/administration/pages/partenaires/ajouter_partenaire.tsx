@@ -15,35 +15,32 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Save, Building, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
-import { 
-  addPartner, 
-  fetchEntites, 
-  addEntite, 
-  deleteEntite 
+import {
+  addPartner,
+  fetchEntites,
+  addEntite,
+  deleteEntite
 } from '@/modules/administration-Finnance/services/partenaireService';
 import { useApiCall } from '@/hooks/useAPiCall';
 
 interface Entite {
-  id: number;
-  nom: string;
+  id_entite: number;
+  denomination: string;
 }
 
 const AddPartnerForm: React.FC = () => {
   const navigate = useNavigate();
 
-  // Utilisation du hook pour les entités
-  const { 
-    data: entites, 
-    loading: loadingEntites, 
-    // Renommé pour éviter l'avertissement "déclaré mais jamais lu"
-    error: entitesErrorData, 
-    call: fetchEntitesData 
+  const {
+    data: entites,
+    loading: loadingEntites,
+    error: entitesErrorData,
+    call: fetchEntitesData
   } = useApiCall<Entite[]>(fetchEntites);
 
-  // Correction du typage pour l'ajout de partenaire
-  const { 
-    call: submitPartnerData, 
-    loading: isSubmitting 
+  const {
+    call: submitPartnerData,
+    loading: isSubmitting
   } = useApiCall<Partenaires, [Partenaires]>(addPartner);
 
   const [formData, setFormData] = useState<Partenaires>({
@@ -55,7 +52,7 @@ const AddPartnerForm: React.FC = () => {
     localisation: "",
     type_partenaire: "",
     id_entite: 0,
-    statut: "Actif", // Ajout du statut par défaut
+    statut: "Actif",
     interlocuteurs: [],
   });
 
@@ -73,10 +70,8 @@ const AddPartnerForm: React.FC = () => {
   const [newEntiteNom, setNewEntiteNom] = useState("");
   const [showAddEntite, setShowAddEntite] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
-  // État local pour entités à utiliser avec setEntites
   const [localEntites, setLocalEntites] = useState<Entite[]>([]);
 
-  // Mise à jour de localEntites quand entites change
   useEffect(() => {
     if (entites) {
       setLocalEntites(entites);
@@ -104,7 +99,6 @@ const AddPartnerForm: React.FC = () => {
     "Autres",
   ];
 
-  // Options pour le statut du partenaire
   const statuts = [
     "Actif",
     "Inactif",
@@ -139,6 +133,8 @@ const AddPartnerForm: React.FC = () => {
     }
   };
 
+  
+
   const handleSelectChange = (field: string, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -154,7 +150,7 @@ const AddPartnerForm: React.FC = () => {
     if (!newEntiteNom.trim()) return;
 
     try {
-      const newEntite = await addEntite({ nom: newEntiteNom });
+      const newEntite = await addEntite({ denomination: newEntiteNom });
       setLocalEntites([...(localEntites || []), newEntite]);
       setFormData(prev => ({ ...prev, id_entite: newEntite.id }));
       setNewEntiteNom("");
@@ -165,20 +161,31 @@ const AddPartnerForm: React.FC = () => {
     }
   };
 
-  const handleDeleteEntite = async (id: number) => {
-    if (formData.id_entite === id) {
+  const handleDeleteEntite = async (id: number | string) => {
+    // Conversion explicite en number
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+  
+    if (isNaN(numericId) ){
+      console.error("ID invalide:", id);
+      alert("ID d'entité invalide");
+      return;
+    }
+  
+    if (formData.id_entite === numericId) {
       alert("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
       return;
     }
-
+  
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement cette entité ?`)) {
       try {
-        await deleteEntite(id);
-        setLocalEntites((prevEntites) => prevEntites.filter(entite => entite.id !== id));
+        await deleteEntite(numericId);
+        setLocalEntites(prevEntites => prevEntites?.filter(entite => entite.id_entite !== numericId) || []);
         setDeleteMode(false);
+        // Recharger les entités après suppression
+        fetchEntitesData();
       } catch (error) {
-        console.error("Failed to delete entite", error);
-        alert("Erreur lors de la suppression de l'entité");
+        console.error("Échec de la suppression:", error);
+        alert(error instanceof Error ? error.message : "Erreur lors de la suppression de l'entité");
       }
     }
   };
@@ -300,7 +307,10 @@ const AddPartnerForm: React.FC = () => {
     }
   
     try {
-      await submitPartnerData(formData);
+      // Créer une copie des données en excluant l'id_partenaire pour laisser la BD le générer
+      const { id_partenaire, ...partenaireData } = formData;
+      
+      await submitPartnerData(partenaireData as Partenaires);
       alert("Partenaire ajouté avec succès !");
       navigate("/administration/partenaires");
     } catch (error) {
@@ -444,42 +454,42 @@ const AddPartnerForm: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="entite">Entité</Label>
                 <div className="flex gap-2">
-                  <Select
-                    value={formData.id_entite ? formData.id_entite.toString() : ""}
-                    onValueChange={(value) => {
-                      if (value === "__add__") {
-                        setShowAddEntite(true);
-                        setDeleteMode(false);
-                      } else if (value === "__delete__") {
-                        setDeleteMode(!deleteMode);
-                      } else {
-                        if (deleteMode) {
-                          handleDeleteEntite(parseInt(value, 10));
-                        } else {
-                          handleSelectChange("id_entite", parseInt(value, 10));
-                        }
-                      }
-                    }}
+              <Select
+                  value={formData.id_entite ? formData.id_entite.toString() : ""}
+                  onValueChange={(value) => {
+                    if (value === "__add__") {
+                      setShowAddEntite(true);
+                      setDeleteMode(false);
+                    } else if (value === "__delete__") {
+                      setDeleteMode(!deleteMode);
+                      setShowAddEntite(false);
+                    } else if (deleteMode) {
+                      handleDeleteEntite(value);
+                    } else {
+                      handleSelectChange("id_entite", parseInt(value, 10));
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    id="entite"
+                    className={errors.id_entite ? "border-red-500" : ""}
+                    disabled={loadingEntites}
                   >
-                    <SelectTrigger 
-                      id="entite" 
-                      className={errors.id_entite ? "border-red-500" : ""}
-                      disabled={loadingEntites}
-                    >
-                      <SelectValue 
-                        placeholder={
-                          loadingEntites ? "Chargement..." : 
-                          deleteMode ? "Choisir une entité à supprimer" : 
-                          "Sélectionner une entité"
-                        } 
-                      />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                    {loadingEntites ? (
-                    <div className="py-2 text-center text-sm text-gray-500">
-                      Chargement des entités...
-                    </div>
+                    <SelectValue
+                      placeholder={
+                        loadingEntites 
+                          ? "Chargement..." 
+                          : deleteMode 
+                              ? "Sélectionner une entité à supprimer" 
+                              : "Sélectionner une entité"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {loadingEntites ? (
+                        <div className="py-2 text-center text-sm text-gray-500">
+                          Chargement des entités...
+                        </div>
                       ) : entitesErrorData ? (
                         <div className="py-2 text-center text-sm text-red-500">
                           Erreur: Impossible de charger les entités
@@ -488,18 +498,16 @@ const AddPartnerForm: React.FC = () => {
                         <>
                           {localEntites?.map((entite) => (
                             <SelectItem
-                              key={entite.id}
-                              value={entite.id.toString()}
+                              key={entite.id_entite}
+                              value={entite.id_entite?.toString()}
                               className={deleteMode ? "text-red-500 hover:bg-red-50" : ""}
                             >
-                              {entite.nom}
+                              {entite.denomination}
                             </SelectItem>
                           ))}
-
                           <SelectItem value="__add__" className="text-blue-600 font-medium">
                             + Ajouter une entité
                           </SelectItem>
-
                           {localEntites && localEntites.length > 0 && (
                             <SelectItem
                               value="__delete__"
@@ -511,7 +519,7 @@ const AddPartnerForm: React.FC = () => {
                         </>
                       )}
                     </SelectContent>
-                  </Select>
+              </Select>
                 </div>
 
                 {showAddEntite && (
@@ -537,7 +545,7 @@ const AddPartnerForm: React.FC = () => {
                   <p className="text-red-500 text-sm">{errors.id_entite}</p>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="telephone_partenaire">Téléphone</Label>
                 <Input

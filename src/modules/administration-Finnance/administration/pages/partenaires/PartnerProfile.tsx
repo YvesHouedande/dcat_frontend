@@ -23,12 +23,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchPartnerById, updatePartner } from '@/modules/administration-Finnance/services/partenaireService';
-import { useApiCall } from "@/hooks/useAPiCall";
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
 
 const ModernPartnerProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  // États pour gérer les données et le loading
+  const [partnerInfo, setPartnerInfo] = useState<Partenaires | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur'>>({
     nom_interlocuteur: "",
@@ -39,17 +43,77 @@ const ModernPartnerProfile: React.FC = () => {
   });
   const [isAddingInterlocuteur, setIsAddingInterlocuteur] = useState(false);
 
-  const { data: partnerInfo, loading, error, call } = useApiCall<Partenaires>(() => fetchPartnerById(id));
+  // const { data: partnerInfo, loading, error, call } = useApiCall<Partenaires>(() => fetchPartnerById(id));
 
-  useEffect(() => {
-    if (id) {
-      call();
+  // Fonction pour charger les données du partenaire
+  const loadPartnerData = async () => {
+    if (!id) {
+      setError("ID du partenaire manquant");
+      setLoading(false);
+      return;
     }
-  }, [id, call]);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!partnerInfo) return <div>No partner data available.</div>;
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("Chargement du partenaire avec ID:", id);
+      
+      const data = await fetchPartnerById(id);
+      console.log("Données reçues:", data);
+      
+      setPartnerInfo(data);
+    } catch (err) {
+      console.error("Erreur lors du chargement:", err);
+      setError(err instanceof Error ? err.message : "Erreur lors du chargement des données");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Charger les données au montage du composant
+  useEffect(() => {
+    loadPartnerData();
+  }, [id]);
+
+  // Affichage des états de chargement et d'erreur
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement des informations du partenaire...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            Erreur: {error}
+          </div>
+          <Button onClick={loadPartnerData} className="bg-indigo-600 hover:bg-indigo-700">
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!partnerInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Aucune donnée de partenaire disponible.</p>
+          <Button onClick={() => navigate('/administration/partenaires')} variant="outline">
+            Retour à la liste
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -105,7 +169,7 @@ const ModernPartnerProfile: React.FC = () => {
       return;
     }
 
-    const maxId = partnerInfo.interlocuteurs.length > 0
+    const maxId = partnerInfo.interlocuteurs && partnerInfo.interlocuteurs.length > 0
       ? Math.max(...partnerInfo.interlocuteurs.map(i => i.id_interlocuteur))
       : 0;
 
@@ -115,9 +179,10 @@ const ModernPartnerProfile: React.FC = () => {
     };
 
     try {
+      setLoading(true);
       const updatedPartnerData = {
         ...partnerInfo,
-        interlocuteurs: [...partnerInfo.interlocuteurs, newInterlocuteurWithId],
+        interlocuteurs: [...(partnerInfo.interlocuteurs || []), newInterlocuteurWithId],
       };
 
       await updatePartner(id, updatedPartnerData);
@@ -129,9 +194,12 @@ const ModernPartnerProfile: React.FC = () => {
         mail_interlocuteur: "",
       });
       setIsAddingInterlocuteur(false);
-      call();
+      await loadPartnerData(); // Recharger les données
     } catch (error) {
       console.error('Error updating partner:', error);
+      setError("Erreur lors de l'ajout de l'interlocuteur");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -142,7 +210,8 @@ const ModernPartnerProfile: React.FC = () => {
     }
 
     try {
-      const updatedInterlocuteurs = partnerInfo.interlocuteurs.filter(
+      setLoading(true);
+      const updatedInterlocuteurs = (partnerInfo.interlocuteurs || []).filter(
         i => i.id_interlocuteur !== id_interlocuteur
       );
 
@@ -152,9 +221,12 @@ const ModernPartnerProfile: React.FC = () => {
       };
 
       await updatePartner(id, updatedPartnerData);
-      call();
+      await loadPartnerData(); // Recharger les données
     } catch (error) {
       console.error('Error updating partner:', error);
+      setError("Erreur lors de la suppression de l'interlocuteur");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -207,7 +279,9 @@ const ModernPartnerProfile: React.FC = () => {
         <Tabs defaultValue="profil" className="mb-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profil">Profil</TabsTrigger>
-            <TabsTrigger value="interlocuteurs">Interlocuteurs</TabsTrigger>
+            <TabsTrigger value="interlocuteurs">
+              Interlocuteurs ({partnerInfo.interlocuteurs?.length || 0})
+            </TabsTrigger>
             <TabsTrigger value="projects">Projets</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
           </TabsList>
@@ -392,7 +466,7 @@ const ModernPartnerProfile: React.FC = () => {
           <TabsContent value="interlocuteurs" className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-800">
-                Interlocuteurs ({partnerInfo.interlocuteurs.length})
+                Interlocuteurs ({partnerInfo.interlocuteurs?.length || 0})
               </h2>
               <Button
                 className="bg-indigo-600 hover:bg-indigo-700"
@@ -489,7 +563,7 @@ const ModernPartnerProfile: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {partnerInfo.interlocuteurs.map((interlocuteur) => (
+              {partnerInfo.interlocuteurs?.map((interlocuteur) => (
                 <Card key={interlocuteur.id_interlocuteur}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
@@ -534,8 +608,14 @@ const ModernPartnerProfile: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )) || []}
             </div>
+
+            {(!partnerInfo.interlocuteurs || partnerInfo.interlocuteurs.length === 0) && (
+              <div className="text-center text-gray-500 py-8">
+                <p>Aucun interlocuteur trouvé pour ce partenaire</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="projects" className="p-6">
