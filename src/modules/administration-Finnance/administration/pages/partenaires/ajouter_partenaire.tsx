@@ -22,7 +22,7 @@ import {
   deleteEntite
 } from '@/modules/administration-Finnance/services/partenaireService';
 import { useApiCall } from '@/hooks/useAPiCall';
-
+import { omit } from "@/lib/utils";
 interface Entite {
   id_entite: number;
   denomination: string;
@@ -308,7 +308,8 @@ const AddPartnerForm: React.FC = () => {
   
     try {
       // Créer une copie des données en excluant l'id_partenaire pour laisser la BD le générer
-      const { id_partenaire, ...partenaireData } = formData;
+      // const { id_partenaire, ...partenaireData } = formData;
+      const partenaireData = omit(formData, ["id_partenaire"])
       
       await submitPartnerData(partenaireData as Partenaires);
       alert("Partenaire ajouté avec succès !");
