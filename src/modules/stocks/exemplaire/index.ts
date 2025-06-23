@@ -13,7 +13,7 @@ export { useProductInstances } from './hooks/useProductInstances';
 export { useProducts } from '../reference/hooks/useProducts';
 
 // Services
-export { productInstanceService } from './services/productInstance.service';
+export { useProductInstanceService} from './services/productInstance.service';
 
 // Types
 export type { 

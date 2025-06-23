@@ -10,7 +10,7 @@ export const retourService = {
   //   return response.data;
   // },
   getAll: async (params: PaginationParams): Promise<PaginatedResponse<RetourSchemaFormsValue>> => {
-    console.log("params", params);
+    
     const prod:RetourSchemaFormsValue[] = 
       [
         {

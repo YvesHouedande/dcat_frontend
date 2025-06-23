@@ -1,7 +1,7 @@
 // src/hooks/useProductInstances.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PaginationParams, PaginatedResponse } from "../types";
-import { productInstanceService } from "../services/productInstance.service";
+import { useProductInstanceService } from "../services/productInstance.service";
 import { ProductInstanceFormValues } from "../schemas/productInstanceSchema";
 
 // Clés de query pour React Query
@@ -11,11 +11,11 @@ const PRODUCT_INSTANCES_KEY = "productInstances";
 const wait = <T>(result: T): Promise<T> =>
   new Promise(resolve => setTimeout(() => resolve(result), 200));
 export const useProductInstances = () => {
+  const productInstanceService = useProductInstanceService();
   const queryClient = useQueryClient();
   // Récupérer la liste des instances de produit avec pagination
   const fetchProductInstances = (params: PaginationParams) =>
     productInstanceService.getAll(params);
-
   const {
     data: productInstancesResponse,
     isLoading: loading,

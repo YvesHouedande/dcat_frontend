@@ -1,24 +1,33 @@
 // src/hooks/useProducts.ts
 
-import { productService } from '../services/product.service';
+import { useProductService } from '../services/product.service';
 import { ReferenceProduit } from '../../types/reference';
 
 import { 
   useQuery, 
   useMutation, 
   useQueryClient,
+  useInfiniteQuery,
 } from '@tanstack/react-query';
 
 // Hook unique pour toutes les opérations CRUD sur les produits
 export const useProducts = (productId?: string | number) => {
   const queryClient = useQueryClient();
-
+  const productService = useProductService();
   // Récupérer tous les produits
-  const products = useQuery({
-    queryKey: ['products'],
-    queryFn: productService.getAll,
-    staleTime: 15 * 60 * 1000, // 5 minutes (optional)
-  });
+   const products = useInfiniteQuery(
+    ['products'],
+    ({ pageParam = 1 }) => productService.getAll(pageParam, 15), // Passer la page et la limite
+    {
+      getNextPageParam: (lastPage) => {
+        // lastPage est l'objet ProductServiceResponse retourné par getAll
+        const nextPage = lastPage.currentPage < lastPage.totalPages ? lastPage.currentPage + 1 : undefined;
+        return nextPage;
+      },
+      staleTime: 15 * 60 * 1000, // 15 minutes
+      // initialPageParam is not valid here in array syntax
+    }
+  );
 
   // Récupérer un produit par son ID
   const product = useQuery({
@@ -56,8 +65,12 @@ export const useProducts = (productId?: string | number) => {
   // Retourner toutes les opérations dans un seul objet
   return {
     // Queries
-    products: {
-      data: products.data,
+    
+    fetchNextPage: products.fetchNextPage,
+    hasNextPage: products.hasNextPage,
+    isFetchingNextPage: products.isFetchingNextPage,
+     products: {
+      data: products.data, // Contient les pages flatten
       isLoading: products.isLoading,
       error: products.error,
       refetch: products.refetch,
@@ -71,7 +84,7 @@ export const useProducts = (productId?: string | number) => {
     
     // Mutations
     create: {
-      mutate: create.mutate,
+      mutateAsync: create.mutateAsync,
       isLoading: create.isLoading,
       isSuccess: create.isSuccess,
       isError: create.isError,
@@ -79,7 +92,7 @@ export const useProducts = (productId?: string | number) => {
       reset: create.reset,
     },
     update: {
-      mutate: update.mutate,
+      mutateAsync: update.mutateAsync,
       isLoading: update.isLoading,
       isSuccess: update.isSuccess,
       isError: update.isError,
@@ -87,7 +100,7 @@ export const useProducts = (productId?: string | number) => {
       reset: update.reset,
     },
     delete: {
-      mutate: remove.mutate,
+      mutateAsync: remove.mutateAsync,
       isLoading: remove.isLoading,
       isSuccess: remove.isSuccess,
       isError: remove.isError,

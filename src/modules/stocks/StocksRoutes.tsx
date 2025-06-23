@@ -5,7 +5,6 @@ import NotFound from "@/pages/NotFound";
 import StockLayout from "./stockLayout";
 import CataloguePage from "./reference/pages/cataloguePage";
 import ReferencePage from "./reference/pages/referencePage";
-import ReferenceRegistrationForm from "./reference/pages/referenceRegistration";
 import ReferenceEditForm from "./reference/pages/referenceEdit";
 import LivraisonPage from "./livraison/pages/LivraisonPage";
 import { ExemplaireApp } from "./exemplaire";
@@ -17,7 +16,7 @@ const StocksRoutes: React.FC = () => {
       <Route path="/" element={<StockLayout />} />
       <Route path="/references" element={<StockLayout />}>
         <Route index element={<CataloguePage />} />
-        <Route path="nouveau" element={<ReferenceRegistrationForm />} />
+        <Route path="nouveau" element={<ReferenceEditForm />} />
         <Route path=":id" element={<ReferencePage />} />
         <Route path=":id/edit" element={<ReferenceEditForm />} />
       </Route>

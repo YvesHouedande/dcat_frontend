@@ -1,14 +1,11 @@
 // This file contains the TypeScript interface for the ReferenceProduit object.
 // It defines the structure of the object, including its properties and their types.
 import { z } from "zod";
-import { referenceSchema } from "../reference/schemas/referenceSchema";
+import { imageProduitSchema, referenceSchema } from "../reference/schemas/referenceSchema";
 
-export const referenceProduitSchema = referenceSchema.extend({
-  qte_produit: z.number(),
-});
 
-export type ReferenceProduit = z.infer<typeof referenceProduitSchema>;
-
+export type ReferenceProduit = z.infer<typeof referenceSchema>;
+export type ImageProduit = z.infer<typeof imageProduitSchema>;
 // export interface  ReferenceProduit {
   //   id_produit: string | number;
   //   code_produit: string;
@@ -26,10 +23,12 @@ export type ReferenceProduit = z.infer<typeof referenceProduitSchema>;
   // }
 
 
-  export interface produitTypes{ id: number; libelle_produit: string; };
-  export interface categorieTypes{ id: number; libelle_categorie: string; };
-  export interface marqueTypes{ id: number; libelle_marque: string; };
-  export interface modeleTypes{ id: number; libelle_modele: string; };
-  export interface familleTypes{ id: number; libelle_famille: string; };
+
+
+  export interface categorieTypes{ id_categorie: number; libelle: string; };
+  export interface marqueTypes{ id_marque: number; libelle_marque: string; };
+  export interface modeleTypes{ id_modele: number; libelle_modele: string; };
+  export interface familleTypes{ id_famille: number; libelle_famille: string; };
+  export interface typeTypes{ id_type_produit: number; libelle: string; };
 
   

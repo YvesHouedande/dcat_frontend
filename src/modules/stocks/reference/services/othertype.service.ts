@@ -1,79 +1,125 @@
 import { categorieTypes, familleTypes, marqueTypes, modeleTypes } from "../../types/reference";
+import { api } from "@/api/api";
 
-
-export const productBrands = {
-  getAll: async (): Promise<marqueTypes[]> => {
-    // const response = await api.get("/deliveries");
-      // Marques pour le filtre
-      const productBrands: marqueTypes[] = [
-        { id: 1, libelle_marque: "Marque 05" },
-        { id: 2, libelle_marque: "Marque 08" },
-        { id: 3, libelle_marque: "Marque 12" },
-        { id: 4, libelle_marque: "Marque 07" },
-        { id: 5, libelle_marque: "Marque 09" },
-        { id: 6, libelle_marque: "Marque 03" },
-      ];
-    // return response.data;
-    return productBrands;
+export const useProductMarquesService = () => {
+  const apis = api();
+  const getAll = async (): Promise<marqueTypes[]> => {
+    const response = await apis.get("/stocks/marques");
+    return response.data;
   }
+  const getById = async (id: string | number): Promise<marqueTypes> => {
+    const response = await apis.get(`/stocks/marques/${id}`);
+    return response.data; 
+  }
+  const create = async (data: marqueTypes): Promise<marqueTypes> => {
+    const response = await apis.post("/stocks/marques", data);
+    return response.data;
+  }
+  const update = async (id: string | number, data: marqueTypes): Promise<marqueTypes> => {
+    const response = await apis.put(`/stocks/marques/${id}`, data);
+    return response.data;
+  }
+  const remove = async (id: string | number): Promise<void> => {
+    await apis.delete(`/stocks/marques/${id}`);
+  }
+  return {
+    getAll,
+    getById,
+    create,
+    update,
+    delete: remove,
+  };
 };
 
-export const productCategories = {
-  getAll: async (): Promise<categorieTypes[]> => {
-    // const response = await api.get("/deliveries");
-      const productCategories: categorieTypes[] = [
-        { id: 1, libelle_categorie: "Informatique" },
-        { id: 2, libelle_categorie: "Bureautique" },
-        { id: 3, libelle_categorie: "Périphériques" },
-        { id: 4, libelle_categorie: "Stockage" },
-        { id: 5, libelle_categorie: "Audio" },
-        { id: 6, libelle_categorie: "Graphisme" },
-        { id: 7, libelle_categorie: "Réseau" },
-      ];
-    // return response.data;
-    return productCategories;
+export const useProductCategoriesService = () => {
+  const apis = api();
+  const getAll = async (): Promise<categorieTypes[]> => {
+      const response = await apis.get("/stocks/categories");
+    return response.data;
   }
+  const getById = async (id: string | number): Promise<categorieTypes> => {
+    const response = await apis.get(`/stocks/categories/${id}`);
+    return response.data; 
+  }
+  const create = async (data: categorieTypes): Promise<categorieTypes> => {
+    const response = await apis.post("/stocks/categories", data);
+    return response.data;
+  }
+  const update = async (id: string | number, data: categorieTypes): Promise<categorieTypes> => {
+    const response = await apis.put(`/stocks/categories/${id}`, data);
+    return response.data;
+  }
+  const remove = async (id: string | number): Promise<void> => {
+    await apis.delete(`/stocks/categories/${id}`);
+  }
+  return {
+    getAll,
+    getById,
+    create,
+    update,
+    delete: remove,
+  };
 };
 
 
 
-export const  productModels = {
-  getAll: async (): Promise<modeleTypes[]> => {
-    // const response = await api.get("/deliveries");
-   
-     // Modèles pour le filtre
-     const productModels: modeleTypes[] = [
-       { id: 1, libelle_modele: "Modèle 123" },
-       { id: 2, libelle_modele: "Modèle 456" },
-       { id: 3, libelle_modele: "Modèle 789" },
-       { id: 4, libelle_modele: "Modèle 012" },
-       { id: 5, libelle_modele: "Modèle 345" },
-       { id: 6, libelle_modele: "Modèle 678" },
-       { id: 7, libelle_modele: "Modèle 901" },
-       { id: 8, libelle_modele: "Modèle 234" },
-     ];
-   
-    // return response.data;
-    return  productModels;
+export const  useProductModelsService = () => {
+  const apis = api();
+  const getAll = async (): Promise<modeleTypes[]> => {
+    const response = await apis.get("/stocks/modeles");
+    return response.data;
   }
+  const getById = async (id: string | number): Promise<modeleTypes> => {
+    const response = await apis.get(`/stocks/modeles/${id}`);
+    return response.data; 
+  }
+  const create = async (data: modeleTypes): Promise<modeleTypes> => {
+    const response = await apis.post("/stocks/modeles", data);
+    return response.data;
+  }
+  const update = async (id: string | number, data: modeleTypes): Promise<modeleTypes> => {
+    const response = await apis.put(`/stocks/modeles/${id}`, data);
+    return response.data;
+  }
+  const remove = async (id: string | number): Promise<void> => {
+    await apis.delete(`/stocks/modeles/${id}`);
+  }
+  return {
+    getAll,
+    getById,
+    create,
+    update,
+    delete: remove,
+  };
 };
 
-export const  productFamilies = {
-  getAll: async (): Promise<familleTypes[]> => {
-    // const response = await api.get("/deliveries");
-   
-    const productFamilies: familleTypes[] = [
-        { id: 1, libelle_famille: "Laptop" },
-        { id: 2, libelle_famille: "Moniteur" },
-        { id: 3, libelle_famille: "Accessoires PC" },
-        { id: 4, libelle_famille: "Imprimante" },
-        { id: 5, libelle_famille: "Externe" },
-        { id: 6, libelle_famille: "Networking" },
-        { id: 7, libelle_famille: "Casque audio" },
-        { id: 8, libelle_famille: "Création numérique" },
-        { id: 9, libelle_famille: "Connectivité" },
-      ];
-    // return response.data;
-    return  productFamilies;
+export const  useProductFamiliesService = () => {
+  const apis = api(); 
+  const getAll = async (): Promise<familleTypes[]> => {
+    const response = await apis.get("/stocks/familles");
+    return response.data;
   }
+  const getById = async (id: string | number): Promise<familleTypes> => {
+    const response = await apis.get(`/stocks/familles/${id}`);
+    return response.data; 
+  }
+  const create = async (data: familleTypes): Promise<familleTypes> => {
+    const response = await apis.post("/stocks/familles", data);
+    return response.data;
+  }
+  const update = async (id: string | number, data: familleTypes): Promise<familleTypes> => {
+    const response = await apis.put(`/stocks/familles/${id}`, data);
+    return response.data;
+  }
+  const remove = async (id: string | number): Promise<void> => {
+    await apis.delete(`/stocks/familles/${id}`);
+  }
+
+  return {
+    getAll,
+    getById,
+    create,
+    update,
+    delete: remove,
+  };
 };

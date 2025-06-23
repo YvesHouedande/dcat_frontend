@@ -8,7 +8,7 @@ export const exemplaireSortieService = {
   //   return response.data;
   // },
   getAll: async (params: PaginationParams): Promise<PaginatedResponse<ExemplaireSortie>> => {
-    console.log("params", params);
+    
     const prod = [
       {
         "id_sortie_exemplaire": 1,

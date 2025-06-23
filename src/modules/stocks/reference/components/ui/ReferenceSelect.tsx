@@ -48,6 +48,8 @@ export function ReferenceSelect<TItem extends { id: number }, TValues extends Fi
               field.onChange(Number(value));
               if (onChange) onChange(value);
             }}
+            defaultValue={field.value ? field.value.toString() : ""}
+            value={field.value ? field.value.toString() : ""}
           >
             <FormControl>
               <SelectTrigger>

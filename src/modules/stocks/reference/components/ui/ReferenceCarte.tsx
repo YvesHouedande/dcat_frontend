@@ -3,7 +3,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ReferenceProduit } from "@/modules/stocks/types/reference";
 import { useNavigate } from "react-router-dom";
-import { ProductInstanceForm, ProductInstanceFormValues } from "@/modules/stocks/exemplaire";
+import {
+  ProductInstanceForm,
+  ProductInstanceFormValues,
+} from "@/modules/stocks/exemplaire";
 import {
   Dialog,
   DialogContent,
@@ -96,8 +99,8 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
       >
         <div className="h-32 bg-gray-100 relative">
           <img
-            src="/api/placeholder/400/300"
-            alt={product.desi_produit}
+            src={product.image_produit?.[0]?.url}
+            alt={product.image_produit?.[0]?.libelle_image}
             className="w-full h-full object-cover"
           />
           <Badge className="absolute top-1 right-1 text-xs px-1 py-0 bg-blue-500">
@@ -115,10 +118,10 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
         <CardContent className="px-3 pb-3 pt-0">
           <div className="flex gap-1 flex-wrap mb-2">
             <Badge variant="outline" className="text-xs px-1 py-0">
-              {product.emplacement}
+              {product.emplacement_produit}
             </Badge>
             <Badge variant="secondary" className="text-xs px-1 py-0">
-              {product.id_type_produit}
+              {product.type_produit}
             </Badge>
           </div>
           <div className="flex gap-1">

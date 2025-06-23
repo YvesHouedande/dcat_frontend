@@ -12,8 +12,9 @@ import { useNavigate } from "react-router-dom";
 import { Package, Search, Wrench } from "lucide-react";
 import ReferenceCarte from "../components/ui/ReferenceCarte";
 import { useProducts } from "../hooks/useProducts";
-import { useOthers } from "@/modules/stocks/reference/hooks/useOthers";
+
 import ProductCatalogSkeleton from "@/components/skeleton/ProductCatalogSkeleton";
+import { useProductCategories, useProductFamilies, useProductMarques, useProductModels } from "@/modules/stocks/reference/hooks/useOthers";
 
 export default function CataloguePage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,8 +26,10 @@ export default function CataloguePage() {
   const navigate = useNavigate();
 
   const { products: productsData } = useProducts();
-  const { productBrands, productFamilies, productModels, productCategories } =
-    useOthers();
+  const { productCategories } = useProductCategories();
+  const { productFamilies } = useProductFamilies();
+  const { productMarques } = useProductMarques();
+  const { productModels } = useProductModels();
 
   //. Filtrer les produits
   const filteredProducts = (productsData.data ?? []).filter((product) => {
@@ -105,12 +108,12 @@ export default function CataloguePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes catégories</SelectItem>
-              {productCategories.map((category) => (
+              {productCategories.data.map((category) => (
                 <SelectItem
-                  key={category.id}
-                  value={category.libelle_categorie}
+                  key={category.id_categorie}
+                  value={category.libelle}
                 >
-                  {category.libelle_categorie}
+                  {category.libelle}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -121,8 +124,8 @@ export default function CataloguePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes familles</SelectItem>
-              {productFamilies.map((family) => (
-                <SelectItem key={family.id} value={family.libelle_famille}>
+              {productFamilies.data.map((family) => (
+                <SelectItem key={family.id_famille} value={family.libelle_famille}>
                   {family.libelle_famille}
                 </SelectItem>
               ))}
@@ -134,8 +137,8 @@ export default function CataloguePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous modèles</SelectItem>
-              {productModels.map((model) => (
-                <SelectItem key={model.id} value={model.libelle_modele}>
+              {productModels.data.map((model) => (
+                <SelectItem key={model.id_modele} value={model.libelle_modele}>
                   {model.libelle_modele}
                 </SelectItem>
               ))}
@@ -147,8 +150,8 @@ export default function CataloguePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes marques</SelectItem>
-              {productBrands.map((brand) => (
-                <SelectItem key={brand.id} value={brand.libelle_marque}>
+              {productMarques.data.map((brand) => (
+                <SelectItem key={brand.id_marque} value={brand.libelle_marque}>
                   {brand.libelle_marque}
                 </SelectItem>
               ))}

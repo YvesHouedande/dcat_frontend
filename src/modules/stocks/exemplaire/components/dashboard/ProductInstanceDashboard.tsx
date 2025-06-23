@@ -27,12 +27,15 @@ import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { UseFormReturn } from "react-hook-form";
 import { ProductInstanceFormValues } from "../../schemas/productInstanceSchema";
 
-export function ProductInstanceDashboard() {
+interface ProductInstanceDashboardProps {
+  produitId?: string | number;
+}
+export function ProductInstanceDashboard({produitId}: ProductInstanceDashboardProps) {
   const formRef = useRef<UseFormReturn<ProductInstanceFormValues> | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentInstance, setCurrentInstance] =
-    useState<ProductInstanceFormValues | null>(null);
+    useState<Partial<ProductInstanceFormValues>| null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
   // const [searchTerm, setSearchTerm] = useState("");
@@ -60,7 +63,9 @@ export function ProductInstanceDashboard() {
   };
 
   const openAddForm = () => {
-    setCurrentInstance(null);
+    setCurrentInstance({
+      id_produit: String(produitId),
+    });
     setIsEditMode(false);
     setIsFormOpen(true);
   };
@@ -147,15 +152,6 @@ export function ProductInstanceDashboard() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Gestion des Exemplaires
-        </h1>
-        <p className="text-muted-foreground">
-          Gérez tous les exemplaires de produits dans le système
-        </p>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -164,7 +160,7 @@ export function ProductInstanceDashboard() {
             </CardTitle>
             <ShoppingBag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent >
             <div className="text-2xl font-bold">{soldCount}</div>
             <p className="text-xs text-muted-foreground">
               {pagination.total > 0

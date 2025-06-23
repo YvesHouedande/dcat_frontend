@@ -9,8 +9,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { DeliveryCombobox } from "../../../../../components/combobox/DeliveryCombobox";
-import { ProductCombobox } from "../../../../../components/combobox/ProductCombobox";
+import { DeliveryCombobox } from "@/components/combobox/DeliveryCombobox";
+import { ProductCombobox } from "@/components/combobox/ProductCombobox";
 import {
   Select,
   SelectContent,
@@ -119,16 +119,19 @@ export const ProductInstanceForm = React.forwardRef<
                 <FormItem>
                   <FormLabel>{isTools ? "Outils" : "Produit"}</FormLabel>
                   <FormControl>
-                    <ProductCombobox
-                      isTools={isTools}
-                      value={String(field.value)}
-                      onChange={field.onChange}
-                    />
+                    <div className="pointer-events-none opacity-70">
+                      <ProductCombobox
+                        isTools={isTools}
+                        value={String(field.value)}
+                        onChange={field.onChange}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="num_serie"
@@ -157,52 +160,56 @@ export const ProductInstanceForm = React.forwardRef<
             />
             {shouldShowEtatVente && EtatVenteField}
             {/* Composant pour le champ "Achat" */}
-            <FormField
-              control={form.control}
-              name="id_livraison"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{isTools ? "Fournisseur" : "Achat"}</FormLabel>
-                  <FormControl>
-                    {isTools ? (
-                      <FournisseurCombobox
-                        value={String(field.value)}
-                        onChange={field.onChange}
-                      />
-                    ) : (
-                      <DeliveryCombobox
-                        value={String(field.value)}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="prix_exemplaire"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{isTools ? "Fournisseur" : "Achat"}</FormLabel>
-                  <FormControl>
-                    {isTools ? (
-                      <FournisseurCombobox
-                        value={String(field.value)}
-                        onChange={field.onChange}
-                      />
-                    ) : (
-                      <DeliveryCombobox
-                        value={String(field.value)}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isTools ? (
+              <FormField
+                control={form.control}
+                name="id_livraison"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{isTools ? "Fournisseur" : "Achat"}</FormLabel>
+                    <FormControl>
+                      {isTools ? (
+                        <FournisseurCombobox
+                          value={String(field.value)}
+                          onChange={field.onChange}
+                        />
+                      ) : (
+                        <DeliveryCombobox
+                          value={String(field.value)}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormField
+                control={form.control}
+                name="prix_exemplaire"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{isTools ? "Fournisseur" : "Achat"}</FormLabel>
+                    <FormControl>
+                      {isTools ? (
+                        <FournisseurCombobox
+                          value={String(field.value)}
+                          onChange={field.onChange}
+                        />
+                      ) : (
+                        <DeliveryCombobox
+                          value={String(field.value)}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             {isTools && (
               <FormField
                 control={form.control}

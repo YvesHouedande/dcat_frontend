@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { Package, Search, Wrench } from "lucide-react";
 import ReferenceCarte from "@/modules/stocks/reference/components/ui/ReferenceCarte";
 import { useProducts } from "../hooks/useProducts";
-import { useOthers } from "../hooks/useOthers";
+import { useProductCategories,useProductFamilies,useProductMarques,useProductModels } from "../hooks/useOthers";
 import ProductCatalogSkeleton from "../../../../components/skeleton/ProductCatalogSkeleton";
 
 export default function CataloguePage() {
@@ -24,24 +24,32 @@ export default function CataloguePage() {
   const [productTypeFilter, setProductTypeFilter] = useState("all");
   const navigate = useNavigate();
 
-  const { products: productsData } = useProducts();
-  const { productBrands, productFamilies, productModels, productCategories } =
-    useOthers();
+  const { products: productsQuery, fetchNextPage, hasNextPage, isFetchingNextPage } = useProducts();
 
-  //. Filtrer les produits
-  const filteredProducts = (productsData.data ?? []).filter((product) => {
-    const matchesSearch =
-      product.desi_produit.toLowerCase().includes(searchTerm.toLowerCase())
+  const { productCategories } = useProductCategories();
+  const { productFamilies } = useProductFamilies();
+  const { productMarques } = useProductMarques();
+  const { productModels } = useProductModels();
+
+  // Aplatir toutes les pages de produits reçues
+  const allProducts = productsQuery.data?.pages?.flatMap(page => page.data) || [];
+
+  const filteredProducts = allProducts.filter((product) => {
+    const matchesSearch = product.desi_produit
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     const matchesCategory =
-      categoryFilter === "all" || String(product.id_categorie) === categoryFilter;
+      categoryFilter === "all" ||
+      String(product.id_categorie) === categoryFilter; // Comparer l'ID
     const matchesProductType =
-      productTypeFilter === "all" || String(product.id_type_produit) === productTypeFilter;
+      productTypeFilter === "all" ||
+      String(product.id_type_produit) === productTypeFilter; // Comparer l'ID
     const matchesModel =
-      modelFilter === "all" || String(product.id_modele) === modelFilter;
+      modelFilter === "all" || String(product.id_modele) === modelFilter; // Comparer l'ID
     const matchesBrand =
-      brandFilter === "all" || String(product.id_marque) === brandFilter;
+      brandFilter === "all" || String(product.id_marque) === brandFilter; // Comparer l'ID
     const matchesFamily =
-      familyFilter === "all" || String(product.id_famille) === familyFilter;
+      familyFilter === "all" || String(product.id_famille) === familyFilter; // Comparer l'ID
     return (
       matchesSearch &&
       matchesCategory &&
@@ -51,6 +59,34 @@ export default function CataloguePage() {
       matchesFamily
     );
   });
+
+  const handleScroll = useCallback(() => {
+    if (
+      window.innerHeight + document.documentElement.scrollTop >=
+      document.documentElement.offsetHeight - 100
+    ) {
+      if (hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
+
+  // Si vous souhaitez réinitialiser la pagination infinie lorsque les filtres changent,
+  // vous devez invalider la query cache et refetch.
+  // Une approche courante est de modifier la queryKey de `useProducts` pour inclure les filtres.
+  // Pour cet exemple, je vais juste appeler productsQuery.refetch() qui rechargera la première page
+  // et effacera les pages suivantes chargées par l'infinite scroll.
+  useEffect(() => {
+    // Invalider la query pour la forcer à recharger depuis le début avec les nouveaux filtres.
+    // Ceci est la manière correcte de gérer les filtres avec useInfiniteQuery.
+    productsQuery.refetch();
+  }, [searchTerm, categoryFilter, modelFilter, brandFilter, familyFilter, productTypeFilter, productsQuery.refetch]);
+
 
   return (
     <div className="container mx-auto py-4">
@@ -66,7 +102,7 @@ export default function CataloguePage() {
           Ajouter
         </Button>
       </div>
-      Contrôles de recherche et de filtres
+      {/* Contrôles de recherche et de filtres */}
       <div className="space-y-4 mb-4">
         {/* Première ligne : Recherche et bouton réinitialiser */}
         <div className="flex gap-2">
@@ -99,18 +135,19 @@ export default function CataloguePage() {
 
         {/* Deuxième ligne : Filtres */}
         <div className="flex flex-wrap gap-2">
+          {/* Les Selects doivent avoir des 'value' correspondant aux IDs si vous filtrez par ID */}
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-40 h-9">
               <SelectValue placeholder="Catégorie" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes catégories</SelectItem>
-              {productCategories.map((category) => (
+              {productCategories.data.map((category) => (
                 <SelectItem
-                  key={category.id}
-                  value={category.libelle_categorie}
+                  key={category.id_categorie} // Utilisez l'ID unique de la catégorie
+                  value={String(category.id_categorie)} // La valeur doit être une chaîne
                 >
-                  {category.libelle_categorie}
+                  {category.libelle}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -121,8 +158,8 @@ export default function CataloguePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes familles</SelectItem>
-              {productFamilies.map((family) => (
-                <SelectItem key={family.id} value={family.libelle_famille}>
+              {productFamilies.data.map((family) => (
+                <SelectItem key={family.id_famille} value={String(family.id_famille)}>
                   {family.libelle_famille}
                 </SelectItem>
               ))}
@@ -134,8 +171,8 @@ export default function CataloguePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous modèles</SelectItem>
-              {productModels.map((model) => (
-                <SelectItem key={model.id} value={model.libelle_modele}>
+              {productModels.data.map((model) => (
+                <SelectItem key={model.id_modele} value={String(model.id_modele)}>
                   {model.libelle_modele}
                 </SelectItem>
               ))}
@@ -147,8 +184,8 @@ export default function CataloguePage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes marques</SelectItem>
-              {productBrands.map((brand) => (
-                <SelectItem key={brand.id} value={brand.libelle_marque}>
+              {productMarques.data.map((brand) => (
+                <SelectItem key={brand.id_marque} value={String(brand.id_marque)}>
                   {brand.libelle_marque}
                 </SelectItem>
               ))}
@@ -159,12 +196,11 @@ export default function CataloguePage() {
       <div className="text-sm text-gray-500 p-2">
         {filteredProducts.length} produits
       </div>
-      {productsData.isLoading ? (
+      {productsQuery.isLoading && !isFetchingNextPage ? (
         <ProductCatalogSkeleton />
       ) : (
         <>
-          {/* Grille de produits */}
-          {filteredProducts.length == 0 && (
+          {filteredProducts.length === 0 && (
             <div className="flex w-full h-full flex-col justify-center items-center">
               <Package className="w-24 h-24 text-blue-500" />
               <div className="mt-6">Aucun Produit trouvé</div>
@@ -172,9 +208,13 @@ export default function CataloguePage() {
           )}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filteredProducts.map((product) => (
-              <ReferenceCarte product={product} />
+              <ReferenceCarte key={product.id_produit} product={product} />
             ))}
           </div>
+          {isFetchingNextPage && <ProductCatalogSkeleton />}
+          {!hasNextPage && allProducts.length > 0 && (
+            <div className="text-center text-gray-500 mt-4">Fin de la liste</div>
+          )}
         </>
       )}
     </div>

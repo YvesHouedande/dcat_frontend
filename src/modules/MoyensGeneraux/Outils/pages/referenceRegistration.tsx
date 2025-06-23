@@ -27,13 +27,11 @@ import { ReferenceSelect } from "../components/ui/ReferenceSelect";
 import { referenceSchema } from "@/modules/stocks/reference/schemas/referenceSchema";
 import { ImageDropzone } from "../utils/ImageDropzone";
 import { generateProductCode } from "@/modules/stocks/utils/generateProductCode";
-import { useReferenceOptions } from "@/modules/stocks/hooks/useReferenceOptions";
 import { ReferenceProduit } from "@/modules/stocks/types/reference";
 import { z } from "zod";
 
 export type FormValues = z.infer<typeof referenceSchema>;
 export default function ReferenceForm() {
-  const { categories, modeles, familles, marques } = useReferenceOptions();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
 
@@ -73,49 +71,8 @@ export default function ReferenceForm() {
 
   // Récupère les données du produit si on est en mode édition
   useEffect(() => {
-    const fetchProduct = async () => {
-      if (isEditMode) {
-        try {
-          // En production, remplacer par un vrai appel API
-          // const response = await fetch(`/api/produits/${id}`);
-          // const product = await response.json();
-
-          // Simulation de données récupérées pour la démonstration
-          const product: ReferenceProduit = {
-            id_produit: Number(id),
-            code_produit: "SAM-MDA-ELC-FAX",
-            desi_produit: "Moniteur Samsung",
-            desc_produit: "Un super écran",
-            image_produit: "",
-            emplacement: "A1",
-            qte_produit: 0,
-            caracteristiques: "27 pouces, 4K",
-            id_categorie: 3,
-            id_type_produit: 2, // Toujours initialiser à 2
-            id_modele: 4,
-            id_famille: 5,
-            id_marque: 6,
-          };
-
-          form.reset(product);
-          setSelectedReferences({
-            id_marque: product.id_marque,
-            id_modele: product.id_modele,
-            id_categorie: product.id_categorie,
-            id_famille: product.id_famille,
-            id_type_produit: product.id_type_produit || 2, // Assurer que c'est 2 si non défini
-          });
-        } catch (error) {
-          console.error("Erreur lors de la récupération du produit:", error);
-          setSubmitResult({
-            success: false,
-            message: "Erreur lors de la récupération du produit.",
-          });
-        }
-      }
-    };
-
-    fetchProduct();
+   
+    
   }, [id, isEditMode, form]);
 
   useEffect(() => {
@@ -137,7 +94,8 @@ export default function ReferenceForm() {
   }, [selectedReferences, form, marques, modeles, categories, familles]);
 
   const handleImageSelected = (imageDataUrl: string) => {
-    form.setValue("image_produit", imageDataUrl);
+    // form.setValue("image_produit", imageDataUrl);
+    console
   };
 
   const handleReferenceChange = (

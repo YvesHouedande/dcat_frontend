@@ -31,22 +31,20 @@ export function ProductCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const { products } = useProducts();
-
+  const allProducts = products.data?.pages?.flatMap(page => page.data) || []
   // Filtrer les produits selon la recherche
   const filteredProducts = React.useMemo(() => {
-    if (!searchTerm) return products.data ?? [];
-    return (
-      products.data?.filter(
-        (product) =>
-          (product.desi_produit ?? "")
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          (product.code_produit ?? "")
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())
-      ) ?? []
+    if (!searchTerm) return allProducts;
+    return allProducts.filter(
+      (product) =>
+        (product.desi_produit ?? "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (product.code_produit ?? "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm, products.data]);
+  }, [searchTerm, allProducts]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -59,7 +57,7 @@ export function ProductCombobox({
           disabled={products.isLoading}
         >
           {value
-            ? products.data?.find(
+            ? allProducts.find(
                 (product) => String(product.id_produit) === value
               )?.desi_produit
             : `Sélectionner un ${isTools ? "outil" : "produit"}...`}
@@ -88,6 +86,13 @@ export function ProductCombobox({
                     setOpen(false);
                   }}
                 >
+                  <div>
+                    <img
+                      src={product.image_produit?.[0]?.url}
+                      alt={product.image_produit?.[0]?.libelle_image}
+                      className="w-8 h-8 rounded mr-2"
+                    />
+                  </div>
                   {product.code_produit} - {product.desi_produit}
                   <Check
                     className={cn(
