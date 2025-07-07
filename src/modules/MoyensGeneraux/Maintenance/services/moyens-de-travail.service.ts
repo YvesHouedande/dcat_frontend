@@ -22,7 +22,7 @@ export const MoyensDesTravailService = {
             "recommandations": "Ajouter liquide de frein",
             "autre_intervenant": "Marie Lemoine",
             "id_intervenants": "23",
-            "id_partenaire": 5,
+            "id_partenaire": "5",
             "id_section": "informatique",
             "id_exemplaire_produit": 1,
             "date": "2025-05-01"
@@ -81,7 +81,7 @@ export const MoyensDesTravailService = {
             "recommandations": "Réviser le circuit d'eau",
             "autre_intervenant": "Technicien externe",
             "id_intervenants": 27,
-            "id_partenaire": 9,
+            "id_partenaire": "9",
             "id_section": "E3",
             "id_exemplaire_produit": 714,
             "date": "2025-03-22"

@@ -49,6 +49,7 @@ export interface Commande {
   created_at: string;
   updated_at: string;
   produits?: ProduitDetail[];
+  montant_total: number;
 }
 
 export interface CommandeData {

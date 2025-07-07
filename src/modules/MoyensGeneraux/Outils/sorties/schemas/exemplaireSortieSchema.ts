@@ -10,5 +10,6 @@ export const exemplaireSortieSchema = z.object({
   date_de_sortie: z.string().min(1, "La date de sortie est requise"),
   site_intervention: z.string().min(1,"le site d'intervention est requis"),
   commentaire: z.string().optional(),
+  id_commande: z.union([z.number().min(1,"la commande est requise"),z.string().min(1,"la commande est requise")]),
 });
 

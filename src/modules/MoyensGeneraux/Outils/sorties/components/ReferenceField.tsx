@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ExemplaireSortieFormValues } from "@/modules/stocks/sorties/schemas/exemplaireSortieSchema";
+import { ExemplaireSortieFormValues } from "../types";
 
 // Définir les types pour les données
 interface Client {
@@ -61,9 +61,9 @@ const ReferenceField = ({
         return (
           <Select
             onValueChange={(value: string) =>
-              form.setValue("reference_id", value)
+              form.setValue("id_commande", value)
             }
-            defaultValue={form.getValues("reference_id") as string}
+            defaultValue={form.getValues("id_commande") as string}
           >
             <FormControl>
               <SelectTrigger>
@@ -83,9 +83,9 @@ const ReferenceField = ({
         return (
           <Select
             onValueChange={(value: string) =>
-              form.setValue("reference_id", value)
+              form.setValue("id_commande", value)
             }
-            defaultValue={form.getValues("reference_id")}
+            defaultValue={form.getValues("id_commande") as string}
           >
             <FormControl>
               <SelectTrigger>
@@ -105,9 +105,9 @@ const ReferenceField = ({
         return (
           <Select
             onValueChange={(value: string) =>
-              form.setValue("reference_id", value)
+              form.setValue("id_commande", value)
             }
-            defaultValue={form.getValues("reference_id")}
+            defaultValue={form.getValues("id_commande") as string}
           >
             <FormControl>
               <SelectTrigger>
@@ -127,9 +127,9 @@ const ReferenceField = ({
         return (
           <Select
             onValueChange={(value: string) =>
-              form.setValue("reference_id", value)
+              form.setValue("id_commande", value)
             }
-            defaultValue={form.getValues("reference_id")}
+            defaultValue={form.getValues("id_commande") as string}
           >
             <FormControl>
               <SelectTrigger>
@@ -150,7 +150,7 @@ const ReferenceField = ({
         );
       default:
         return (
-          <Input placeholder="Référence" {...form.register("reference_id")} />
+          <Input placeholder="Référence" {...form.register("id_commande")} />
         );
     }
   };
