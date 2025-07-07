@@ -118,6 +118,7 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
               date_de_sortie: "",
               site_intervention: "",
               commentaire: "",
+              id_commande: 0,
             }}
             isEditMode={false}
           />
