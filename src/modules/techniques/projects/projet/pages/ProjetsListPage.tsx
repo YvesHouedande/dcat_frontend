@@ -7,7 +7,7 @@ import { ProjetTable } from "../components/ProjetTable";
 import { ProjetPagination } from "../components/ProjetPagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import { Home, Plus } from "lucide-react";
@@ -88,9 +88,9 @@ export const ProjetsListPage: React.FC = () => {
       await Promise.all(partnerFetchPromises);
       setProjectPartnersMap(tempProjectPartnersMap);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Erreur lors du chargement des données :", err);
-      setError(err.message || "Impossible de charger les données. Veuillez réessayer.");
+      setError((err as Error).message || "Impossible de charger les données. Veuillez réessayer.");
       setProjets([]);
       setPartenaires([]);
       setFamilles([]);
@@ -130,10 +130,10 @@ export const ProjetsListPage: React.FC = () => {
         setError(result.message);
         toast.error(`Échec de la suppression: ${result.message}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Erreur lors de la suppression du projet:", err);
-      setError(err.message || "Erreur inconnue lors de la suppression du projet.");
-      toast.error(`Erreur lors de la suppression: ${err.message || "Erreur inconnue."}`);
+      setError((err as Error).message || "Erreur inconnue lors de la suppression du projet.");
+      toast.error(`Erreur lors de la suppression: ${(err as Error).message || "Erreur inconnue."}`);
     } finally {
       setLoading(false);
     }
@@ -199,7 +199,7 @@ export const ProjetsListPage: React.FC = () => {
         {/* Affichage des erreurs */}
         {error && (
           <Alert variant="destructive">
-            <ExclamationTriangleIcon className="h-4 w-4" />
+            <TriangleAlert className="h-4 w-4" />
             <AlertTitle>Erreur</AlertTitle>
             <AlertDescription>
               {error}

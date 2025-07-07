@@ -7,7 +7,7 @@ import keycloak from "../KeycloakService";
 import DashboardRoutes from "./modules/dashboard/DashboardRoutes";
 import AdministrationRoutes from "./modules/administration-Finnance/administration/AdministrationRoutes";
 import StocksRoutes from "./modules/stocks/StocksRoutes";
-import ProjectsRoutes from "./modules/techniques/projects/ProjectsRoutes";
+import ProjectsRoutes from "./modules/techniques/ProjectsRoutes";
 import { QueryClientProvider } from "@tanstack/react-query";
 import MoyenGenerauxgRoutes from "./modules/MoyensGeneraux/MoyensGenerauxRoutes";
 import DCATInterface from "./modules/dashboard/pages/AnotherDashboardPage";

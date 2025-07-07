@@ -171,7 +171,7 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
 
   const handleDocumentSelectChange = (name: keyof CreateDocumentTextPayload, value: string) => {
     const newValue = name === "id_nature_document" ? Number(value) : value;
-    setDocumentFormData((prev: typeof documentFormData) => ({ ...prev, [name]: newValue as any }));
+    setDocumentFormData((prev: typeof documentFormData) => ({ ...prev, [name]: newValue as string }));
   };
 
   const handleDocumentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -154,7 +154,7 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     const newValue = name === "id_nature_document" ? Number(value) : value;
     setDocumentFormData((prev) => ({
       ...prev,
-      [name]: newValue as any, // Type assertion as value could be string from select
+      [name]: newValue as string, // Type assertion as value could be string from select
     }));
   };
 

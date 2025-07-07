@@ -18,7 +18,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { NavLink } from "react-router-dom";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/useSidebar";
 
 export function NavMain({
   title,

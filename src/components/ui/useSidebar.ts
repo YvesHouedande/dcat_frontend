@@ -9,7 +9,9 @@ export type SidebarContextProps = {
   isMobile: boolean;
   toggleSidebar: () => void;
 };
-export const SidebarContext = React.createContext<SidebarContextProps | null>(null);
+export const SidebarContext = React.createContext<SidebarContextProps | null>(
+  null
+);
 export function useSidebar() {
   const context = React.useContext(SidebarContext);
   if (!context) {

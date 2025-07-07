@@ -299,7 +299,7 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
     }
     setDocumentFormData((prev) => ({
       ...prev,
-      [name]: newValue as any,
+      [name]: newValue as string,
     }));
   };
 

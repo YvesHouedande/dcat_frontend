@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import logoSrc from "../../../../assets/dcat-logo.jpg";
+
 import {
   Table,
   TableBody,
@@ -36,6 +36,8 @@ import { Intervention } from "../interface/interface";
 import { getInterventions } from "../api/intervention";
 import { FileDown, Eye, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+
+const logoSrc = "/dcat-logo.png";
 
 interface MonthlyReportProps {
   onViewIntervention?: (intervention: Intervention) => void;
