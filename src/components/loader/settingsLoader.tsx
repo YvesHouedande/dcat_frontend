@@ -1,5 +1,5 @@
 import { Cog } from "lucide-react";
-function settingsLoader() {
+function SettingsLoader() {
   return (
     <div className="flex flex-col h-full justify-center items-center">
       <Cog className="w-24 h-24  animate-spin text-blue-600" />
@@ -8,4 +8,4 @@ function settingsLoader() {
   );
 }
 
-export default settingsLoader;
+export default SettingsLoader;

@@ -6,7 +6,7 @@ import { useExemplaireSorties } from "../hooks/useExemplaireSorties";
 import {
   ExemplaireSortieFormValues,
   PaginationParams,
-  ProductInstance,
+  ExemplaireProduit,
 } from "../types";
 import {
   Dialog,
@@ -31,7 +31,7 @@ import { idSotieOutils } from "../types";
 export interface ExemplaireSortieFormProps {
   onSubmit: (data: ExemplaireSortieFormValues) => void;
   onCancel: () => void;
-  exemplaires: ProductInstance[];
+  exemplaires: ExemplaireProduit[];
   isEditMode: boolean;
   defaultValues?: ExemplaireSortieFormProps | undefined;
 }

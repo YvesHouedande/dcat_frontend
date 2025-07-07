@@ -8,20 +8,28 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Fonction pour formatter la date
-export function formatDate(dateString: string): string {
-  if (!dateString) return "";
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch (error) {
-    console.log(error)
-    return dateString;
-  }
-}
+// export function formatDate(dateString: string): string {
+//   if (!dateString) return "";
+//   try {
+//     const date = new Date(dateString);
+//     return date.toLocaleDateString("fr-FR", {
+//       day: "2-digit",
+//       month: "2-digit",
+//       year: "numeric",
+//     });
+//   } catch (error) {
+//     console.log(error)
+//     return dateString;
+//   }
+// }
+
+export const formatDate = (dateString : string | number) => {
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+};
 
 // Fonction pour générer un ID unique
 export function generateUniqueId(): string {

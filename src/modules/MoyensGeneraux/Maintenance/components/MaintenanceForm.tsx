@@ -178,10 +178,7 @@ export function MoyensDesTravailForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Partenaire</FormLabel>
-                <PartenaireCombobox
-                  value={String(field.value)}
-                  onChange={field.onChange}
-                />
+                <PartenaireCombobox {...field} />
                 <FormMessage />
               </FormItem>
             )}

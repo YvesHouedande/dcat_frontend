@@ -1,16 +1,21 @@
 // src/services/exemplaireSortieService.ts
-import {api }from "@/api/api"; // Assurez-vous que le chemin d'importation est correct
+import {useApi }from "@/api/api"; // Assurez-vous que le chemin d'importation est correct
 import { RetourSchemaFormsValue } from "../types";
 import { PaginatedResponse, PaginationParams } from "../../exemplaire";
 import { idSotieOutils } from "../../sorties/types";
 
+const Returnapi = () => {
+  const api = useApi();
+  return api;
+};
 export const retourService = {
   // getAll: async (params: PaginationParams): Promise<PaginatedResponse<ExemplaireSortie>> => {
   //   const response = await api.get("/exemplaire-sorties", { params });
   //   return response.data;
   // },
+ 
   getAll: async (params: PaginationParams): Promise<PaginatedResponse<RetourSchemaFormsValue>> => {
-    
+    console.log("params", params);
     const prod:RetourSchemaFormsValue[] = 
       [
         {
@@ -91,11 +96,13 @@ export const retourService = {
   
   getById: async (ids: idSotieOutils): Promise<RetourSchemaFormsValue> => {
     const { id_exemplaire, id_employes, date_de_retour } = ids;
+    const api = Returnapi();
     const response = await api.get(`/exemplaire-sorties/${id_exemplaire}/${id_employes}/${encodeURIComponent(String(date_de_retour))}`);
     return response.data;
   },
   
   create: async (data: RetourSchemaFormsValue): Promise<RetourSchemaFormsValue> => {
+  const api = Returnapi();
     const response = await api.post("/exemplaire-sorties", data);
     return response.data;
   },
@@ -105,7 +112,7 @@ export const retourService = {
     data: Omit<RetourSchemaFormsValue, "id_exemplaire" | "id_employes" | "date_de_retour">
   ): Promise<RetourSchemaFormsValue> => {
     const { id_exemplaire, id_employes, date_de_retour } = ids;
-  
+    const api = Returnapi();
     const response = await api.put(
       `/exemplaire-sorties/${id_exemplaire}/${id_employes}/${encodeURIComponent(String(date_de_retour))}`,
       data
@@ -119,6 +126,7 @@ export const retourService = {
   
   delete: async (ids: idSotieOutils): Promise<void> => {
     const { id_exemplaire, id_employes, date_de_retour } = ids;
+    const api = Returnapi();
     const response = await api.delete(
       `/exemplaire-sorties/${id_exemplaire}/${id_employes}/${encodeURIComponent(String(date_de_retour))}`,
     );

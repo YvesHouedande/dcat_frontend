@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
 
-interface DeliveryComboboxProps {
+interface ForunisseurComboboxProps {
   value: string;
   onChange: (value: string | number) => void;
 }
@@ -26,7 +26,7 @@ interface DeliveryComboboxProps {
 export function FournisseurCombobox({
   value,
   onChange,
-}: DeliveryComboboxProps) {
+}: ForunisseurComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const { livraisons: deliveries, isLoading } = useLivraisonData();
@@ -39,7 +39,7 @@ export function FournisseurCombobox({
   const filteredDeliveries = React.useMemo(() => {
     if (!searchTerm) return deliveriesArray;
     return deliveriesArray.filter((delivery) =>
-      delivery.reference.toLowerCase().includes(searchTerm.toLowerCase())
+      delivery.reference_livraison.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [deliveriesArray, searchTerm]);
 
@@ -56,7 +56,7 @@ export function FournisseurCombobox({
           {value
             ? deliveriesArray.find(
                 (delivery) => String(delivery.id_livraison) === value
-              )?.reference
+              )?.reference_livraison
             : "Sélectionner un forunisseur..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -81,7 +81,7 @@ export function FournisseurCombobox({
                     setOpen(false);
                   }}
                 >
-                  {delivery.reference}
+                  {delivery.reference_livraison}
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",

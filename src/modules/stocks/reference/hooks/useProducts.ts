@@ -1,76 +1,84 @@
-// src/hooks/useProducts.ts
+import { useProductService } from "../services/product.service";
+import { ReferenceProduit } from "../../types/reference";
 
-import { useProductService } from '../services/product.service';
-import { ReferenceProduit } from '../../types/reference';
-
-import { 
-  useQuery, 
-  useMutation, 
+import {
+  useQuery,
+  useMutation,
   useQueryClient,
   useInfiniteQuery,
-} from '@tanstack/react-query';
+} from "@tanstack/react-query";
+import { ProduiLimit } from "../../exemplaire/types/const";
 
-// Hook unique pour toutes les opérations CRUD sur les produits
-export const useProducts = (productId?: string | number) => {
+export const useProducts = (filters = {}, productId?: string | number) => {
   const queryClient = useQueryClient();
   const productService = useProductService();
-  // Récupérer tous les produits
-   const products = useInfiniteQuery(
-    ['products'],
-    ({ pageParam = 1 }) => productService.getAll(pageParam, 15), // Passer la page et la limite
-    {
-      getNextPageParam: (lastPage) => {
-        // lastPage est l'objet ProductServiceResponse retourné par getAll
-        const nextPage = lastPage.currentPage < lastPage.totalPages ? lastPage.currentPage + 1 : undefined;
-        return nextPage;
-      },
-      staleTime: 15 * 60 * 1000, // 15 minutes
-      // initialPageParam is not valid here in array syntax
-    }
-  );
 
-  // Récupérer un produit par son ID
+  const products = useInfiniteQuery({
+    queryKey: ["outils", filters], // Ajout des filtres ici
+    queryFn: ({ pageParam = 1 }) =>
+      productService.getAll(pageParam, ProduiLimit, filters), // ⚠️ Doit être adapté dans le service
+    staleTime: 15 * 60 * 1000,
+    getNextPageParam: (lastPage) => {
+      const currentPage = lastPage.currentPage;
+      const totalPages = lastPage.totalPages;
+      if (currentPage < totalPages) {
+        return currentPage + 1;
+      }
+      return undefined; // Plus de pages à charger
+    },
+  });
+
+  // 🔍 Récupérer un produit par ID
   const product = useQuery({
-    queryKey: ['products', productId],
-    queryFn: () => productService.getById(productId || ''),
-    enabled: !!productId, // Désactiver la requête si l'ID n'est pas défini
+    queryKey: ["outils", String(productId)],
+    // queryFn: () => productService.getById(productId!),
+    queryFn: () => productService.getById(productId!),
+    enabled: !!productId,
+    retry: false, // empêche de retenter après une 404
   });
 
-  // Créer un nouveau produit
+  // ➕ Créer un nouveau produit
   const create = useMutation({
-    mutationFn: (newProduct: ReferenceProduit) => productService.create(newProduct),
+    mutationFn: (newProduct: ReferenceProduit) =>
+      productService.create(newProduct),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ["outils"] });
     },
   });
 
-  // Mettre à jour un produit
+  // ✏️ Mettre à jour un produit
   const update = useMutation({
-    mutationFn: (updatedProduct: ReferenceProduit) => productService.update(updatedProduct),
+    mutationFn: (updatedProduct: ReferenceProduit) => {
+      return productService.update(updatedProduct);
+    },
+
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['products', data.id_produit] });
+      queryClient.invalidateQueries({ queryKey: ["outils"] });
+      queryClient.invalidateQueries({
+        queryKey: ["outils", String(data.id_produit)],
+      });
     },
   });
 
-  // Supprimer un produit
+  // ❌ Supprimer un produit
   const remove = useMutation({
-    mutationFn: (id: string) => productService.delete(id),
+    mutationFn: async (id: string) => await productService.delete(id),
     onSuccess: (_data, id) => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.removeQueries({ queryKey: ['products', id] });
+      // ✅ Met à jour manuellement la liste paginée
+      queryClient.invalidateQueries({ queryKey: ["outils"] });
+      // ❌ Supprimer la query du produit pour éviter un GET après suppression
+      queryClient.removeQueries({ queryKey: ["outils", id] });
     },
   });
 
-  // Retourner toutes les opérations dans un seul objet
+  // ✅ Retourne toutes les opérations
   return {
-    // Queries
-    
     fetchNextPage: products.fetchNextPage,
     hasNextPage: products.hasNextPage,
     isFetchingNextPage: products.isFetchingNextPage,
-     products: {
-      data: products.data, // Contient les pages flatten
+
+    products: {
+      data: products.data,
       isLoading: products.isLoading,
       error: products.error,
       refetch: products.refetch,
@@ -81,31 +89,17 @@ export const useProducts = (productId?: string | number) => {
       error: product.error,
       refetch: product.refetch,
     },
-    
-    // Mutations
     create: {
-      mutateAsync: create.mutateAsync,
-      isLoading: create.isLoading,
-      isSuccess: create.isSuccess,
-      isError: create.isError,
-      error: create.error,
-      reset: create.reset,
+      mutates: create.mutate,
+      ...create,
     },
     update: {
-      mutateAsync: update.mutateAsync,
-      isLoading: update.isLoading,
-      isSuccess: update.isSuccess,
-      isError: update.isError,
-      error: update.error,
-      reset: update.reset,
+      mutates: update.mutate,
+      ...update,
     },
     delete: {
-      mutateAsync: remove.mutateAsync,
-      isLoading: remove.isLoading,
-      isSuccess: remove.isSuccess,
-      isError: remove.isError,
-      error: remove.error,
-      reset: remove.reset,
-    }
+      mutates: remove.mutate,
+      ...remove,
+    },
   };
 };

@@ -1,7 +1,12 @@
-import { api } from "@/api/api";
+import { useApi } from "@/api/api";
 import { Maintenance, MoyensFilters, PaginatedResponse, MaintenanceFormData } from "../types/maitenance.types";
 
 const BASE_PATH = "/moyens-de-travail";
+
+const Returnapi = () => {
+  const api = useApi();
+  return api;
+};
 
 export const MoyensDesTravailService = {
   getAll: async (filters: MoyensFilters): Promise<PaginatedResponse<Maintenance>> => {
@@ -137,21 +142,25 @@ export const MoyensDesTravailService = {
   },
 
   getById: async (id: number): Promise<Maintenance> => {
+  const api = Returnapi();
     const { data } = await api.get(`${BASE_PATH}/${id}`);
     return data;
   },
 
   create: async (maintenance: MaintenanceFormData): Promise<Maintenance> => {
+  const api = Returnapi();
     const { data } = await api.post(BASE_PATH, maintenance);
     return data;
   },
 
   update: async (id: number, maintenance: MaintenanceFormData): Promise<Maintenance> => {
+  const api = Returnapi();
     const { data } = await api.put(`${BASE_PATH}/${id}`, maintenance);
     return data;
   },
 
   delete: async (id: number): Promise<void> => {
+  const api = Returnapi();
     await api.delete(`${BASE_PATH}/${id}`);
   },
 

@@ -1,396 +1,276 @@
-import React, { useState, useEffect } from "react";
+// src/pages/LivrablesPage.tsx
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  ChevronLeft,
-  ChevronRight,
-  MoreVertical,
-  Search,
-  Plus,
-  Filter,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import Layout from "@/components/Layout";
+import { toast } from "sonner"; // Import toast for messages
 
-// Type pour le statut d'approbation
-type ApprobationStatus = "en attente" | "approuvé" | "rejeté" | "révisions requises";
+// Importez vos types
+import { Livrable, Projet, ApiResponse } from "../types/types";
 
-// Interface pour un livrable
-interface Livrable {
-  id_livrable: number;
-  libelle_livrable: string;
-  date: string;
-  approbation: ApprobationStatus;
-  id_projet: number;
-  projet_nom: string;
-}
+// Importez les composants nécessaires pour les livrables
+import { LivrableHeader } from "./components/LivrableHeader";
+import { LivrableKPICard } from "./components/LivrableKPICard"; // Vous devrez créer ce composant
+import { LivrableFilters } from "./components/LivrableFilters";
+import { LivrableTable } from "./components/LivrableTable";
+import { LivrablePagination } from "./components/LivrablePagination"; // Vous devrez créer ce composant de pagination
 
-// Interface pour un projet
-interface Projet {
-  id: number;
-  nom: string;
-}
+// Importez les fonctions API réelles pour les livrables et projets
+import {
+  getAllLivrables, // Renommé de fetchAllLivrables pour correspondre à notre API
+  deleteLivrable,
+} from "./api/livrables";
+import { fetchAllProjets } from "../projet/api/projets"; // Chemin correct pour l'API des projets
+
+// Import des icônes pour les KPIs
+import { Skeleton } from "@/components/ui/skeleton"; // Pour l'état de chargement
+import {
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  CircleDashed, // Nouvelle icône pour Total Livrables (ou toute autre icône pertinente)
+} from 'lucide-react'; // Assurez-vous d'avoir Lucide React installé
 
 const LivrablesPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // --- États pour les données et le chargement ---
   const [livrables, setLivrables] = useState<Livrable[]>([]);
+  const [projets, setProjets] = useState<Projet[]>([]); // Pour les filtres et l'affichage
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  // --- États pour les filtres et la pagination ---
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [filterApprobation, setFilterApprobation] = useState<Livrable["approbation"] | "tous">("tous");
+  const [filterProjet, setFilterProjet] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const livrablesPerPage = 8; // Nombre de livrables par page, comme pour les projets
 
-  // Filtres
-  const [filters, setFilters] = useState({
-    approbation: "" as ApprobationStatus | "",
-    projet: "",
-  });
-
-  // Chargement des données
+  // --- Chargement initial des données ---
   useEffect(() => {
-    const fetchLivrables = async () => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        // Simulation d'appel API
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simule un temps de chargement
+        // Appels aux fonctions API réelles
+        const [livrablesResponse, projetsResponseRaw] = await Promise.all([
+          getAllLivrables(), // Retourne Promise<ApiResponse<Livrable[]>>
+          fetchAllProjets(), // Retourne Promise<ApiResponse<Projet[]>> ou Promise<Projet[]>
+        ]);
 
-        const mockData: Livrable[] = [
-          {
-            id_livrable: 1,
-            libelle_livrable: "Rapport final",
-            date: "2023-06-15",
-            approbation: "approuvé",
-            id_projet: 1,
-            projet_nom: "Projet Alpha",
-          },
-          {
-            id_livrable: 2,
-            libelle_livrable: "Cahier des charges",
-            date: "2023-05-20",
-            approbation: "en attente",
-            id_projet: 2,
-            projet_nom: "Projet Beta",
-          },
-          {
-            id_livrable: 3,
-            libelle_livrable: "Maquettes UI",
-            date: "2023-07-10",
-            approbation: "révisions requises",
-            id_projet: 1,
-            projet_nom: "Projet Alpha",
-          },
-          {
-            id_livrable: 4,
-            libelle_livrable: "Documentation technique",
-            date: "2023-08-05",
-            approbation: "rejeté",
-            id_projet: 3,
-            projet_nom: "Projet Gamma",
-          },
-        ];
+        // Extraction des livrables
+        if (Array.isArray(livrablesResponse)) {
+          setLivrables(livrablesResponse);
+          console.log("[LivrablesPage] Livrables récupérés:", livrablesResponse);
+        } else {
+          console.warn("[LivrablesPage] Structure de réponse livrables inattendue:", livrablesResponse);
+          setLivrables([]); // S'assure que c'est un tableau vide en cas de structure inattendue
+          toast.warning("Impossible de charger les livrables. Structure de réponse inattendue.");
+        }
 
-        setLivrables(mockData);
-      } catch (error) {
-        console.error("Erreur:", error);
-        toast.error("Erreur lors du chargement des livrables");
+
+        // Extraction des projets (logique copiée de EditerLivrablePage pour robustesse)
+        let projectsToSet: Projet[] = [];
+        if (projetsResponseRaw && typeof projetsResponseRaw === 'object' && ('data' in projetsResponseRaw || 'success' in projetsResponseRaw)) {
+          const apiResponse = projetsResponseRaw as ApiResponse<Projet[]>; 
+          if (apiResponse.data && Array.isArray(apiResponse.data)) {
+            projectsToSet = apiResponse.data;
+            console.log("[LivrablesPage] Projets récupérés via ApiResponse.data:", projectsToSet);
+          } else {
+            console.warn("Structure d'ApiResponse inattendue pour la récupération des projets, données manquantes:", projetsResponseRaw);
+            toast.warning("Impossible de charger les projets. Données de l'API inattendues.");
+          }
+        } else if (Array.isArray(projetsResponseRaw)) {
+          projectsToSet = projetsResponseRaw;
+          console.log("[LivrablesPage] Projets récupérés directement sous forme de tableau:", projectsToSet);
+        } else {
+          console.warn("Structure de réponse inattendue pour la récupération des projets: ni ApiResponse ni un tableau direct.", projetsResponseRaw);
+          toast.warning("Impossible de charger les projets. Structure de réponse inattendue.");
+        }
+        setProjets(projectsToSet);
+
+      } catch (err) {
+        console.error("Erreur lors du chargement des données des livrables :", err);
+        setError("Impossible de charger les livrables. Veuillez réessayer.");
+        toast.error("Erreur de chargement: " + (err instanceof Error ? err.message : "Erreur inconnue"));
       } finally {
         setLoading(false);
       }
     };
+    loadData();
+  }, []); // [] pour un chargement au montage uniquement
 
-    fetchLivrables();
-  }, []);
+  // Prépare les options de projets pour le filtre
+  const projetsOptionsWithNames = useMemo(() => {
+    return [
+      { id_projet: 0, nom_projet: "Tous les projets" }, // Option "Tous"
+      ...projets.map(p => ({ id_projet: p.id_projet, nom_projet: p.nom_projet }))
+    ];
+  }, [projets]);
 
-  // Liste des projets pour le filtre
-  const projets: Projet[] = [
-    { id: 1, nom: "Projet Alpha" },
-    { id: 2, nom: "Projet Beta" },
-    { id: 3, nom: "Projet Gamma" },
-  ];
+  // --- Logique de filtrage des livrables ---
+  const filteredLivrables = useMemo(() => {
+    return livrables.filter(livrable => {
+      const matchesSearch =
+        livrable.libelle_livrable.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (livrable.realisations && livrable.realisations.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (livrable.reserves && livrable.reserves.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  // Filtrage et recherche
-  const filteredLivrables = livrables.filter((livrable) => {
-    const matchesSearch =
-      livrable.libelle_livrable.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      livrable.projet_nom.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesApprobation = filterApprobation === "tous" || livrable.approbation === filterApprobation;
+      const matchesProjet = filterProjet === 0 || livrable.id_projet === filterProjet;
 
-    const matchesApproval = filters.approbation
-      ? livrable.approbation === filters.approbation
-      : true;
+      return matchesSearch && matchesApprobation && matchesProjet;
+    });
+  }, [livrables, searchTerm, filterApprobation, filterProjet]);
 
-    const matchesProject = filters.projet
-      ? livrable.id_projet.toString() === filters.projet
-      : true;
+  // --- Pagination ---
+  const indexOfLastLivrable = currentPage * livrablesPerPage;
+  const indexOfFirstLivrable = indexOfLastLivrable - livrablesPerPage;
+  const currentLivrables = filteredLivrables.slice(indexOfFirstLivrable, indexOfLastLivrable);
+  const totalPages = Math.ceil(filteredLivrables.length / livrablesPerPage);
 
-    return matchesSearch && matchesApproval && matchesProject;
-  });
-
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredLivrables.length / itemsPerPage));
-  const paginatedLivrables = filteredLivrables.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Réinitialiser la page courante si elle devient invalide après filtrage
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [totalPages, currentPage]);
-
-  // Suppression d'un livrable
+  // --- Suppression d'un livrable ---
   const handleDelete = async (id: number) => {
-    try {
-      // Simulation de suppression
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simule un temps de requête
-      setLivrables(livrables.filter((livrable) => livrable.id_livrable !== id));
-      toast.success("Livrable supprimé avec succès");
-    } catch (error) {
-      console.error("Erreur:", error);
-      toast.error("Erreur lors de la suppression");
-    }
+    // Utilisation de toast.promise pour la confirmation et le feedback asynchrone
+    toast.promise(
+      async () => {
+        await deleteLivrable(id); // Appel à la fonction de suppression réelle
+        setLivrables(prev => prev.filter(livrable => livrable.id_livrable !== id));
+        return "Livrable supprimé avec succès !";
+      },
+      {
+        loading: "Suppression du livrable...",
+        success: (message) => message,
+        error: (err) => {
+          console.error("Erreur lors de la suppression du livrable :", err);
+          return "Échec de la suppression du livrable.";
+        },
+        // Optionnel: ajouter une confirmation plus explicite avant l'action
+        // Si vous voulez un dialogue de confirmation explicite, vous devrez implémenter un modal séparé.
+        // Pour l'instant, toast.promise gère un chargement puis un succès/échec.
+      }
+    );
   };
 
-  // Obtenir le variant du badge en fonction du statut
-  const getBadgeVariant = (status: ApprobationStatus) => {
-    switch (status) {
-      case "approuvé":
-        return "success";
-      case "rejeté":
-        return "destructive";
-      case "révisions requises":
-        return "secondary"; // or another valid variant if "secondary" is not appropriate
-      default:
-        return "secondary"; // or another valid variant
-    }
-  };
+  // --- Calcul des KPIs pour les Livrables (utiliser useMemo pour optimiser) ---
+  const kpis = useMemo(() => {
+    const totalLivrables = livrables.length;
+    const livrablesByApprobation: { [key: string]: number } = {
+      "en attente": 0,
+      "approuvé": 0,
+      "rejeté": 0,
+      "révisions requises": 0,
+    };
+    let overdueLivrables = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Réinitialiser l'heure pour comparer seulement les dates
+
+    livrables.forEach(livrable => {
+      // KPI par statut d'approbation
+      if (livrable.approbation in livrablesByApprobation) {
+        livrablesByApprobation[livrable.approbation]++;
+      }
+      // Livrables en retard (basé sur la date et le statut d'approbation)
+      if (livrable.date && livrable.approbation !== "approuvé" && livrable.approbation !== "rejeté") {
+        const livrableDate = new Date(livrable.date);
+        livrableDate.setHours(0, 0, 0, 0); // Réinitialiser l'heure pour comparer seulement les dates
+
+        if (livrableDate < today) {
+          overdueLivrables++;
+        }
+      }
+    });
+
+    return {
+      totalLivrables,
+      livrablesApprouves: livrablesByApprobation["approuvé"],
+      livrablesEnAttente: livrablesByApprobation["en attente"],
+      livrablesRejetes: livrablesByApprobation["rejeté"],
+      livrablesRevisionsRequises: livrablesByApprobation["révisions requises"],
+      overdueLivrables,
+    };
+  }, [livrables]);
 
   return (
-    <Layout>
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardHeader className="border-b">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-              <CardTitle className="text-2xl">Gestion des Livrables</CardTitle>
-              <Button
-                onClick={() => navigate("/technique/livrable/nouveau")}
-                className="w-full md:w-auto"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Nouveau Livrable
-              </Button>
+
+
+      <div className="p-6 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          {/* Header pour la page Livrables */}
+          <LivrableHeader onAddLivrable={() => navigate("/technique/projets/livrables/nouveau")} />
+
+          {/* Cartes KPI pour les Livrables */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <LivrableKPICard
+              title="Total Livrables"
+              value={kpis.totalLivrables}
+              icon={<CircleDashed className="h-5 w-5 text-blue-500" />} // Exemple d'icône
+            />
+            <LivrableKPICard
+              title="Approuvés"
+              value={kpis.livrablesApprouves}
+              icon={<CheckCircle className="h-5 w-5 text-green-500" />}
+            />
+            <LivrableKPICard
+              title="En attente"
+              value={kpis.livrablesEnAttente}
+              icon={<Clock className="h-5 w-5 text-yellow-500" />}
+            />
+            <LivrableKPICard
+              title="En retard"
+              value={kpis.overdueLivrables}
+              icon={<AlertTriangle className="h-5 w-5 text-red-500" />}
+            />
+          </div>
+
+          {/* Filtres */}
+          <LivrableFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterApprobation={filterApprobation}
+            onFilterApprobationChange={setFilterApprobation}
+            filterProjet={filterProjet}
+            onFilterProjetChange={setFilterProjet}
+            projetsOptions={projetsOptionsWithNames}
+            resultCount={filteredLivrables.length}
+          />
+
+          {/* Contenu principal : Table des livrables ou message de chargement/erreur/vide */}
+          {loading ? (
+            <div className="space-y-4">
+              {[...Array(livrablesPerPage)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
             </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            {/* Barre de recherche et filtres */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher par nom ou projet..."
-                  className="pl-9"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1); // Réinitialiser à la première page lors d'une nouvelle recherche
-                  }}
-                />
-              </div>
-
-              <div className="flex gap-2 flex-wrap">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Statut</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setFilters({...filters, approbation: ""})}>
-                      Tous les statuts
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFilters({...filters, approbation: "en attente"})}>
-                      En attente
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFilters({...filters, approbation: "approuvé"})}>
-                      Approuvé
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFilters({...filters, approbation: "rejeté"})}>
-                      Rejeté
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFilters({...filters, approbation: "révisions requises"})}>
-                      Révisions requises
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Projet</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setFilters({...filters, projet: ""})}>
-                      Tous les projets
-                    </DropdownMenuItem>
-                    {projets.map((projet) => (
-                      <DropdownMenuItem
-                        key={projet.id}
-                        onClick={() => {
-                          setFilters({...filters, projet: projet.id.toString()});
-                          setCurrentPage(1);
-                        }}
-                      >
-                        {projet.nom}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+          ) : error ? (
+            <div className="flex justify-center items-center h-64 text-lg text-red-600">
+              {error}
             </div>
-
-            {/* Tableau des livrables */}
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">Libellé</TableHead>
-                    <TableHead className="min-w-[150px]">Projet</TableHead>
-                    <TableHead className="min-w-[120px]">Date</TableHead>
-                    <TableHead className="min-w-[150px]">Statut</TableHead>
-                    <TableHead className="text-right min-w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    // Squelette de chargement
-                    Array.from({ length: itemsPerPage }).map((_, index) => (
-                      <TableRow key={`skeleton-${index}`}>
-                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                        <TableCell className="text-right">
-                          <Skeleton className="h-8 w-8 rounded-md ml-auto" />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : paginatedLivrables.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        Aucun livrable trouvé
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedLivrables.map((livrable) => (
-                      <TableRow key={livrable.id_livrable}>
-                        <TableCell className="font-medium">
-                          {livrable.libelle_livrable}
-                        </TableCell>
-                        <TableCell>{livrable.projet_nom}</TableCell>
-                        <TableCell>
-                          {format(new Date(livrable.date), "dd MMM yyyy", {
-                            locale: fr,
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getBadgeVariant(livrable.approbation)}>
-                            {livrable.approbation}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  navigate(`/technique/livrable/${livrable.id_livrable}/details`)
-                                }
-                              >
-                                Voir détails
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  navigate(`/technique/livrable/${livrable.id_livrable}/editer`)
-                                }
-                              >
-                                Modifier
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => handleDelete(livrable.id_livrable)}
-                              >
-                                Supprimer
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+          ) : filteredLivrables.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              Aucun livrable trouvé pour les filtres actuels.
             </div>
-
-            {/* Pagination */}
-            {!loading && filteredLivrables.length > 0 && (
-              <div className="flex items-center justify-between px-2 py-4">
-                <div className="text-sm text-muted-foreground">
-                  {filteredLivrables.length} résultat{filteredLivrables.length > 1 ? 's' : ''}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm">
-                    Page {currentPage} sur {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          ) : (
+            <>
+              <LivrableTable
+                livrables={currentLivrables}
+                onDelete={handleDelete}
+                onEdit={(id) => navigate(`/technique/projets/livrables/${id}/editer`)}
+                onView={(id) => navigate(`/technique/projets/livrables/${id}`)}
+                projets={projets} // Passez les projets pour mapper les noms
+              />
+              <LivrablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredLivrables.length}
+                itemsPerPage={livrablesPerPage}
+                className="mt-4"
+              />
+            </>
+          )}
+        </div>
       </div>
-    </Layout>
+
   );
 };
 

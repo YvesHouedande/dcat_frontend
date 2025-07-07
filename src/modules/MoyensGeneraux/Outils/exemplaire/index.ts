@@ -2,32 +2,33 @@
 // Point d'entrée principal qui exporte tous les composants et fonctionnalités
 
 // Composants
-export { ProductInstanceDashboard } from './components/ProductInstanceDashboard';
-export { ProductInstanceTable } from './components/ProductInstanceTable';
+export { ExemplaireOutilsDashboard } from "./components//ExemplaireOutilsDashboard";
+export { ExemplaireOutilsTable } from "./components/ExemplaireOutilsTable";
 
 // Hooks
-export { useProductInstances } from './hooks/useProductInstances';
+export { useExemplaireOutils } from "./hooks/ExemaplaireOutils";
 
 // Services
-export { productInstanceService } from './services/productInstance.service';
+export { ExemplaireOutilsService } from "./services/ExemplaireOutils.service";
 
 // Types
-export type { 
-  ProductInstance,
+export type {
+  ExemplaireProduit,
   Delivery,
   Product,
   PaginationParams,
-  PaginatedResponse
-} from './types';
+  PaginatedResponse,
+} from "./types";
 
 // Schemas
-export { 
-  productInstanceSchema, 
-  type ProductInstanceFormValues 
-} from './schemas/productInstanceSchema';
+export {
+  ExemplaireOutilsSchema,
+  type ExemplaireOutilsFormValues,
+  ExemplaireOutilsEditSchema,
+} from "./schemas/ExemplaireOutilsSchema";
 
 // Utils
-export { cn, formatDate, generateUniqueId } from './utils/helpers';
+export { cn, formatDate, generateUniqueId } from "./utils/helpers";
 
 // Application principale
-export { default as ExemplaireApp } from './pages/Dashboard';
+export { default as ExemplaireApp } from "./pages/Dashboard";

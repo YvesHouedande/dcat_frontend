@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { categorieTypes, familleTypes, marqueTypes, modeleTypes } from "../../types/reference";
+import { categorieTypes, familleTypes, marqueTypes, modeleTypes, typeTypes } from "../../types/reference";
 import {
   useProductMarquesService,
   useProductCategoriesService,
   useProductFamiliesService,
   useProductModelsService,
 } from "../services/othertype.service";
+import { useProductTypeService } from "../services/othertype.service";
 
 export const useProductMarques = (marqueId?: string | number) => {
   const productBrands = useProductMarquesService();
@@ -25,7 +26,7 @@ export const useProductMarques = (marqueId?: string | number) => {
 
   // Créer un nouveau produit
   const create = useMutation({
-    mutationFn: (newMarque: marqueTypes) => productBrands.create(newMarque),
+    mutationFn: (newMarque: Omit<marqueTypes, "id_marque">) => productBrands.create(newMarque),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["productBrands"] });
     },
@@ -44,8 +45,8 @@ export const useProductMarques = (marqueId?: string | number) => {
   const remove = useMutation({
     mutationFn: (id: string) => productBrands.delete(id),
     onSuccess: (_data, id) => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.removeQueries({ queryKey: ["products", id] });
+      queryClient.invalidateQueries({ queryKey: ["productBrands"] });
+      queryClient.removeQueries({ queryKey: ["productBrands", id] });
     },
   });
 
@@ -55,30 +56,9 @@ export const useProductMarques = (marqueId?: string | number) => {
       isLoading: fetchProductBrands.isLoading,
       error: fetchProductBrands.error,
       refetch: fetchProductBrands.refetch,
-    },
-    create: {
-      mutate: create.mutate,
-      isLoading: create.isLoading,
-      isSuccess: create.isSuccess,
-      isError: create.isError,
-      error: create.error,
-      reset: create.reset,
-    },
-    update: {
-      mutate: update.mutate,
-      isLoading: update.isLoading,
-      isSuccess: update.isSuccess,
-      isError: update.isError,
-      error: update.error,
-      reset: update.reset,
-    },
-    remove: {
-      mutate: remove.mutate,
-      isLoading: remove.isLoading,
-      isSuccess: remove.isSuccess,
-      isError: remove.isError,
-      error: remove.error,
-      reset: remove.reset,
+      create: create,
+      update: update,
+      remove: remove,
     },
     productMarque: {
       data: productBrand.data,
@@ -106,7 +86,7 @@ export const useProductCategories = (categorieId?: string | number) => {
   });
 
   const create = useMutation({
-    mutationFn: (newCategorie: categorieTypes) => productCategories.create(newCategorie),
+    mutationFn: (newCategorie: Omit<categorieTypes, "id_categorie">) => productCategories.create(newCategorie),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["productCategories"] });
     },
@@ -135,30 +115,9 @@ export const useProductCategories = (categorieId?: string | number) => {
       isLoading: fetchProductCategories.isLoading,
       error: fetchProductCategories.error,
       refetch: fetchProductCategories.refetch,
-    },
-    create: {
-      mutate: create.mutate,
-      isLoading: create.isLoading,
-      isSuccess: create.isSuccess,
-      isError: create.isError,
-      error: create.error,
-      reset: create.reset,
-    },
-    update: {
-      mutate: update.mutate,
-      isLoading: update.isLoading,
-      isSuccess: update.isSuccess,
-      isError: update.isError,
-      error: update.error,
-      reset: update.reset,
-    },
-    remove: {
-      mutate: remove.mutate,
-      isLoading: remove.isLoading,
-      isSuccess: remove.isSuccess,
-      isError: remove.isError,
-      error: remove.error,
-      reset: remove.reset,
+      create:create,
+      update:update,
+      remove:remove,
     },
     productCategory: {
       data: productCategory.data,
@@ -186,7 +145,7 @@ export const useProductFamilies = (familleId?: string | number) => {
   });
 
   const create = useMutation({
-    mutationFn: (newFamille: familleTypes) => productFamilies.create(newFamille),
+    mutationFn: (newFamille: Omit<familleTypes, "id_famille">) => productFamilies.create(newFamille),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["productFamilies"] });
     },
@@ -215,31 +174,11 @@ export const useProductFamilies = (familleId?: string | number) => {
       isLoading: fetchProductFamilies.isLoading,
       error: fetchProductFamilies.error,
       refetch: fetchProductFamilies.refetch,
+      create: create,
+      update: update,
+      remove: remove,
     },
-    create: {
-      mutate: create.mutate,
-      isLoading: create.isLoading,
-      isSuccess: create.isSuccess,
-      isError: create.isError,
-      error: create.error,
-      reset: create.reset,
-    },
-    update: {
-      mutate: update.mutate,
-      isLoading: update.isLoading,
-      isSuccess: update.isSuccess,
-      isError: update.isError,
-      error: update.error,
-      reset: update.reset,
-    },
-    remove: {
-      mutate: remove.mutate,
-      isLoading: remove.isLoading,
-      isSuccess: remove.isSuccess,
-      isError: remove.isError,
-      error: remove.error,
-      reset: remove.reset,
-    },
+   
     productFamily: {
       data: productFamily.data,
       isLoading: productFamily.isLoading,
@@ -266,7 +205,7 @@ export const useProductModels = (modeleId?: string | number) => {
   });
 
   const create = useMutation({
-    mutationFn: (newModele: modeleTypes) => productModels.create(newModele),
+    mutationFn: (newModele: Omit<modeleTypes, "id_modele">) => productModels.create(newModele),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["productModels"] });
     },
@@ -295,31 +234,70 @@ export const useProductModels = (modeleId?: string | number) => {
       isLoading: fetchProductModels.isLoading,
       error: fetchProductModels.error,
       refetch: fetchProductModels.refetch,
+      create: create,
+      update: update,
+      remove: remove,
     },
-    create: {
-      mutate: create.mutate,
-      isLoading: create.isLoading,
-      isSuccess: create.isSuccess,
-      isError: create.isError,
-      error: create.error,
-      reset: create.reset,
+    
+    productModel: {
+      data: productModel.data,
+      isLoading: productModel.isLoading,
+      error: productModel.error,
+      refetch: productModel.refetch,
     },
-    update: {
-      mutate: update.mutate,
-      isLoading: update.isLoading,
-      isSuccess: update.isSuccess,
-      isError: update.isError,
-      error: update.error,
-      reset: update.reset,
+  };
+};
+export const useProductTypes = (typeId?: string | number) => {
+  const productTypes = useProductTypeService();
+  const queryClient = useQueryClient();
+
+  const fetchproductTypes = useQuery<typeTypes[], Error>({
+    queryKey: ["productTypes"],
+    queryFn: () => productTypes.getAll(),
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const productModel = useQuery({
+    queryKey: ["productTypes",typeId],
+    queryFn: () => productTypes.getById(typeId || ""),
+    enabled: !!typeId, // Désactiver la requête si l'ID n'est pas défini
+  });
+
+  const create = useMutation({
+    mutationFn: (newModele: Omit<typeTypes, "id_type_produit">) => productTypes.create(newModele),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["productTypes"] });
     },
-    remove: {
-      mutate: remove.mutate,
-      isLoading: remove.isLoading,
-      isSuccess: remove.isSuccess,
-      isError: remove.isError,
-      error: remove.error,
-      reset: remove.reset,
+  });
+
+  const update = useMutation({
+    mutationFn: (updatedType: typeTypes) =>
+      productTypes.update(updatedType.id_type_produit, updatedType),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["productTypes"] });
+      queryClient.invalidateQueries({ queryKey: ["productTypes", data.id_type_produit] });
     },
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => productTypes.delete(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["productTypes"] });
+      queryClient.removeQueries({ queryKey: ["productTypes", id] });
+    },
+  });
+
+  return {
+    productTypes: {
+      data: fetchproductTypes.data || [],
+      isLoading: fetchproductTypes.isLoading,
+      error: fetchproductTypes.error,
+      refetch: fetchproductTypes.refetch,
+      create: create,
+      update: update,
+      remove: remove,
+    },
+    
     productModel: {
       data: productModel.data,
       isLoading: productModel.isLoading,

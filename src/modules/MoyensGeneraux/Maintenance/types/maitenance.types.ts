@@ -6,7 +6,7 @@ export interface Maintenance {
   recommandations:string;
   autre_intervenant?:string | undefined;
   id_intervenants?:string | number;
-  id_partenaire?:string | number;
+  id_partenaire?:string ;
   id_section:string | number;
   id_exemplaire_produit:string | number;
   date:string;

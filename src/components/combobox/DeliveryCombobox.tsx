@@ -36,7 +36,7 @@ export function DeliveryCombobox({ value, onChange }: DeliveryComboboxProps) {
   const filteredDeliveries = React.useMemo(() => {
     if (!searchTerm) return deliveriesArray;
     return deliveriesArray.filter((delivery) =>
-      delivery.reference.toLowerCase().includes(searchTerm.toLowerCase())
+      delivery.reference_livraison.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [deliveriesArray, searchTerm]);
 
@@ -53,7 +53,7 @@ export function DeliveryCombobox({ value, onChange }: DeliveryComboboxProps) {
           {value
             ? deliveriesArray.find(
                 (delivery) => String(delivery.id_livraison) === value
-              )?.reference
+              )?.reference_livraison
             : "Sélectionner reference d'achat..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -78,7 +78,7 @@ export function DeliveryCombobox({ value, onChange }: DeliveryComboboxProps) {
                     setOpen(false);
                   }}
                 >
-                  {delivery.reference}
+                  {delivery.reference_livraison}
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",

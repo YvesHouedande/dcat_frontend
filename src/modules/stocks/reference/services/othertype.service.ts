@@ -1,26 +1,29 @@
-import { categorieTypes, familleTypes, marqueTypes, modeleTypes } from "../../types/reference";
-import { api } from "@/api/api";
+
+import { categorieTypes, familleTypes, marqueTypes, modeleTypes, typeTypes } from "../../types/reference";
+import { useApi } from "@/api/api";
 
 export const useProductMarquesService = () => {
-  const apis = api();
+  const api = useApi();
   const getAll = async (): Promise<marqueTypes[]> => {
-    const response = await apis.get("/stocks/marques");
+    const response = await api.get("/stocks/marques");
     return response.data;
   }
   const getById = async (id: string | number): Promise<marqueTypes> => {
-    const response = await apis.get(`/stocks/marques/${id}`);
+    const response = await api.get(`/stocks/marques/${id}`);
     return response.data; 
   }
-  const create = async (data: marqueTypes): Promise<marqueTypes> => {
-    const response = await apis.post("/stocks/marques", data);
+  const create = async (data: Omit<marqueTypes, "id_marque">): Promise<marqueTypes> => {
+    const response = await api.post("/stocks/marques", data);
     return response.data;
   }
   const update = async (id: string | number, data: marqueTypes): Promise<marqueTypes> => {
-    const response = await apis.put(`/stocks/marques/${id}`, data);
+    alert(data.libelle_marque);
+    const response = await api.put(`/stocks/marques/${id}`, data);
+    alert(JSON.stringify(response.data));
     return response.data;
   }
   const remove = async (id: string | number): Promise<void> => {
-    await apis.delete(`/stocks/marques/${id}`);
+    await api.delete(`/stocks/marques/${id}`);
   }
   return {
     getAll,
@@ -32,25 +35,26 @@ export const useProductMarquesService = () => {
 };
 
 export const useProductCategoriesService = () => {
-  const apis = api();
+  const api = useApi();
   const getAll = async (): Promise<categorieTypes[]> => {
-      const response = await apis.get("/stocks/categories");
+      const response = await api.get("/stocks/categories");
     return response.data;
   }
   const getById = async (id: string | number): Promise<categorieTypes> => {
-    const response = await apis.get(`/stocks/categories/${id}`);
+    const response = await api.get(`/stocks/categories/${id}`);
     return response.data; 
   }
-  const create = async (data: categorieTypes): Promise<categorieTypes> => {
-    const response = await apis.post("/stocks/categories", data);
+  const create = async (data: Omit<categorieTypes, "id_categorie">): Promise<categorieTypes> => {
+    console.log("Creating category with data:", data);
+    const response = await api.post("/stocks/categories", data);
     return response.data;
   }
   const update = async (id: string | number, data: categorieTypes): Promise<categorieTypes> => {
-    const response = await apis.put(`/stocks/categories/${id}`, data);
+    const response = await api.put(`/stocks/categories/${id}`, data);
     return response.data;
   }
   const remove = async (id: string | number): Promise<void> => {
-    await apis.delete(`/stocks/categories/${id}`);
+    await api.delete(`/stocks/categories/${id}`);
   }
   return {
     getAll,
@@ -64,25 +68,25 @@ export const useProductCategoriesService = () => {
 
 
 export const  useProductModelsService = () => {
-  const apis = api();
+  const api = useApi();
   const getAll = async (): Promise<modeleTypes[]> => {
-    const response = await apis.get("/stocks/modeles");
+    const response = await api.get("/stocks/modeles");
     return response.data;
   }
   const getById = async (id: string | number): Promise<modeleTypes> => {
-    const response = await apis.get(`/stocks/modeles/${id}`);
+    const response = await api.get(`/stocks/modeles/${id}`);
     return response.data; 
   }
-  const create = async (data: modeleTypes): Promise<modeleTypes> => {
-    const response = await apis.post("/stocks/modeles", data);
+  const create = async (data: Omit<modeleTypes, "id_modele">): Promise<modeleTypes> => {
+    const response = await api.post("/stocks/modeles", data);
     return response.data;
   }
   const update = async (id: string | number, data: modeleTypes): Promise<modeleTypes> => {
-    const response = await apis.put(`/stocks/modeles/${id}`, data);
+    const response = await api.put(`/stocks/modeles/${id}`, data);
     return response.data;
   }
   const remove = async (id: string | number): Promise<void> => {
-    await apis.delete(`/stocks/modeles/${id}`);
+    await api.delete(`/stocks/modeles/${id}`);
   }
   return {
     getAll,
@@ -94,25 +98,55 @@ export const  useProductModelsService = () => {
 };
 
 export const  useProductFamiliesService = () => {
-  const apis = api(); 
+  const api = useApi(); 
   const getAll = async (): Promise<familleTypes[]> => {
-    const response = await apis.get("/stocks/familles");
+    const response = await api.get("/stocks/familles");
     return response.data;
   }
   const getById = async (id: string | number): Promise<familleTypes> => {
-    const response = await apis.get(`/stocks/familles/${id}`);
+    const response = await api.get(`/stocks/familles/${id}`);
     return response.data; 
   }
-  const create = async (data: familleTypes): Promise<familleTypes> => {
-    const response = await apis.post("/stocks/familles", data);
+  const create = async (data: Omit<familleTypes, "id_famille">): Promise<familleTypes> => {
+    const response = await api.post("/stocks/familles", data);
     return response.data;
   }
   const update = async (id: string | number, data: familleTypes): Promise<familleTypes> => {
-    const response = await apis.put(`/stocks/familles/${id}`, data);
+    const response = await api.put(`/stocks/familles/${id}`, data);
     return response.data;
   }
   const remove = async (id: string | number): Promise<void> => {
-    await apis.delete(`/stocks/familles/${id}`);
+    await api.delete(`/stocks/familles/${id}`);
+  }
+
+  return {
+    getAll,
+    getById,
+    create,
+    update,
+    delete: remove,
+  };
+};
+export const  useProductTypeService = () => {
+  const api = useApi(); 
+  const getAll = async (): Promise<typeTypes[]> => {
+    const response = await api.get("/stocks/types-produits");
+    return response.data;
+  }
+  const getById = async (id: string | number): Promise<typeTypes> => {
+    const response = await api.get(`/stocks/types-produits/${id}`);
+    return response.data; 
+  }
+  const create = async (data: Omit<typeTypes, "id_type_produit">): Promise<typeTypes> => {
+    const response = await api.post("/stocks/types-produits", data);
+    return response.data;
+  }
+  const update = async (id: string | number, data: typeTypes): Promise<typeTypes> => {
+    const response = await api.put(`/stocks/types-produits/${id}`, data);
+    return response.data;
+  }
+  const remove = async (id: string | number): Promise<void> => {
+    await api.delete(`/stocks/types-produits/${id}`);
   }
 
   return {

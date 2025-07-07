@@ -20,20 +20,26 @@ import * as z from "zod";
 export const imageProduitSchema = z.object({
   id_image: z.number().optional(),
   libelle_image: z.string(),
-  lien_image: z.string(),
-  numero_image: z.number(),
+  lien_image: z.string().optional(),
+  numero_image: z.union([z.number(), z.string()]),
+  file: z.instanceof(File).optional(),
   created_at: z.string().optional(),
   url: z.string().optional(),
+  preview: z.string().optional(),
+  dataUrl: z.string().optional(),
 });
+
+
 
 export const referenceSchema = z.object({
   id_produit: z.union([z.number(), z.string()]).optional(),
   code_produit: z.string().optional(),
   desi_produit: z.string().min(1, "La désignation est obligatoire"),
   desc_produit: z.string().optional(),
-  image_produit: z.array(imageProduitSchema).optional(),
+  images: z.array(imageProduitSchema).optional(),
   emplacement_produit: z.string().min(1, "L'emplacement est obligatoire"),
   caracteristiques: z.string().optional(),
+  prix_produit: z.number().optional(),
   id_categorie: z.number().min(1, "La catégorie est obligatoire"),
   id_type_produit: z.number().min(1, "Le type est obligatoire"),
   id_modele: z.number().min(1, "Le modèle est obligatoire"),
@@ -45,6 +51,7 @@ export const referenceSchema = z.object({
   famille: z.string().optional(),
   marque: z.string().optional(),
   qte_produit: z.number().optional(),
+  imagesMeta: z.string().optional(),
 });
 
 export type FormValues = z.infer<typeof referenceSchema>;

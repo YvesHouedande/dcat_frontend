@@ -116,7 +116,7 @@ const DemandesAnnuaire: React.FC = () => {
       date_debut: "2025-04-18T09:00:00",
       status: "En attente",
       date_fin: "2025-04-22T18:00:00",
-      motif: "Congé parental",
+      motif: "Congé pour raisons personnelles",
       type_demande: "Congé",
       id_employe: 5,
       employe: employes[4],

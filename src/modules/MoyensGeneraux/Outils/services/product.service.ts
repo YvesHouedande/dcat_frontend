@@ -1,189 +1,127 @@
 // / src/services/productService.ts
-import { api } from "@/api/api";
+import { useApi } from "@/api/api";
+import {
+  ApiResponse,
+  ProductFilters,
+  ProductServiceResponse,
+} from "@/modules/stocks/reference/types/referenceTypes";
 import { ReferenceProduit } from "@/modules/stocks/types/reference";
 
-export const productService = {
-  getAll: async (): Promise<ReferenceProduit[]> => {
-    // const response = await api.get("/products");
-  // Données exemple pour l'annuaire de produits
-  const productsData: ReferenceProduit[] = [
-    {
-      id_produit: 1,
-      code_produit: "PROD-001",
-      desi_produit: "Ordinateur Portable Pro",
-      desc_produit:
-        "Ordinateur portable avec écran 15 pouces, 16GB RAM, 512GB SSD.",
-      image_produit: "https://example.com/images/prod001.jpg",
-      qte_produit: 25,
-      emplacement: "A1-B2",
-      caracteristiques: "Intel i7, Full HD, Wi-Fi 6",
-      id_categorie: 1,
-      id_type_produit: 1,
-      id_modele: 1,
-      id_famille: 1,
-      id_marque: 1,
-    },
-    {
-      id_produit: 2,
-      code_produit: "PROD-002",
-      desi_produit: "Écran LED 24 pouces",
-      desc_produit: "Écran LED Full HD avec connectique HDMI et VGA.",
-      image_produit: "https://example.com/images/prod002.jpg",
-      qte_produit: 40,
-      emplacement: "B3-C1",
-      caracteristiques: "1080p, HDMI, 75Hz",
-      id_categorie: 1,
-      id_type_produit: 2,
-      id_modele: 2,
-      id_famille: 2,
-      id_marque: 2,
-    },
-    {
-      id_produit: 3,
-      code_produit: "PROD-003",
-      desi_produit: "Clavier mécanique RGB",
-      desc_produit:
-        "Clavier gaming avec rétroéclairage RGB et switches rouges.",
-      image_produit: "https://example.com/images/prod003.jpg",
-      qte_produit: 60,
-      emplacement: "C2-D3",
-      caracteristiques: "AZERTY, Switchs Red, USB",
-      id_categorie: 2,
-      id_type_produit: 3,
-      id_modele: 3,
-      id_famille: 3,
-      id_marque: 3,
-    },
-    {
-      id_produit: 4,
-      code_produit: "PROD-004",
-      desi_produit: "Imprimante laser multifonction",
-      desc_produit: "Imprimante laser avec scanner et copieur intégré.",
-      image_produit: "https://example.com/images/prod004.jpg",
-      qte_produit: 15,
-      emplacement: "E4-F1",
-      caracteristiques: "Wi-Fi, Duplex, A4",
-      id_categorie: 3,
-      id_type_produit: 4,
-      id_modele: 4,
-      id_famille: 4,
-      id_marque: 4,
-    },
-    {
-      id_produit: 5,
-      code_produit: "PROD-005",
-      desi_produit: "Disque dur externe 1TB",
-      desc_produit: "Stockage portable USB 3.0 de 1 To.",
-      image_produit: "https://example.com/images/prod005.jpg",
-      qte_produit: 80,
-      emplacement: "G2-H3",
-      caracteristiques: "USB 3.0, Portable",
-      id_categorie: 4,
-      id_type_produit: 5,
-      id_modele: 5,
-      id_famille: 5,
-      id_marque: 5,
-    },
-    {
-      id_produit: 6,
-      code_produit: "PROD-006",
-      desi_produit: "Routeur Wi-Fi 6",
-      desc_produit: "Routeur performant pour maisons connectées.",
-      image_produit: "https://example.com/images/prod006.jpg",
-      qte_produit: 30,
-      emplacement: "H1-I2",
-      caracteristiques: "Wi-Fi 6, 5GHz, MU-MIMO",
-      id_categorie: 5,
-      id_type_produit: 6,
-      id_modele: 6,
-      id_famille: 6,
-      id_marque: 6,
-    },
-    {
-      id_produit: 7,
-      code_produit: "PROD-007",
-      desi_produit: "Casque sans fil Bluetooth",
-      desc_produit: "Casque avec réduction de bruit active.",
-      image_produit: "https://example.com/images/prod007.jpg",
-      qte_produit: 50,
-      emplacement: "I4-J1",
-      caracteristiques: "ANC, Bluetooth 5.0, Autonomie 20h",
-      id_categorie: 6,
-      id_type_produit: 7,
-      id_modele: 7,
-      id_famille: 7,
-      id_marque: 7,
-    },
-    {
-      id_produit: 8,
-      code_produit: "PROD-008",
-      desi_produit: "Souris ergonomique",
-      desc_produit: "Souris sans fil conçue pour réduire la fatigue.",
-      image_produit: "https://example.com/images/prod008.jpg",
-      qte_produit: 70,
-      emplacement: "J3-K2",
-      caracteristiques: "2.4GHz, Ergonomique, USB",
-      id_categorie: 2,
-      id_type_produit: 8,
-      id_modele: 8,
-      id_famille: 3,
-      id_marque: 8,
-    },
-    {
-      id_produit: 9,
-      code_produit: "PROD-009",
-      desi_produit: "Station d'accueil USB-C",
-      desc_produit: "Dock USB-C avec ports HDMI, USB 3.0, Ethernet.",
-      image_produit: "https://example.com/images/prod009.jpg",
-      qte_produit: 35,
-      emplacement: "K1-L1",
-      caracteristiques: "USB-C, Power Delivery, 4K HDMI",
-      id_categorie: 7,
-      id_type_produit: 9,
-      id_modele: 9,
-      id_famille: 9,
-      id_marque: 9,
-    },
-    {
-      id_produit: 10,
-      code_produit: "PROD-010",
-      desi_produit: "Tablette graphique",
-      desc_produit: "Tablette pour dessinateurs et graphistes, stylet inclus.",
-      image_produit: "https://example.com/images/prod010.jpg",
-      qte_produit: 20,
-      emplacement: "L3-M1",
-      caracteristiques: "8192 niveaux de pression, USB",
-      id_categorie: 8,
-      id_type_produit: 10,
-      id_modele: 10,
-      id_famille: 10,
-      id_marque: 10,
-    },
-  ];
-      return productsData ;
-      // return response.data;
-  },
-
-    // Récupérer un produit par son ID
-  getById: async (id: string | number): Promise<ReferenceProduit> => {
-    const response = await api.get(`/products/${id}`);
-    return response.data;
-  },
-  
-  // Créer un nouveau produit
-  create: async (produit: ReferenceProduit): Promise<ReferenceProduit> => {
-    const response = await api.post("/products", produit);
-    return response.data;
-  },
-  
-  // Mettre à jour un produit
-  update: async (produit: ReferenceProduit): Promise<ReferenceProduit> => {
-    const response = await api.put(`/products/${produit.id_produit}`, produit);
-    return response.data;
-  },
-  
-  // Supprimer un produit
-  delete: async (id: string | number): Promise<void> => {
-    await api.delete(`/products/${id}`);
+// transformation des données pour l'API
+const transformData = (values: ReferenceProduit) => {
+  {
+    const formData = new FormData();
+    formData.append("code_produit", values.code_produit ?? "");
+    formData.append("desi_produit", values.desi_produit);
+    formData.append("desc_produit", values.desc_produit ?? "");
+    formData.append("emplacement_produit", values.emplacement_produit);
+    formData.append("id_categorie", values.id_categorie.toString());
+    formData.append("id_famille", values.id_famille.toString());
+    formData.append("id_marque", values.id_marque.toString());
+    formData.append("id_modele", values.id_modele.toString());
+    formData.append("id_type_produit", values.id_type_produit.toString());
+    if (values.imagesMeta !== undefined) {
+      formData.append("imagesMeta", values.imagesMeta);
+    } else {
+      formData.append("imagesMeta", "");
+    }
+    // Pour chaque image
+    values.images?.forEach((img) => {
+      if (img.file) {
+        formData.append("images", img.file); // ⚠️ clé "images" multiple pour plusieurs fichiers
+      }
+    });
+    return formData;
   }
+};
+export const useOutilsService = () => {
+  const apis = useApi();
+  const getAll = async (
+    page: number,
+    limit: number,
+    filters: ProductFilters
+  ): Promise<ProductServiceResponse> => {
+    const params = { page, limit, ...filters, typeId: 2 }; // Ajoutez d'autres filtres si nécessaire
+    // const response = await apis.get<ApiResponse>(`stocks/produits?page=${page}&limit=${limit}`);
+    const response = await apis.get<ApiResponse>(`stocks/produits?`, {
+      params,
+    });
+
+    const apiResponse = response.data;
+
+    // Extrayez uniquement l'objet 'produit' et ajoutez la liste 'images'
+    const produits: ReferenceProduit[] = apiResponse.data.map((item) => ({
+      ...item.produit, // Copie toutes les propriétés de l'objet produit
+      images: item.images, // Ajoute le tableau 'images' directement
+      type_produit: item.type.libelle,
+      famille: item.famille.libelle_famille,
+      categorie: item.category.libelle,
+      marque: item.marque.libelle_marque,
+      modele: item.modele.libelle_modele,
+    }));
+    return {
+      data: produits,
+      currentPage: apiResponse.pagination.page,
+      totalPages: apiResponse.pagination.totalPages,
+      totalItems: apiResponse.pagination.total,
+    };
+  };
+
+  // Le reste des fonctions (getById, create, update, delete) reste inchangé
+  // ...
+  const getById = async (id: string | number): Promise<ReferenceProduit> => {
+    const response = await apis.get(`stocks/produits/${id}`);
+    // la réponse de getById n'a la même structure complète avec 'produit' et 'images',
+    // donc on doit l'adapter ici aussi
+    // On suppose que la réponse a la même structure que dans getAll
+
+    return {
+      ...response.data.produit,
+      images: response.data.images,
+      type_produit: response.data.type.libelle,
+      categorie: response.data.category.libelle,
+      modele: response.data.modele.libelle_modele,
+      famille: response.data.famille.libelle_famille,
+      marque: response.data.marque.libelle_marque,
+    };
+  };
+
+  // ... (create, update, delete)
+  const create = async (
+    produit: ReferenceProduit
+  ): Promise<ReferenceProduit> => {
+    const formData = transformData(produit);
+    const response = await apis.post("stocks/produits", formData);
+    return response.data;
+  };
+
+  // Mettre à jour un produit
+  const update = async (
+    produit: ReferenceProduit
+  ): Promise<ReferenceProduit> => {
+    const formData = transformData(produit);
+    // Note: Assurez-vous que l'ID du produit est bien défini dans l'objet produit
+    const response = await apis.put(
+      `stocks/produits/${produit.id_produit}`,
+      formData
+    );
+    return {
+      ...response.data, // Conserver les autres propriétés du produit
+      images: response.data.images, // Mettre à jour les images depuis la réponse
+      id_produit: produit.id_produit, // Assurez-vous que l'ID est correct
+    };
+  };
+
+  // Supprimer un produit
+  const deleteProduct = async (id: string | number): Promise<void> => {
+    await apis.delete(`stocks/produits/${id}`);
+  };
+
+  return {
+    getAll,
+    getById,
+    create,
+    update,
+    delete: deleteProduct,
+  };
 };

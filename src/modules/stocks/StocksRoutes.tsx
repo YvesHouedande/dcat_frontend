@@ -7,8 +7,9 @@ import CataloguePage from "./reference/pages/cataloguePage";
 import ReferencePage from "./reference/pages/referencePage";
 import ReferenceEditForm from "./reference/pages/referenceEdit";
 import LivraisonPage from "./livraison/pages/LivraisonPage";
-import { ExemplaireApp } from "./exemplaire";
-import Dashboard from "./sorties/pages/Dashboard";
+import CommandePage from "./commande/pages/commandePage";
+import CommandeForm from "./commande/components/CommandeForm";
+import CommandeDetails from "./commande/components/CommandeDetails";
 
 const StocksRoutes: React.FC = () => {
   return (
@@ -21,13 +22,13 @@ const StocksRoutes: React.FC = () => {
         <Route path=":id/edit" element={<ReferenceEditForm />} />
       </Route>
       <Route path="/achats" element={<StockLayout />}>
-        <Route index element={<LivraisonPage />} />{" "}
+        <Route index element={<LivraisonPage />} />
       </Route>
-      <Route path="/exemplaires" element={<StockLayout />}>
-        <Route index element={<ExemplaireApp />} />
-      </Route>
-      <Route path="/sorties" element={<StockLayout />}>
-        <Route index element={<Dashboard />} />
+      <Route path="/commandes" element={<StockLayout />}>
+        <Route index element={<CommandePage />} />
+        <Route path="nouvelle" element={<CommandeForm />} />
+        <Route path=":id" element={<CommandeDetails />} />
+        <Route path=":id/modifier" element={<CommandeForm />} />
       </Route>
       <Route path="/*" element={<NotFound />} />
     </Routes>

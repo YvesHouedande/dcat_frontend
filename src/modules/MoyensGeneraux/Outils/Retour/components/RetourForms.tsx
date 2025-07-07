@@ -15,14 +15,14 @@ import {
 export interface ExemplaireSortieFormProps {
   onSubmit: (data: RetourSchemaFormsValue) => void;
   onCancel: () => void;
-  exemplaires?: ProductInstance[];
+  exemplaires?: ExemplaireProduit[];
   isEditMode: boolean;
   defaultValues?: RetourSchemaFormsValue | undefined;
   isLoading?: boolean;
 }
 
 import { Textarea } from "@/components/ui/textarea";
-import { ProductInstance } from "../../sorties/types";
+import { ExemplaireProduit } from "../../sorties/types";
 import {
   Select,
   SelectContent,

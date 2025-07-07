@@ -1,7 +1,6 @@
 import { MenuItem } from "@/types/Menu";
 import { Cog } from "lucide-react";
 
-
 export const TechniqueMenu: MenuItem[] = [
   {
     title: "Technique",
@@ -11,19 +10,15 @@ export const TechniqueMenu: MenuItem[] = [
     items: [
       {
         title: "Gestion des projets",
-        url: "/technique/Projets",
+        url: "/technique/projets",
       },
       {
-        title: "Gestion des tâches",
-        url: "/technique/taches",
-      },
-      {
-        title: "Livrables",
-        url: "/technique/livrable",
+        title: "Documents",
+        url: "/technique/document",
       },
       {
         title: "Gestion des interventions",
-        url: "/technique/intervention",
+        url: "/technique/interventions",
       },
     ],
   },

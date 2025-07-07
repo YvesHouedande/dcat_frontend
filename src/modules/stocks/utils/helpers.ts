@@ -8,38 +8,32 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Fonction pour formatter la date
-export function formatDate(dateString: string): string {
-  if (!dateString) return "";
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch (error) {
-    console.log(error)
-    return dateString;
-  }
-}
+export const formatDate = (dateString: string | number) => {
+  return new Date(dateString).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 // Fonction pour formatter la date et l'heure
-export function formatDateTime(dateString: string): string {
-  if (!dateString) return "";
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch (error) {
-    console.log(error)
-    return dateString;
-  }
+export function formatDateTime(dateString: string | number): string {
+  return new Date(dateString).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
+
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "XOF",
+    minimumFractionDigits: 0,
+  }).format(amount);
+};
 
 export function toDatetimeLocal(date: Date): string {
   const offset = date.getTimezoneOffset();
@@ -49,5 +43,7 @@ export function toDatetimeLocal(date: Date): string {
 
 // Fonction pour générer un ID unique
 export function generateUniqueId(): string {
-  return `EX-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`.toUpperCase();
+  return `EX-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .substring(2, 7)}`.toUpperCase();
 }

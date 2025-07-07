@@ -18,20 +18,20 @@ import {
 } from "@/components/ui/popover";
 import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
 
-interface DeliveryComboboxProps {
+interface OutilsComboboxProps {
   value: string;
   onChange: (value: string | number) => void;
 }
 
-export function OutilsCombobox({ value, onChange }: DeliveryComboboxProps) {
+export function OutilsCombobox({ value, onChange }: OutilsComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const { livraisons: deliveries, isLoading } = useLivraisonData();
 
   const filteredDeliveries = React.useMemo(() => {
     if (!searchTerm) return deliveries;
-    return deliveries.filter((delivery) =>
-      delivery.reference.toLowerCase().includes(searchTerm.toLowerCase())
+    return deliveries?.filter((delivery) =>
+      delivery.reference_livraison.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [deliveries, searchTerm]);
 
@@ -46,9 +46,9 @@ export function OutilsCombobox({ value, onChange }: DeliveryComboboxProps) {
           disabled={isLoading}
         >
           {value
-            ? deliveries.find(
+            ? deliveries?.find(
                 (delivery) => String(delivery.id_livraison) === value
-              )?.reference
+              )?.reference_livraison
             : "Sélectionner un outil..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -64,7 +64,7 @@ export function OutilsCombobox({ value, onChange }: DeliveryComboboxProps) {
           <CommandList>
             <CommandEmpty>Aucun outil trouvé.</CommandEmpty>
             <CommandGroup className="max-h-60 overflow-y-auto">
-              {filteredDeliveries.map((delivery) => (
+              {filteredDeliveries?.map((delivery) => (
                 <CommandItem
                   key={delivery.id_livraison}
                   value={String(delivery.id_livraison)}
@@ -73,7 +73,7 @@ export function OutilsCombobox({ value, onChange }: DeliveryComboboxProps) {
                     setOpen(false);
                   }}
                 >
-                  {delivery.reference}
+                  {delivery.reference_livraison}
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",

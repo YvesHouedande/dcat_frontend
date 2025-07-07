@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useCallback, useMemo} from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+// UI Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,238 +23,355 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle, AlertCircle } from "lucide-react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ReferenceSelect } from "../components/ui/ReferenceSelect";
+
+// Custom Components & Hooks
+import { ReferenceSelect } from "@/modules/stocks/reference/components/ui/ReferenceSelect";
+import { ImageDropzone } from "@/modules/stocks/reference/utils/ImageDropzone";
+import { useProducts } from "@/modules/stocks/reference/hooks/useProducts";
+import {
+  useProductCategories,
+  useProductFamilies,
+  useProductMarques,
+  useProductModels,
+} from "@/modules/stocks/reference/hooks/useOthers";
+import { generateProductCode } from "@/lib/codeGenerator";
 import { referenceSchema } from "@/modules/stocks/reference/schemas/referenceSchema";
-import { ImageDropzone } from "../utils/ImageDropzone";
-import { generateProductCode } from "@/modules/stocks/utils/generateProductCode";
-import { ReferenceProduit } from "@/modules/stocks/types/reference";
-import { z } from "zod";
+import { toast } from "sonner";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  categorieTypes,
+  familleTypes,
+  ImageProduit,
+  marqueTypes,
+  modeleTypes,
+} from "@/modules/stocks/types/reference";
 
 export type FormValues = z.infer<typeof referenceSchema>;
-export default function ReferenceForm() {
-  const { id } = useParams<{ id: string }>();
-  const isEditMode = !!id;
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitResult, setSubmitResult] = useState({
-    success: false,
-    message: "",
-  });
-  const [selectedReferences, setSelectedReferences] = useState({
-    id_marque: 0,
-    id_modele: 0,
-    id_categorie: 0,
-    id_famille: 0,
-    id_type_produit: 2, // Valeur par défaut définie à 2 comme demandé
-  });
+const DEFAULT_VALUES: Partial<FormValues> = {
+  id_type_produit: 2,
+  desi_produit: "",
+  desc_produit: undefined,
+  caracteristiques: "",
+  emplacement_produit: "",
+  code_produit: "",
+};
 
-  // Valeurs par défaut initiales
-  const defaultValues = {
-    id_produit: 0,
-    code_produit: "",
-    desi_produit: "",
-    desc_produit: "",
-    image_produit: "",
-    emplacement: "",
-    caracteristiques: "",
-    id_categorie: 2,
-    id_type_produit: 2, // Valeur par défaut définie à 2 comme demandé
-    id_modele: 2,
-    id_famille: 3,
-    id_marque: 5,
-  };
+type ReferenceFieldName =
+  | "id_marque"
+  | "id_modele"
+  | "id_categorie"
+  | "id_famille";
 
+export default function ReferenceEditForm() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
+
+  // Data hooks
+  const { productCategories: categories } = useProductCategories();
+  const { productFamilies: familles } = useProductFamilies();
+  const { productMarques: marques } = useProductMarques();
+  const { productModels: modeles } = useProductModels();
+  const { create, update, product } = useProducts({}, id);
+
+  // State
+  const [productImages, setProductImages] = useState<ImageProduit[]>([]);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+
+  // Form
   const form = useForm<FormValues>({
     resolver: zodResolver(referenceSchema),
-    defaultValues,
+    defaultValues:
+      isEditMode && product.data
+        ? {
+            ...DEFAULT_VALUES,
+            ...product.data,
+            id_marque: product.data.id_marque ?? undefined,
+            id_modele: product.data.id_modele ?? undefined,
+            id_categorie: product.data.id_categorie ?? undefined,
+            id_famille: product.data.id_famille ?? undefined,
+            id_type_produit: product.data.id_type_produit ?? 2,
+          }
+        : DEFAULT_VALUES,
   });
 
-  // Récupère les données du produit si on est en mode édition
-  useEffect(() => {
-   
-    
-  }, [id, isEditMode, form]);
+  const watchedValues = form.watch([
+    "id_marque",
+    "id_modele",
+    "id_categorie",
+    "id_famille",
+  ]);
 
-  useEffect(() => {
-    const { id_marque, id_modele, id_categorie, id_famille } =
-      selectedReferences;
-    const code = generateProductCode(
-      id_marque,
-      id_modele,
-      id_categorie,
-      id_famille,
-      marques,
-      modeles,
-      categories,
-      familles
-    );
-    if (code) {
-      form.setValue("code_produit", code);
-    }
-  }, [selectedReferences, form, marques, modeles, categories, familles]);
-
-  const handleImageSelected = (imageDataUrl: string) => {
-    // form.setValue("image_produit", imageDataUrl);
-    console
-  };
-
-  const handleReferenceChange = (
-    field: keyof typeof selectedReferences,
-    value: number
-  ) => {
-    setSelectedReferences((prev) => ({
-      ...prev,
-      [field]: value,
+  // Utilities
+  const cleanImageData = (images: ImageProduit[]) =>
+    images.map((img, index) => ({
+      ...img,
+      numero_image:
+        typeof img.numero_image === "string"
+          ? parseInt(img.numero_image, 10)
+          : img.numero_image || index + 1,
+      url: img.url || img.lien_image,
     }));
-  };
+
+  const resetForm = useCallback(
+    (data = DEFAULT_VALUES, images: ImageProduit[] = []) => {
+      form.reset(data, {
+        keepDefaultValues: false,
+        keepErrors: false,
+        keepDirty: false,
+        keepTouched: false,
+      });
+      setProductImages(images);
+      setIsFormDirty(false);
+      setTimeout(() => form.trigger(), 100);
+    },
+    [form]
+  );
+
+
+
+  // Auto-generate product code
+  useMemo(() => {
+    const [id_marque, id_modele, id_categorie, id_famille] = watchedValues;
+
+    if (
+      (isEditMode && !isFormDirty) ||
+      !marques.data ||
+      !modeles.data ||
+      !categories.data ||
+      !familles.data ||
+      !id_marque ||
+      !id_modele ||
+      !id_categorie ||
+      !id_famille
+    )
+      return;
+
+    const code = generateProductCode(
+      Number(id_marque),
+      Number(id_modele),
+      Number(id_categorie),
+      Number(id_famille),
+      marques.data,
+      modeles.data,
+      categories.data,
+      familles.data
+    );
+
+    if (code && code !== form.getValues("code_produit")) {
+      form.setValue("code_produit", code, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [
+    watchedValues,
+    marques.data,
+    modeles.data,
+    categories.data,
+    familles.data,
+    isEditMode,
+    isFormDirty,
+    form,
+  ]);
+
+  // Image handlers
+  const handleImageSelected = useCallback(
+    (imageDataUrl: string, file: File) => {
+      const newImage: ImageProduit = {
+        libelle_image: file.name.replace(/\.[^/.]+$/, ""),
+        numero_image: productImages.length + 1,
+        file,
+        dataUrl: imageDataUrl,
+      };
+      setProductImages((prev) => [...prev, newImage]);
+      setIsFormDirty(true);
+    },
+    [productImages.length]
+  );
+
+  const handleImageChange = useCallback(
+    (action: string, index: number, value?: string | number) => {
+      setProductImages((prev) => {
+        let updated = [...prev];
+        switch (action) {
+          case "label":
+            updated[index] = {
+              ...updated[index],
+              libelle_image: String(value),
+            };
+            break;
+          case "remove":
+            updated = updated.filter((_, i) => i !== index);
+            break;
+          case "reorder": {
+            const [movedImage] = updated.splice(index, 1);
+            updated.splice(Number(value), 0, movedImage);
+            break;
+          }
+        }
+        return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
+      });
+      setIsFormDirty(true);
+    },
+    []
+  );
+
+  // Form handlers
+  const handleFieldChange = useCallback(() => setIsFormDirty(true), []);
+
+  const handleReset = useCallback(() => {
+    if (isEditMode && product.data) {
+      const formData = {
+        ...DEFAULT_VALUES,
+        ...product.data,
+        id_marque: product.data.id_marque || undefined,
+        id_modele: product.data.id_modele || undefined,
+        id_categorie: product.data.id_categorie || undefined,
+        id_famille: product.data.id_famille || undefined,
+        id_type_produit: product.data.id_type_produit || 2,
+      };
+      const images = product.data.images
+        ? cleanImageData(product.data.images)
+        : [];
+      resetForm(formData, images);
+    } else {
+      resetForm();
+    }
+  }, [isEditMode, product.data, resetForm]);
+
+  const handleCancel = useCallback(() => {
+    if (
+      isFormDirty &&
+      !window.confirm(
+        "Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter ?"
+      )
+    )
+      return;
+    navigate(-1);
+  }, [isFormDirty, navigate]);
 
   const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true);
     try {
-      // Assurer que id_type_produit est bien défini à 2
-      data.id_type_produit = 2;
-
-      // Simulation d'un appel API - À remplacer par un vrai appel en production
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const formDataWithImages = {
+        ...data,
+        images: productImages,
+        imagesMeta: JSON.stringify(
+          productImages.map((img) => ({
+            libelle: img.libelle_image,
+            numero: img.numero_image,
+          }))
+        ),
+      };
 
       if (isEditMode) {
-        // Pour la modification d'un produit existant
-        // await fetch(`/api/produits/${id}`, {
-        //   method: 'PUT',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(data)
-        // });
-        console.log("Produit modifié:", data);
-        setSubmitResult({
-          success: true,
-          message: "Produit modifié avec succès!",
-        });
+        await update.mutateAsync(formDataWithImages);
+        toast.success("Produit mis à jour avec succès");
+        setIsFormDirty(false);
       } else {
-        // Pour l'ajout d'un nouveau produit
-        // await fetch('/api/produits', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(data)
-        // });
-        console.log("Nouveau produit ajouté:", data);
-        setSubmitResult({
-          success: true,
-          message: "Produit ajouté avec succès!",
-        });
-        // Réinitialiser le formulaire après ajout
-        if (!isEditMode) {
-          form.reset(defaultValues);
-          setSelectedReferences({
-            id_marque: defaultValues.id_marque,
-            id_modele: defaultValues.id_modele,
-            id_categorie: defaultValues.id_categorie,
-            id_famille: defaultValues.id_famille,
-            id_type_produit: 2,
-          });
-        }
+        await create.mutateAsync(formDataWithImages);
+        toast.success("Produit ajouté avec succès");
+        resetForm();
       }
     } catch (error) {
-      setSubmitResult({
-        success: false,
-        message: isEditMode
-          ? "Erreur lors de la modification du produit." + error
-          : "Erreur lors de l'ajout du produit." + error,
-      });
-    } finally {
-      setIsSubmitting(false);
+      toast.error(
+        isEditMode
+          ? "Erreur lors de la mise à jour du produit"
+          : "Erreur lors de l'ajout du produit"
+      );
+      console.error("Form submission error:", error);
     }
   };
 
+  // Loading states
+  const isLoading = create.isLoading || update.isLoading;
+  const isDataLoading = isEditMode && product.isLoading;
+
+  if (isDataLoading) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="w-full shadow-lg">
+          <CardContent className="p-8 flex items-center justify-center">
+            <div className="text-lg">Chargement...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Reference data with mapping
+  const referenceData: {
+    data: unknown[] | undefined;
+    name: ReferenceFieldName;
+    label: string;
+    getLabel: (item: unknown) => string;
+  }[] = [
+    {
+      data: marques.data?.map((item) => ({ ...item, id: item.id_marque })),
+      name: "id_marque",
+      label: "Marque",
+      getLabel: (item: unknown) => (item as marqueTypes).libelle_marque,
+    },
+    {
+      data: modeles.data?.map((item) => ({ ...item, id: item.id_modele })),
+      name: "id_modele",
+      label: "Modèle",
+      getLabel: (item: unknown) => (item as modeleTypes).libelle_modele,
+    },
+    {
+      data: categories.data?.map((item) => ({
+        ...item,
+        id: item.id_categorie,
+      })),
+      name: "id_categorie",
+      label: "Catégorie",
+      getLabel: (item: unknown) => (item as categorieTypes).libelle,
+    },
+    {
+      data: familles.data?.map((item) => ({ ...item, id: item.id_famille })),
+      name: "id_famille",
+      label: "Famille",
+      getLabel: (item: unknown) => (item as familleTypes).libelle_famille,
+    },
+  ];
+
   return (
-    <div className="container mx-auto p-4 max-w-5xl">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center">
-            {isEditMode ? "Modification" : "Ajout"} d'un produit
+    <div className="container mx-auto p-4">
+      <Card className="w-full shadow-lg">
+        <CardHeader className="pb-6">
+          <CardTitle className="text-2xl font-bold">
+            {isEditMode ? "Modification" : "Ajout"} d'un outil
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base">
             {isEditMode
               ? "Modifiez les informations du produit sélectionné"
               : "Ajoutez un nouveau produit à votre catalogue"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
-          {submitResult.message && (
-            <Alert
-              className={`mb-6 ${
-                submitResult.success ? "bg-green-50" : "bg-red-50"
-              }`}
-            >
-              {submitResult.success ? (
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              ) : (
-                <AlertCircle className="h-4 w-4 text-red-600" />
-              )}
-              <AlertTitle>
-                {submitResult.success ? "Succès" : "Erreur"}
-              </AlertTitle>
-              <AlertDescription>{submitResult.message}</AlertDescription>
-            </Alert>
-          )}
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="p-4 rounded-md mb-4">
-                <h3 className="font-medium mb-2">Classification du produit</h3>
+        <CardContent>
+          <Form  key={isEditMode ? `edit-${product.data?.code_produit}` : "create"} {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {/* Classification Section */}
+              <div className="px-4 pb-4 rounded-md">
+                <h3 className="font-medium mb-4 text-lg">
+                  Classification du produit
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ReferenceSelect
-                    items={marques}
-                    label="Marque"
-                    name="id_marque"
-                    getLabel={(item) => item.libelle_marque}
-                    control={form.control}
-                    isRequired={true}
-                    onChange={(value) =>
-                      handleReferenceChange("id_marque", Number.parseInt(value))
-                    }
-                  />
-                  <ReferenceSelect
-                    items={modeles}
-                    label="Modèle"
-                    name="id_modele"
-                    control={form.control}
-                    getLabel={(item) => item.libelle_modele}
-                    isRequired={true}
-                    onChange={(value) =>
-                      handleReferenceChange("id_modele", Number.parseInt(value))
-                    }
-                  />
-                  <ReferenceSelect
-                    items={categories}
-                    label="Catégorie"
-                    name="id_categorie"
-                    control={form.control}
-                    getLabel={(item) => item.libelle_categorie}
-                    isRequired={true}
-                    onChange={(value) =>
-                      handleReferenceChange(
-                        "id_categorie",
-                        Number.parseInt(value)
-                      )
-                    }
-                  />
-                  <ReferenceSelect
-                    items={familles}
-                    label="Famille"
-                    name="id_famille"
-                    control={form.control}
-                    isRequired={true}
-                    getLabel={(item) => item.libelle_famille}
-                    onChange={(value) =>
-                      handleReferenceChange(
-                        "id_famille",
-                        Number.parseInt(value)
-                      )
-                    }
-                  />
+                  {referenceData.map(({ data, name, label, getLabel }) => (
+                    <ReferenceSelect
+                      key={name}
+                      items={(data as { id: number }[]) ?? []}
+                      label={label}
+                      name={name}
+                      control={form.control}
+                      isRequired={true}
+                      getLabel={getLabel}
+                      onChange={handleFieldChange}
+                    />
+                  ))}
+
                   <FormField
                     control={form.control}
                     name="code_produit"
@@ -267,13 +387,14 @@ export default function ReferenceForm() {
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="id_type_produit"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="hidden">
                         <FormControl>
-                          <Input {...field} type="hidden" value="2" />
+                          <Input {...field} type="hidden" />
                         </FormControl>
                       </FormItem>
                     )}
@@ -281,24 +402,36 @@ export default function ReferenceForm() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Product Info & Images Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div className="space-y-6">
-                  <h3 className="font-medium mb-2">Informations du produit</h3>
+                  <h3 className="font-medium text-lg">
+                    Informations du produit
+                  </h3>
+
                   <FormField
                     control={form.control}
                     name="desi_produit"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Désignation<span className="text-red-500">*</span>
+                          Désignation <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Nom du produit" {...field} />
+                          <Input
+                            placeholder="Nom de l'outil"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              handleFieldChange();
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="desc_produit"
@@ -308,8 +441,12 @@ export default function ReferenceForm() {
                         <FormControl>
                           <Textarea
                             placeholder="Description détaillée du produit"
-                            className="h-24"
+                            className="min-h-24 resize-y"
                             {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              handleFieldChange();
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
@@ -318,44 +455,124 @@ export default function ReferenceForm() {
                   />
                 </div>
 
-                <div>
-                  <h3 className="font-medium mb-2">Image du produit</h3>
-                  <FormField
-                    control={form.control}
-                    name="image_produit"
-                    render={() => (
-                      <FormItem>
-                        <FormControl>
-                          <ImageDropzone
-                            onImageSelected={handleImageSelected}
-                            initialImage={form.getValues("image_produit")}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {/* Images Section */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-lg">Images du produit</h3>
+
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                    <ImageDropzone onImageSelected={handleImageSelected} />
+                  </div>
+
+                  {productImages.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">
+                        Images ajoutées ({productImages.length})
+                      </h4>
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {productImages.map((image, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50"
+                          >
+                            
+
+                            <div className="w-12 h-12 shrink-0">
+                              {image.dataUrl ||
+                              image.url ||
+                              image.lien_image ? (
+                                <img
+                                  src={
+                                    image.dataUrl ||
+                                    image.url ||
+                                    image.lien_image
+                                  }
+                                  alt={image.libelle_image}
+                                  className="w-full h-full object-cover rounded border"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-200 rounded border flex items-center justify-center">
+                                  <span className="text-xs text-gray-500">
+                                    IMG
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex-1">
+                              <Input
+                                value={image.libelle_image}
+                                onChange={(e) =>
+                                  handleImageChange(
+                                    "label",
+                                    index,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Nom de l'image"
+                                className="text-sm"
+                              />
+                            </div>
+
+                            <div className="flex gap-1 shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="px-2"
+                                onClick={() =>
+                                  handleImageChange(
+                                    "reorder",
+                                    index,
+                                    Math.max(0, index - 1)
+                                  )
+                                }
+                                disabled={index === 0}
+                              >
+                                ↑
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="px-2"
+                                onClick={() =>
+                                  handleImageChange(
+                                    "reorder",
+                                    index,
+                                    Math.min(
+                                      productImages.length - 1,
+                                      index + 1
+                                    )
+                                  )
+                                }
+                                disabled={index === productImages.length - 1}
+                              >
+                                ↓
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="px-2"
+                                onClick={() =>
+                                  handleImageChange("remove", index)
+                                }
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="grid items-start grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="emplacement"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Emplacement<span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Localisation du produit"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
+              {/* Additional Info Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <FormField
                   control={form.control}
                   name="caracteristiques"
@@ -365,8 +582,35 @@ export default function ReferenceForm() {
                       <FormControl>
                         <Textarea
                           placeholder="Caractéristiques techniques"
-                          className="h-24"
+                          className="min-h-24 resize-y"
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleFieldChange();
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="emplacement_produit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Emplacement <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Localisation de l'outil"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleFieldChange();
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -374,36 +618,39 @@ export default function ReferenceForm() {
                   )}
                 />
               </div>
-              <div className="pt-4 border-t">
-                <div className="flex justify-end space-x-4">
+
+              {/* Action Buttons */}
+              <div className="flex justify-between pt-6 border-t border-gray-200">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isLoading}
+                  className="min-w-32"
+                >
+                  Annuler
+                </Button>
+
+                <div className="flex space-x-4">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      if (isEditMode) {
-                        // Réinitialiser avec les données originales du produit
-                        // fetchProduct();
-                      } else {
-                        // Réinitialiser avec les valeurs par défaut
-                        form.reset(defaultValues);
-                        setSelectedReferences({
-                          id_marque: defaultValues.id_marque,
-                          id_modele: defaultValues.id_modele,
-                          id_categorie: defaultValues.id_categorie,
-                          id_famille: defaultValues.id_famille,
-                          id_type_produit: 2,
-                        });
-                      }
-                    }}
+                    onClick={handleReset}
+                    disabled={isLoading}
+                    className="min-w-32"
                   >
                     Réinitialiser
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="min-w-48"
+                  >
+                    {isLoading
                       ? "Enregistrement en cours..."
                       : isEditMode
                       ? "Enregistrer les modifications"
-                      : "Ajouter le produit"}
+                      : "Ajouter un outil"}
                   </Button>
                 </div>
               </div>

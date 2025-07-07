@@ -1,5 +1,5 @@
-import { ProductInstanceDashboard } from "../components/ProductInstanceDashboard";
+import { ExemplaireOutilsDashboard } from "..";
 
 export default function Dashboard() {
-  return <ProductInstanceDashboard />;
+  return <ExemplaireOutilsDashboard />;
 }

@@ -1,14 +1,18 @@
 // src/services/exemplaireSortieService.ts
-import {api }from "@/api/api"; // Assurez-vous que le chemin d'importation est correct
+import {useApi }from "@/api/api"; // Assurez-vous que le chemin d'importation est correct
 import { PaginatedResponse, PaginationParams,ExemplaireSortieFormValues ,idSotieOutils } from "../types";
 
+const Returnapi = () => {
+  const api = useApi();
+  return api;
+};
 export const exemplaireSortieService = {
   // getAll: async (params: PaginationParams): Promise<PaginatedResponse<ExemplaireSortie>> => {
   //   const response = await api.get("/exemplaire-sorties", { params });
   //   return response.data;
   // },
   getAll: async (params: PaginationParams): Promise<PaginatedResponse<ExemplaireSortieFormValues>> => {
-    
+    console.log("params", params);
     const prod = 
       [
         {
@@ -109,11 +113,13 @@ export const exemplaireSortieService = {
   
   getById: async (ids: idSotieOutils): Promise<ExemplaireSortieFormValues> => {
     const { id_exemplaire, id_employes, date_de_sortie } = ids;
+    const api = Returnapi();
     const response = await api.get(`/exemplaire-sorties/${id_exemplaire}/${id_employes}/${encodeURIComponent(String(date_de_sortie))}`);
     return response.data;
   },
   
   create: async (data: ExemplaireSortieFormValues): Promise<ExemplaireSortieFormValues> => {
+  const api = Returnapi();
     const response = await api.post("/exemplaire-sorties", data);
     return response.data;
   },
@@ -123,7 +129,7 @@ export const exemplaireSortieService = {
     data: Omit<ExemplaireSortieFormValues, "id_exemplaire" | "id_employes" | "date_de_sortie">
   ): Promise<ExemplaireSortieFormValues> => {
     const { id_exemplaire, id_employes, date_de_sortie } = ids;
-  
+    const api = Returnapi();
     const response = await api.put(
       `/exemplaire-sorties/${id_exemplaire}/${id_employes}/${encodeURIComponent(String(date_de_sortie))}`,
       data
@@ -136,6 +142,7 @@ export const exemplaireSortieService = {
   
   delete: async (ids: idSotieOutils): Promise<void> => {
     const { id_exemplaire, id_employes, date_de_sortie } = ids;
+    const api = Returnapi();
     const response = await api.delete(
       `/exemplaire-sorties/${id_exemplaire}/${id_employes}/${encodeURIComponent(String(date_de_sortie))}`,
     );

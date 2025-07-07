@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useProducts } from "../../modules/stocks/reference/hooks/useProducts";
+import { useMemo } from "react";
 
 interface ProductComboboxProps {
   value: string;
@@ -31,7 +32,7 @@ export function ProductCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const { products } = useProducts();
-  const allProducts = products.data?.pages?.flatMap(page => page.data) || []
+  const allProducts = useMemo(() => products.data?.pages?.flatMap(page => page.data) || [], [products.data?.pages]);
   // Filtrer les produits selon la recherche
   const filteredProducts = React.useMemo(() => {
     if (!searchTerm) return allProducts;
@@ -88,8 +89,8 @@ export function ProductCombobox({
                 >
                   <div>
                     <img
-                      src={product.image_produit?.[0]?.url}
-                      alt={product.image_produit?.[0]?.libelle_image}
+                      src={product.images?.[0]?.url}
+                      alt={product.images?.[0]?.libelle_image}
                       className="w-8 h-8 rounded mr-2"
                     />
                   </div>

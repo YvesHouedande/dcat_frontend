@@ -1,4 +1,4 @@
-// src/components/combobox/DeliveryCombobox.tsx
+// src/components/combobox/partenaireCombobox.tsx
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,17 +16,45 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
 
-interface DeliveryComboboxProps {
-  value: string;
+import { useQuery } from "@tanstack/react-query";
+import { useApi } from "@/api/api";
+import { Partenaires } from "@/modules/administration-Finnance/administration/types/interfaces";
+
+interface PartenaireComboboxProps {
+  value: string | undefined;
   onChange: (value: string | number) => void;
 }
 
-export function PartenaireCombobox({ value, onChange }: DeliveryComboboxProps) {
+const PartenaireService = () => {
+  const api = useApi();
+  return {
+    fetchPartenaire: async (): Promise<Partenaires[]> => {
+      const response = await api.get(`administration/partenaires`);
+      return response.data;
+    },
+  };
+};
+
+const usePartenaire = () => {
+  // Query pour les livraisons
+  const partenaireServie = PartenaireService();
+  const partenaires = useQuery({
+    queryKey: ["livraisons"],
+    queryFn: partenaireServie.fetchPartenaire,
+    staleTime: 15 * 60 * 1000, // 15 minutes (optionnel)
+  });
+  return {
+    partenaires: partenaires.data,
+    isLoading: partenaires.isLoading,
+  };
+};
+export function PartenaireCombobox({ value, onChange }: PartenaireComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const { livraisons: deliveries, isLoading } = useLivraisonData();
+
+
+  const { partenaires: deliveries, isLoading } = usePartenaire();
 
   const deliveriesArray = React.useMemo(
     () => (Array.isArray(deliveries) ? deliveries : []),
@@ -35,8 +63,8 @@ export function PartenaireCombobox({ value, onChange }: DeliveryComboboxProps) {
 
   const filteredDeliveries = React.useMemo(() => {
     if (!searchTerm) return deliveriesArray;
-    return deliveriesArray.filter((delivery) =>
-      delivery.reference.toLowerCase().includes(searchTerm.toLowerCase())
+    return deliveriesArray.filter((partenaire) =>
+      partenaire.nom_partenaire.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [deliveriesArray, searchTerm]);
 
@@ -52,16 +80,16 @@ export function PartenaireCombobox({ value, onChange }: DeliveryComboboxProps) {
         >
           {value
             ? deliveriesArray.find(
-                (delivery) => String(delivery.id_livraison) === value
-              )?.reference
-            : "Sélectionner reference d'achat..."}
+                (partenaire) => String(partenaire.id_partenaire) === value
+              )?.nom_partenaire
+            : "Sélectionner une partenaire..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Rechercher une référence..."
+            placeholder="Rechercher une partenaire..."
             className="h-9"
             value={searchTerm}
             onValueChange={setSearchTerm}
@@ -69,20 +97,26 @@ export function PartenaireCombobox({ value, onChange }: DeliveryComboboxProps) {
           <CommandList>
             <CommandEmpty>Aucune référence trouvée.</CommandEmpty>
             <CommandGroup className="max-h-60 overflow-y-auto">
-              {filteredDeliveries.map((delivery) => (
+              {filteredDeliveries.map((partenaire) => (
                 <CommandItem
-                  key={delivery.id_livraison}
-                  value={String(delivery.id_livraison)}
+                  key={partenaire.id_partenaire}
+                  value={String(partenaire.id_partenaire)}
                   onSelect={(currentValue) => {
                     onChange(currentValue);
                     setOpen(false);
                   }}
                 >
-                  {delivery.reference}
+                 
+                  <div className="flex flex-col">
+                    <span className="font-medium"> {partenaire.nom_partenaire}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {partenaire.email_partenaire} | {partenaire.telephone_partenaire}
+                    </span>
+                  </div>
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",
-                      value === String(delivery.id_livraison)
+                      value === String(partenaire.nom_partenaire)
                         ? "opacity-100"
                         : "opacity-0"
                     )}

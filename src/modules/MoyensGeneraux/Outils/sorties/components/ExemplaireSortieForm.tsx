@@ -12,7 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ExemplaireSortieFormValues, ProductInstance } from "../types";
+import { ExemplaireSortieFormValues, ExemplaireProduit } from "../types";
 import {
   Select,
   SelectContent,
@@ -44,7 +44,7 @@ interface CommandeOption {
 export interface ExemplaireSortieFormProps {
   onSubmit: (data: ExemplaireSortieFormValues) => void;
   onCancel: () => void;
-  exemplaires?: ProductInstance[];
+  exemplaires?: ExemplaireProduit[];
   isEditMode: boolean;
   defaultValues?: ExemplaireSortieFormValues | undefined;
   // Ajoutez ces propriétés selon vos besoins

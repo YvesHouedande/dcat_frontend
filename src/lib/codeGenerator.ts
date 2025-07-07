@@ -1,20 +1,32 @@
-/**
- * Génère un code produit à partir des trois premières lettres du modèle, de la famille et de la marque
- * @param modele Nom du modèle (ex: "Modèle Standard")
- * @param famille Nom de la famille (ex: "Informatique")
- * @param marque Nom de la marque (ex: "TechPro")
- * @returns Code produit formaté (ex: "MOD-INF-TEC")
- */
-export function generateProductCode(modele: string, famille: string, marque: string): string {
-    const getFirstThreeLetters = (str: string) => 
-      str
-        .replace(/[^a-zA-Z]/g, '') // Supprime les caractères non alphabétiques
-        .toUpperCase()
-        .substring(0, 3);
-    
-    const modelePart = getFirstThreeLetters(modele);
-    const famillePart = getFirstThreeLetters(famille);
-    const marquePart = getFirstThreeLetters(marque);
-    
-    return `${modelePart}-${famillePart}-${marquePart}`;
+// adapte le chemin si besoin
+import { marqueTypes,modeleTypes, categorieTypes, familleTypes } from "@/modules/stocks/types/reference";;
+
+
+function getFirstThreeUpper(str: string): string {
+  return str.slice(0, 3).toUpperCase();
+}
+export function generateProductCode(
+  id_marque: number | number,
+  id_modele: number | number,
+  id_categorie: number | number,
+  id_famille: number | number,
+  marques: marqueTypes[],
+  modeles: modeleTypes[],
+  categories: categorieTypes[],
+  familles: familleTypes[]
+): string | undefined {
+  const marqueObj = marques.find((m) => m.id_marque === id_marque);
+  const modeleObj = modeles.find((m) => m.id_modele === id_modele);
+  const categorieObj = categories.find((c) => c.id_categorie === id_categorie);
+  const familleObj = familles.find((f) => f.id_famille === id_famille);
+
+  if (
+    marqueObj?.id_marque &&
+    modeleObj?.id_modele &&
+    categorieObj?.id_categorie &&
+    familleObj?.id_famille
+  ) {
+    return `${getFirstThreeUpper(marqueObj.libelle_marque)}-${getFirstThreeUpper(modeleObj.libelle_modele)}-${getFirstThreeUpper(categorieObj.libelle)}-${getFirstThreeUpper(familleObj.libelle_famille)}`;
   }
+  return undefined;
+}

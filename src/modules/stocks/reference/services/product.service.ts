@@ -1,52 +1,65 @@
 // src/services/productService.ts
 
-import { api } from "@/api/api";
-import { ReferenceProduit, ImageProduit, categorieTypes, marqueTypes, familleTypes, modeleTypes, typeTypes } from "../../types/reference"; // Importez Image ici aussi
+import { useApi } from "@/api/api";
+import { ReferenceProduit } from "../../types/reference"; // Importez Image ici aussi
+import {
+  ApiResponse,
+  ProductFilters,
+  ProductServiceResponse,
+} from "../types/referenceTypes";
 
-// Définissez une interface pour la structure complète de la réponse API
-interface ApiDataItem {
-  produit: ReferenceProduit;
-  category: categorieTypes;
-  modele: modeleTypes;
-  famille: familleTypes;
-  marque: marqueTypes;
-  images: ImageProduit[]; // C'est ici que les images sont directement disponibles dans la réponse de l'API
-  type:typeTypes ; // Ajoutez le type_produit ici
-}
-
-interface ApiResponse {
-  data: ApiDataItem[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-}
-
-// Définissez ce que la fonction getAll va réellement retourner
-interface ProductServiceResponse {
-  data: ReferenceProduit[]; // Le tableau des produits aplati
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
-}
-
+// transformation des données pour l'API
+const transformData = (values: ReferenceProduit) => {
+  {
+    const formData = new FormData();
+    formData.append("code_produit", values.code_produit ?? "");
+    formData.append("desi_produit", values.desi_produit);
+    formData.append("desc_produit", values.desc_produit ?? "");
+    formData.append("emplacement_produit", values.emplacement_produit);
+    formData.append("id_categorie", values.id_categorie.toString());
+    formData.append("id_famille", values.id_famille.toString());
+    formData.append("id_marque", values.id_marque.toString());
+    formData.append("id_modele", values.id_modele.toString());
+    formData.append("id_type_produit", values.id_type_produit.toString());
+    if (values.imagesMeta !== undefined) {
+      formData.append("imagesMeta", values.imagesMeta);
+    } else {
+      formData.append("imagesMeta", "");
+    }
+    // Pour chaque image
+    values.images?.forEach((img) => {
+      if (img.file) {
+        formData.append("images", img.file); // ⚠️ clé "images" multiple pour plusieurs fichiers
+      }
+    });
+    return formData;
+  }
+};
 export const useProductService = () => {
-  const apis = api();
-
-  const getAll = async (page: number = 1, limit: number = 12): Promise<ProductServiceResponse> => {
-    const response = await apis.get<ApiResponse>(`stocks/produits?page=${page}&limit=${limit}`);
+  const apis = useApi();
+  const getAll = async (
+    page: number,
+    limit: number,
+    filters: ProductFilters
+  ): Promise<ProductServiceResponse> => {
+    const params = { page, limit, ...filters, typeId: 1 }; // Ajoutez d'autres filtres si nécessaire
+    // const response = await apis.get<ApiResponse>(`stocks/produits?page=${page}&limit=${limit}`);
+    const response = await apis.get<ApiResponse>(`stocks/produits?`, {
+      params,
+    });
 
     const apiResponse = response.data;
 
     // Extrayez uniquement l'objet 'produit' et ajoutez la liste 'images'
-    const produits: ReferenceProduit[] = apiResponse.data.map(item => ({
+    const produits: ReferenceProduit[] = apiResponse.data.map((item) => ({
       ...item.produit, // Copie toutes les propriétés de l'objet produit
-      image_produit: item.images, // Ajoute le tableau 'images' directement
+      images: item.images, // Ajoute le tableau 'images' directement
       type_produit: item.type.libelle,
+      famille: item.famille.libelle_famille,
+      categorie: item.category.libelle,
+      marque: item.marque.libelle_marque,
+      modele: item.modele.libelle_modele,
     }));
-
     return {
       data: produits,
       currentPage: apiResponse.pagination.page,
@@ -59,26 +72,45 @@ export const useProductService = () => {
   // ...
   const getById = async (id: string | number): Promise<ReferenceProduit> => {
     const response = await apis.get(`stocks/produits/${id}`);
-    // Si la réponse de getById a la même structure complète avec 'produit' et 'images',
-    // vous devrez adapter cette ligne aussi :
-    return { ...response.data.produit, image_produit: response.data.images, 
-      type_produit: response.data.type.libelle ,
+    // la réponse de getById n'a la même structure complète avec 'produit' et 'images',
+    // donc on doit l'adapter ici aussi
+    // On suppose que la réponse a la même structure que dans getAll
+
+    return {
+      ...response.data.produit,
+      images: response.data.images,
+      type_produit: response.data.type.libelle,
       categorie: response.data.category.libelle,
       modele: response.data.modele.libelle_modele,
       famille: response.data.famille.libelle_famille,
-      marque: response.data.marque.libelle_marque,};
+      marque: response.data.marque.libelle_marque,
+    };
   };
 
   // ... (create, update, delete)
-  const create = async (produit: ReferenceProduit): Promise<ReferenceProduit> => {
-    const response = await apis.post("stocks/produits", produit);
+  const create = async (
+    produit: ReferenceProduit
+  ): Promise<ReferenceProduit> => {
+    const formData = transformData(produit);
+    const response = await apis.post("stocks/produits", formData);
     return response.data;
   };
 
   // Mettre à jour un produit
-  const update = async (produit: ReferenceProduit): Promise<ReferenceProduit> => {
-    const response = await apis.put(`stocks/produits/${produit.id_produit}`, produit);
-    return response.data;
+  const update = async (
+    produit: ReferenceProduit
+  ): Promise<ReferenceProduit> => {
+    const formData = transformData(produit);
+    // Note: Assurez-vous que l'ID du produit est bien défini dans l'objet produit
+    const response = await apis.put(
+      `stocks/produits/${produit.id_produit}`,
+      formData
+    );
+    return {
+      ...response.data, // Conserver les autres propriétés du produit
+      images: response.data.images, // Mettre à jour les images depuis la réponse
+      id_produit: produit.id_produit, // Assurez-vous que l'ID est correct
+    };
   };
 
   // Supprimer un produit
@@ -91,6 +123,6 @@ export const useProductService = () => {
     getById,
     create,
     update,
-    delete: deleteProduct
+    delete: deleteProduct,
   };
 };

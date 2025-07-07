@@ -1,354 +1,418 @@
-import React, { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreVertical, Search, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Layout from "@/components/Layout";
+import { Projet, Employe, Tache, TacheWithAssignedEmployes } from "../types/types";
+
+// Import components
+import { TacheHeader } from "../tasks/components/TacheHeader";
+import { TacheFilters } from "../tasks/components/TacheFilters";
+import { TacheTable } from "../tasks/components/TacheTable";
+import { TacheKPICard } from "../tasks/components/TacheKPICards";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { ProjetPagination } from "../projet/components/ProjetPagination";
+
+// Import API functions
+import { 
+    getTachesByProjet, 
+    deleteTacheSafely, 
+    assignEmployeToTache,
+    removeEmployeFromTache,
+    getEmployesAssignes 
+} from "../tasks/api/taches";
+import { fetchAllProjets } from "../projet/api/projets";
+import { getEmployes } from "../projet/api/employes";
+
+import { SquareKanban, Clock, Flag, Gauge } from "lucide-react"; 
+
+const TachesPage = () => {
+    const navigate = useNavigate();
+    const [taches, setTaches] = useState<TacheWithAssignedEmployes[]>([]); 
+    const [projets, setProjets] = useState<Projet[]>([]);
+    const [employes, setEmployes] = useState<Employe[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Filter states
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatut, setFilterStatut] = useState<Tache["statut"] | "tous">("tous");
+    const [filterPriorite, setFilterPriorite] = useState<Tache["priorite"] | "toutes">("toutes");
+    const [filterProjet, setFilterProjet] = useState<number>(0);
+    const [filterAssignee, setFilterAssignee] = useState<number>(0);
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const tachesPerPage = 10; // Nombre de tâches par page
+
+    // Data Loading Effect
+    useEffect(() => {
+        const loadAllData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const [fetchedProjets, fetchedEmployes] = await Promise.all([
+                    fetchAllProjets(),
+                    getEmployes(),
+                ]);
+
+                // Handle projets response - fetchAllProjets returns ApiResponse<Projet[]>
+                let projetsArray: Projet[] = [];
+                if (fetchedProjets.data && Array.isArray(fetchedProjets.data)) {
+                    projetsArray = fetchedProjets.data;
+                } else if (Array.isArray(fetchedProjets)) {
+                    projetsArray = fetchedProjets;
+                }
+
+                setProjets(projetsArray);
+                setEmployes(fetchedEmployes);
+
+                let allBaseTaches: Tache[] = [];
+                if (projetsArray.length > 0) {
+                    const allTachesPromises = projetsArray.map(projet => 
+                        getTachesByProjet(projet.id_projet)
+                    );
+                    // Attend toutes les réponses des API
+                    const tachesResponses = await Promise.all(allTachesPromises);
+
+                    // MODIFICATION CLÉ ICI : Extraire l'array 'data' de chaque réponse AVANT d'aplatir
+                    allBaseTaches = tachesResponses.flatMap(response => {
+                        // S'assurer que la réponse est un objet et qu'elle contient une propriété 'data' qui est un tableau
+                        return (response && typeof response === 'object' && Array.isArray(response.data)) 
+                               ? response.data 
+                               : [];
+                    });
+                }
+                
+                // AJOUT POUR LE DIAGNOSTIC : Vérifier le contenu de allBaseTaches après extraction et aplatissement
+                console.log("DEBUG: Tâches de base récupérées (après extraction et aplatissement):", allBaseTaches);
+
+                // Filtrage pour s'assurer que tache.id_tache est valide avant de récupérer les assignés
+                const tachesWithAssigneesPromises = allBaseTaches
+                    .filter(tache => 
+                        tache && // S'assurer que l'objet tache n'est pas null/undefined
+                        typeof tache.id_tache === 'number' && // S'assurer que id_tache est un nombre
+                        !isNaN(tache.id_tache) // S'assurer que le nombre n'est pas NaN
+                    )
+                    .map(async (tache) => {
+                        try {
+                            const assignedEmployes = await getEmployesAssignes(tache.id_tache);
+                            return {
+                                ...tache,
+                                id_assigne_a: assignedEmployes,
+                            } as TacheWithAssignedEmployes;
+                        } catch (assigneeError) {
+                            console.error(`Erreur lors de la récupération des assignés pour la tâche ${tache.id_tache}:`, assigneeError);
+                            // En cas d'erreur pour une tâche spécifique, on retourne la tâche sans assignés (tableau vide)
+                            // pour ne pas bloquer l'affichage des autres tâches.
+                            return {
+                                ...tache,
+                                id_assigne_a: [],
+                            } as TacheWithAssignedEmployes;
+                        }
+                    });
+
+                const enrichedTaches = await Promise.all(tachesWithAssigneesPromises);
+                setTaches(enrichedTaches);
+
+            } catch (err) {
+                console.error("Erreur lors du chargement des données initiales:", err);
+                if (err instanceof Error) {
+                    setError(`Impossible de charger les données: ${err.message}`);
+                    toast.error(`Erreur de chargement des données: ${err.message}`);
+                } else {
+                    setError("Impossible de charger les données. Veuillez réessayer.");
+                    toast.error("Erreur de chargement des données. Veuillez réessayer.");
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadAllData();
+    }, []); 
+
+    // Filtering Logic for the TacheTable
+    const filteredTaches = useMemo(() => {
+        return taches.filter(tache => {
+            const matchesSearch =
+                (tache.nom_tache || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (tache.desc_tache || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+            const matchesStatut = filterStatut === "tous" || tache.statut === filterStatut;
+            
+            const matchesPriorite = filterPriorite === "toutes" || 
+            (tache.priorite && tache.priorite.toLowerCase() === filterPriorite.toLowerCase());
+            
+            const matchesProjet = filterProjet === 0 || tache.id_projet === filterProjet;
+            
+            const matchesAssignee = filterAssignee === 0 || 
+                (tache.id_assigne_a && tache.id_assigne_a.some(employe => employe.id_employes === filterAssignee));
+
+            return matchesSearch && matchesStatut && matchesPriorite && matchesProjet && matchesAssignee;
+        });
+    }, [taches, searchTerm, filterStatut, filterPriorite, filterProjet, filterAssignee]);
+
+    // Pagination logic
+    const indexOfLastTache = currentPage * tachesPerPage;
+    const indexOfFirstTache = indexOfLastTache - tachesPerPage;
+    const currentTaches = filteredTaches.slice(indexOfFirstTache, indexOfLastTache);
+    const totalPages = Math.ceil(filteredTaches.length / tachesPerPage);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterStatut, filterPriorite, filterProjet, filterAssignee]);
+
+    // KPI Calculations (NOW PROJECT-SPECIFIC)
+    const kpiData = useMemo(() => {
+        // Sélectionne les tâches pertinentes pour le KPI, filtrées par projet
+        const tasksForKPIs = filterProjet === 0
+            ? taches // Si 'Tous les projets' est sélectionné, utilise toutes les tâches
+            : taches.filter(tache => tache.id_projet === filterProjet);
+
+        const totalTasks = tasksForKPIs.length;
+        const tasksByStatus = {
+            "à faire": tasksForKPIs.filter(t => t.statut === "à faire").length,
+            "en cours": tasksForKPIs.filter(t => t.statut === "en cours").length,
+            "en revue": tasksForKPIs.filter(t => t.statut === "en revue").length,
+            "terminé": tasksForKPIs.filter(t => t.statut === "terminé").length,
+            "bloqué": tasksForKPIs.filter(t => t.statut === "bloqué").length,
+        };
+        const overdueTasks = tasksForKPIs.filter(tache =>
+            tache.date_fin && new Date(tache.date_fin) < new Date() && tache.statut !== "terminé"
+        ).length;
+
+        const completedTasks = tasksByStatus["terminé"];
+        const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : "0.0";
+
+        return { totalTasks, tasksByStatus, overdueTasks, completionRate };
+    }, [taches, filterProjet]); 
 
 
-export interface Tache {
-  id_tache: number;
-  nom_tache: string;
-  desc_tache: string;
-  statut: "à faire" | "en cours" | "en revue" | "terminé" | "bloqué";
-  date_debut: string;
-  date_fin: string;
-  priorite: "faible" | "moyenne" | "haute";
-  id_projet: number;
-  nom_projet: string;
-  assigne_a: string;
-}
+    // Action Handlers
+    const handleDeleteTache = async (id: number) => {
+        if (window.confirm("Êtes-vous sûr de vouloir supprimer cette tâche ?")) {
+            try {
+                await deleteTacheSafely(id);
+                setTaches((prev) => prev.filter((t) => t.id_tache !== id));
+                toast.success("Tâche supprimée avec succès !");
+            } catch (err) {
+                console.error("Erreur lors de la suppression de la tâche:", err);
+                if (err instanceof Error) {
+                    toast.error(`Échec de la suppression: ${err.message}`);
+                } else {
+                    toast.error("Échec de la suppression de la tâche. Veuillez réessayer.");
+                }
+            }
+        }
+    };
 
-export interface Projet {
-  id_projet: number;
-  nom_projet: string;
-  description: string;
-  date_debut: string;
-  date_fin: string;
-}
+    const handleEditTache = (id: number) => {
+        navigate(`/technique/projets/taches/${id}/editer`);
+    };
 
-const ProjetsTachesPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("tous");
-  const [priorityFilter, setPriorityFilter] = useState<string>("tous");
-  const [projectFilter, setProjectFilter] = useState<string>("tous");
+    const handleViewTache = (id: number) => {
+        navigate(`/technique/projets/taches/${id}/details`);
+    };
 
-  // Données mockées
-  const projets: Projet[] = [
-    {
-      id_projet: 1,
-      nom_projet: "Site E-commerce",
-      description: "Développement d'une plateforme de vente en ligne",
-      date_debut: "2023-01-15",
-      date_fin: "2023-06-30",
-    },
-    {
-      id_projet: 2,
-      nom_projet: "Application Mobile",
-      description: "Création d'une appli de gestion de tâches",
-      date_debut: "2023-03-01",
-      date_fin: "2023-08-15",
-    },
-  ];
+    const handleAddTask = () => {
+        navigate("/technique/projets/taches/nouvelle");
+    };
 
-  const taches: Tache[] = [
-    {
-      id_tache: 1,
-      nom_tache: "Conception UI",
-      desc_tache: "Maquettes des pages principales",
-      statut: "terminé",
-      date_debut: "2023-01-20",
-      date_fin: "2023-02-10",
-      priorite: "haute",
-      id_projet: 1,
-      nom_projet: "Site E-commerce",
-      assigne_a: "Jean Dupont",
-    },
-    {
-      id_tache: 2,
-      nom_tache: "API Produits",
-      desc_tache: "Développement des endpoints produits",
-      statut: "en cours",
-      date_debut: "2023-02-15",
-      date_fin: "2023-03-20",
-      priorite: "haute",
-      id_projet: 1,
-      nom_projet: "Site E-commerce",
-      assigne_a: "Marie Martin",
-    },
-    {
-      id_tache: 3,
-      nom_tache: "Authentification",
-      desc_tache: "Système de connexion utilisateur",
-      statut: "à faire",
-      date_debut: "2023-03-05",
-      date_fin: "2023-04-15",
-      priorite: "moyenne",
-      id_projet: 2,
-      nom_projet: "Application Mobile",
-      assigne_a: "Pierre Lambert",
-    },
-  ];
+    // Handler pour assigner un employé
+    const handleAssignEmployeToTache = async (tacheId: number, employeId: number) => {
+        try {
+            await assignEmployeToTache(tacheId, employeId); 
+            
+            const employeToAssign = employes.find(e => e.id_employes === employeId);
+            if (employeToAssign) {
+                setTaches(prevTaches => prevTaches.map(tache => {
+                    if (tache.id_tache === tacheId) {
+                        const isAlreadyAssigned = tache.id_assigne_a?.some(emp => emp.id_employes === employeId);
+                        if (!isAlreadyAssigned) {
+                            return { 
+                                ...tache, 
+                                id_assigne_a: [...(tache.id_assigne_a || []), employeToAssign] 
+                            } as TacheWithAssignedEmployes;
+                        }
+                    }
+                    return tache;
+                }));
+            }
+            
+            const employeName = employeToAssign 
+                ? `${employeToAssign.prenom_employes || ''} ${employeToAssign.nom_employes || ''}`.trim() 
+                : `Employé #${employeId}`;
+            
+            toast.success(`Tâche assignée à ${employeName} avec succès !`);
+        } catch (err) {
+            console.error("Erreur lors de l'assignation de la tâche:", err);
+            if (err instanceof Error) {
+                toast.error(`Échec de l'assignation: ${err.message}`);
+            } else {
+                toast.error("Échec de l'assignation de la tâche. Veuillez réessayer.");
+            }
+        }
+    };
 
-  // Filtrer les tâches
-  const filteredTaches = taches.filter((tache) => {
-    const matchesSearch = tache.nom_tache.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tache.desc_tache.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tache.nom_projet.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tache.assigne_a.toLowerCase().includes(searchTerm.toLowerCase());
+    // Handler pour désassigner un employé
+    const handleUnassignEmployeFromTache = async (tacheId: number, employeId: number) => {
+        try {
+            await removeEmployeFromTache(tacheId, employeId); 
+            
+            setTaches(prevTaches => prevTaches.map(tache => {
+                if (tache.id_tache === tacheId) {
+                    return {
+                        ...tache,
+                        id_assigne_a: (tache.id_assigne_a || []).filter(emp => emp.id_employes !== employeId)
+                    } as TacheWithAssignedEmployes;
+                }
+                return tache;
+            }));
+            
+            const employe = employes.find(e => e.id_employes === employeId);
+            const employeName = employe 
+                ? `${employe.prenom_employes || ''} ${employe.nom_employes || ''}`.trim() 
+                : `Employé #${employeId}`;
+            
+            toast.success(`${employeName} désassigné avec succès !`);
+        } catch (err) {
+            console.error("Erreur lors de la désassignation:", err);
+            if (err instanceof Error) {
+                toast.error(`Échec de la désassignation: ${err.message}`);
+            } else {
+                toast.error("Échec de la désassignation. Veuillez réessayer.");
+            }
+        }
+    };
 
-    const matchesStatus = statusFilter === "tous" || tache.statut === statusFilter;
-    const matchesPriority = priorityFilter === "tous" || tache.priorite === priorityFilter;
-    const matchesProject = projectFilter === "tous" || tache.id_projet.toString() === projectFilter;
+    // Options for project filter
+    const projetsOptions = useMemo(() => ([
+        { id: 0, name: "Tous les projets" },
+        ...projets.map(p => ({ id: p.id_projet, name: p.nom_projet }))
+    ]), [projets]);
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesProject;
-  });
+    // Options for employee filter
+    const employesOptions = useMemo(() => ([
+        { id: 0, name: "Tous les employés" },
+        ...employes.map(e => ({
+            id: e.id_employes,
+            name: `${e.prenom_employes || ''} ${e.nom_employes || ''}`.trim() || `Employé #${e.id_employes}`
+        }))
+    ]), [employes]);
 
-  // Gérer la suppression
-  const handleDelete = (id: number) => {
-    // Ici vous implémenteriez la logique de suppression réelle
-    console.log(`Suppression de la tâche ${id}`);
-    // Dans une vraie app, vous feriez un appel API puis rafraîchiriez les données
-  };
+    const clearFilters = () => {
+        setSearchTerm("");
+        setFilterStatut("tous");
+        setFilterPriorite("toutes");
+        setFilterProjet(0);
+        setFilterAssignee(0);
+    };
 
-  // Obtenir la classe de couleur en fonction du statut
-  const getStatusColor = (statut: string) => {
-    switch (statut) {
-      case "terminé":
-        return "bg-green-100 text-green-800";
-      case "en cours":
-        return "bg-blue-100 text-blue-800";
-      case "à faire":
-        return "bg-gray-100 text-gray-800";
-      case "en revue":
-        return "bg-purple-100 text-purple-800";
-      case "bloqué":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+    return (
+        
+            <div className="p-6 min-h-screen">
+                <div className="max-w-7xl mx-auto">
+                    <TacheHeader onAddTask={handleAddTask} />
 
-  // Obtenir la classe de couleur en fonction de la priorité
-  const getPriorityColor = (priorite: string) => {
-    switch (priorite) {
-      case "haute":
-        return "bg-red-100 text-red-800";
-      case "moyenne":
-        return "bg-yellow-100 text-yellow-800";
-      case "faible":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        {loading ? (
+                            <>
+                                <Skeleton className="h-[100px] w-full" />
+                                <Skeleton className="h-[100px] w-full" />
+                                <Skeleton className="h-[100px] w-full" />
+                                <Skeleton className="h-[100px] w-full" />
+                            </>
+                        ) : (
+                            <>
+                                <TacheKPICard
+                                    title="Total des Tâches"
+                                    value={kpiData.totalTasks}
+                                    icon={<SquareKanban className="h-8 w-8 text-blue-500" />}
+                                />
+                                <TacheKPICard
+                                    title="Tâches en Cours"
+                                    value={kpiData.tasksByStatus["en cours"]}
+                                    icon={<Clock className="h-8 w-8 text-yellow-500" />}
+                                />
+                                <TacheKPICard
+                                    title="Taux d'Achèvement"
+                                    value={`${kpiData.completionRate}%`}
+                                    icon={<Gauge className="h-8 w-8 text-purple-500" />}
+                                    subtext={`${kpiData.tasksByStatus["terminé"]} sur ${kpiData.totalTasks} terminées`}
+                                />
+                                <TacheKPICard
+                                    title="Tâches en Retard"
+                                    value={kpiData.overdueTasks}
+                                    icon={<Flag className="h-8 w-8 text-red-500" />}
+                                    subtext={kpiData.overdueTasks > 0 ? "Action requise !" : "À jour"}
+                                />
+                            </>
+                        )}
+                    </div>
 
-  return (
-    <Layout>
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Gestion des Projets et Tâches</h1>
-          <Button onClick={() => navigate("/technique/taches/nouvelle")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nouvelle Tâche
-          </Button>
-        </div>
+                    {/* Filters */}
+                    <TacheFilters
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        filterStatut={filterStatut}
+                        onFilterStatutChange={setFilterStatut}
+                        filterPriorite={filterPriorite}
+                        onFilterPrioriteChange={setFilterPriorite}
+                        filterProjet={filterProjet}
+                        onFilterProjetChange={setFilterProjet}
+                        filterAssignee={filterAssignee}
+                        onFilterAssigneeChange={setFilterAssignee}
+                        projetsOptions={projetsOptions}
+                        employesOptions={employesOptions}
+                        resultCount={filteredTaches.length}
+                    />
 
-        {/* Cartes de statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Tâches Total</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{taches.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Tâches en Cours</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {taches.filter(t => t.statut === "en cours").length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Projets Actifs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{projets.length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filtres */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="md:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Rechercher tâches, projets, assignés..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                    {/* Main Content (Table or No Results) */}
+                    {loading ? (
+                        <div className="space-y-4 mt-6">
+                            {[...Array(8)].map((_, i) => (
+                                <Skeleton key={i} className="h-12 w-full" />
+                            ))}
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-12 text-red-600">
+                            <p>{error}</p>
+                        </div>
+                    ) : filteredTaches.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-gray-500">Aucune tâche trouvée.</p>
+                            <button
+                                className="mt-4 text-sm text-blue-600 hover:text-blue-800"
+                                onClick={clearFilters}
+                            >
+                                Réinitialiser les filtres
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <TacheTable
+                                taches={currentTaches}
+                                onDelete={handleDeleteTache}
+                                onView={handleViewTache}
+                                onEdit={handleEditTache}
+                                onAssign={handleAssignEmployeToTache}
+                                onUnassign={handleUnassignEmployeFromTache} 
+                                projets={projets}
+                                employes={employes} 
+                            />
+                            <ProjetPagination 
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                totalItems={filteredTaches.length}
+                                itemsPerPage={tachesPerPage}
+                                className="mt-4"
+                            />
+                        </>
+                    )}
                 </div>
-              </div>
-              <div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Statut" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tous">Tous statuts</SelectItem>
-                    <SelectItem value="à faire">À faire</SelectItem>
-                    <SelectItem value="en cours">En cours</SelectItem>
-                    <SelectItem value="en revue">En revue</SelectItem>
-                    <SelectItem value="terminé">Terminé</SelectItem>
-                    <SelectItem value="bloqué">Bloqué</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Priorité" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tous">Toutes priorités</SelectItem>
-                    <SelectItem value="haute">Haute</SelectItem>
-                    <SelectItem value="moyenne">Moyenne</SelectItem>
-                    <SelectItem value="faible">Faible</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Select value={projectFilter} onValueChange={setProjectFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Projet" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tous">Tous projets</SelectItem>
-                    {projets.map((projet) => (
-                      <SelectItem key={projet.id_projet} value={projet.id_projet.toString()}>
-                        {projet.nom_projet}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Tableau des tâches */}
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tâche</TableHead>
-                <TableHead>Projet</TableHead>
-                <TableHead>Assigné à</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Priorité</TableHead>
-                <TableHead>Date de fin</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTaches.length > 0 ? (
-                filteredTaches.map((tache) => (
-                  <TableRow key={tache.id_tache}>
-                    <TableCell className="font-medium">{tache.nom_tache}</TableCell>
-                    <TableCell>{tache.nom_projet}</TableCell>
-                    <TableCell>{tache.assigne_a}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(tache.statut)}>
-                        {tache.statut}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getPriorityColor(tache.priorite)}>
-                        {tache.priorite}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(tache.date_fin).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/technique/taches/details/${tache.id_tache}`)}
-                          >
-                            Voir détails
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/technique/taches/edit/${tache.id_tache}`)}
-                          >
-                            Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDelete(tache.id_tache)}
-                          >
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    Aucune tâche trouvée
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Card>
-      </div>
-    </Layout>
-  );
+    );
 };
 
-export default ProjetsTachesPage;
-
-
-
-
-
+export default TachesPage;
