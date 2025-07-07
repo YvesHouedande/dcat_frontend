@@ -1,146 +1,185 @@
 import Layout from "@/components/Layout";
+import { JSX, ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  Users, Briefcase, FolderArchive, Calculator, CalendarDays,
+  Package, Tags, Percent, ShoppingCart, LayoutDashboard, FolderKanban,
+  CalendarClock, Wrench, ClipboardCheck, KanbanSquare, FolderGit2,
+  CalendarCheck, BookOpen, BookUser, Landmark, Laptop
+} from "lucide-react";
 
-const DCATInterface = () => {
+// --- Data Structure for Dashboard ---
+
+interface Section {
+  title: string;
+  route: string;
+  icon: ComponentType<{ className?: string }>;
+  color: string;
+}
+
+interface Department {
+  name: string;
+  route: string;
+  color: string;
+  sections: Section[];
+}
+
+const dashboardConfig: Record<"daf" | "dmc" | "dsei", Department> = {
+  daf: {
+    name: "Direction Administrative et Financière",
+    route: "/administration",
+    color: "bg-slate-700",
+    sections: [
+      { title: "Ressources", route: "/administration/documents", icon: FolderArchive, color: "from-amber-500 to-amber-600" },
+      { title: "Opérations Admin", route: "/administration/partenaires", icon: Briefcase, color: "from-emerald-500 to-emerald-600" },
+      { title: "Ressources Humaines", route: "/administration/employers", icon: Users, color: "from-orange-500 to-orange-600" },
+      { title: "Matérielles", route: "/administration/materiel", icon: Laptop, color: "from-green-500 to-green-600" },
+      { title: "Financières", route: "/administration/finance", icon: Landmark, color: "from-purple-500 to-purple-600" },
+      { title: "Opérations Fin.", route: "/administration/comptabilite", icon: Calculator, color: "from-red-600 to-red-700" },
+      { title: "Planning DAF", route: "/administration/planning", icon: CalendarDays, color: "from-teal-500 to-teal-600" },
+    ],
+  },
+  dmc: {
+    name: "Direction Marketing et Commerciale",
+    route: "/commercial",
+    color: "bg-orange-700",
+    sections: [
+      { title: "Produits", route: "/commercial/produits", icon: Package, color: "from-yellow-600 to-yellow-700" },
+      { title: "Prix", route: "/commercial/prix", icon: Tags, color: "from-yellow-600 to-yellow-700" },
+      { title: "Promotions", route: "/commercial/promotions", icon: Percent, color: "from-yellow-600 to-yellow-700" },
+      { title: "Distribution / Vente", route: "/commercial/distribution", icon: ShoppingCart, color: "from-yellow-600 to-yellow-700" },
+      { title: "Tableau de Bord", route: "/commercial/dashboard", icon: LayoutDashboard, color: "from-amber-600 to-amber-700" },
+      { title: "Dossiers DMC", route: "/commercial/dossiers", icon: FolderKanban, color: "from-pink-600 to-pink-700" },
+      { title: "Planning DCM", route: "/commercial/planning", icon: CalendarClock, color: "from-lime-500 to-lime-600" },
+    ],
+  },
+  dsei: {
+    name: "Direction des Systèmes d'Exploitation et d'Information",
+    route: "/technique",
+    color: "bg-blue-700",
+    sections: [
+      { title: "Interventions", route: "/technique/interventions", icon: Wrench, color: "from-sky-500 to-sky-600" },
+      { title: "Tâches", route: "/technique/projets/taches", icon: ClipboardCheck, color: "from-rose-400 to-rose-500" },
+      { title: "Projets", route: "/technique/projets", icon: KanbanSquare, color: "from-orange-400 to-orange-500" },
+      { title: "Dossiers DSEI", route: "/technique/document", icon: FolderGit2, color: "from-indigo-400 to-indigo-500" },
+      { title: "Planning DSEI", route: "/technique/planning", icon: CalendarCheck, color: "from-cyan-500 to-cyan-600" },
+    ],
+  },
+};
+
+const footerConfig: Section[] = [
+    { title: "Manuel des Procédures", route: "/documentation/procedures", icon: BookOpen, color: "from-gray-100 to-gray-200 text-gray-800" },
+    { title: "Contacts & Planning", route: "/administration/contacts", icon: BookUser, color: "from-gray-100 to-gray-200 text-gray-800" }
+];
+
+
+// --- Reusable Components ---
+
+const Header = ({ onNavigate }: { onNavigate: (path: string) => void }) => (
+  <header className="flex items-center justify-between bg-white p-4 border-b border-gray-200 shadow-sm">
+    <div 
+      className="flex items-center space-x-4 cursor-pointer"
+      onClick={() => onNavigate('/')}
+      title="Retour à l'accueil"
+    >
+      <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-900 text-white font-bold text-xl shadow-md">
+        DCAT
+      </div>
+      <h1 className="text-xl font-semibold text-gray-800 hidden sm:block">
+        Portail de Gestion DCAT
+      </h1>
+    </div>
+    <div 
+      className="text-center font-bold text-2xl text-blue-800 cursor-pointer"
+      onClick={() => onNavigate('/direction-generale')}
+      title="Accéder à la Direction Générale"
+    >
+      Direction Générale
+    </div>
+  </header>
+);
+
+const DepartmentCard = ({ department, onNavigate }: { department: Department, onNavigate: (path: string) => void }) => (
+  <div className="flex-1 flex flex-col bg-gray-50 rounded-xl overflow-hidden shadow-md border border-gray-100 min-w-[300px]">
+    <div
+      className={`${department.color} p-4 text-center font-bold text-xl text-white cursor-pointer hover:opacity-90 transition-opacity`}
+      onClick={() => onNavigate(department.route)}
+      title={`Vue d'ensemble ${department.name}`}
+    >
+      <h2>{department.name}</h2>
+    </div>
+    <div className="p-4 grid grid-cols-2 gap-4 flex-grow">
+      {department.sections.map(section => (
+        <SectionButton key={section.title} section={section} onNavigate={onNavigate} />
+      ))}
+    </div>
+  </div>
+);
+
+const SectionButton = ({ section, onNavigate }: { section: Section, onNavigate: (path: string) => void }) => {
+  const Icon = section.icon;
+  return (
+    <button
+      onClick={() => onNavigate(section.route)}
+      title={`Accéder à ${section.title}`}
+      className={`p-4 flex flex-col items-center justify-center text-center font-semibold text-white rounded-lg shadow-lg bg-gradient-to-br ${section.color} hover:shadow-xl hover:scale-105 transform transition-all duration-300 ease-in-out`}
+    >
+      <Icon className="h-8 w-8 mb-2" />
+      <span>{section.title}</span>
+    </button>
+  );
+};
+
+const Footer = ({ onNavigate }: { onNavigate: (path: string) => void }) => (
+    <footer className="flex flex-col md:flex-row mt-6">
+        {footerConfig.map(section => {
+            const Icon = section.icon;
+            return (
+                <div
+                    key={section.title}
+                    className={`flex-1 p-5 text-center font-semibold rounded-lg ${section.color} transition-all cursor-pointer hover:shadow-md border-t border-gray-200`}
+                    onClick={() => onNavigate(section.route)}
+                    title={`Consulter ${section.title.toLowerCase()}`}
+                >
+                    <div className="flex items-center justify-center">
+                        <Icon className="h-5 w-5 mr-3" />
+                        {section.title}
+                    </div>
+                </div>
+            )
+        })}
+    </footer>
+);
+
+
+// --- Main Component ---
+
+const AnotherDashboardPage = (): JSX.Element => {
   const navigate = useNavigate();
 
-  const handleSectionClick = (section: string) => {
-    navigate(`/section/${encodeURIComponent(section)}`);
+  const handleNavigation = (path: string) => {
+    navigate(path);
   };
-
+  
   return (
     <Layout>
-      <div className="flex flex-col w-full h-full mx-auto border-4 border-gray-700 bg-white">
-        {/* Header */}
-        <div className="flex items-center bg-blue-600 text-white p-2">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center relative">
-              <span className="text-white font-bold text-xl">DCAT</span>
-              <div className="absolute top-1 right-1 w-3 h-3 bg-gray-200"></div>
+      <div className="w-full h-full p-4 md:p-6 bg-gray-100">
+        <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+          <Header onNavigate={handleNavigation} />
+          
+          <main className="p-6">
+            <div className="flex flex-col lg:flex-row gap-6">
+              <DepartmentCard department={dashboardConfig.daf} onNavigate={handleNavigation} />
+              <DepartmentCard department={dashboardConfig.dmc} onNavigate={handleNavigation} />
+              <DepartmentCard department={dashboardConfig.dsei} onNavigate={handleNavigation} />
             </div>
-          </div>
-          <div className="ml-6 text-xl italic">
-            Bienvenue sur le site de gestion de DCAT...
-          </div>
-        </div>
-
-        {/* Direction Générale */}
-        <div className="bg-blue-200 p-4 text-center font-bold text-2xl border-t-2 border-b-2 border-gray-400">
-          DIRECTION GENERALE
-        </div>
-
-        {/* Main Content */}
-        <div className="flex flex-col md:flex-row">
-          {/* DAF Section */}
-          <div className="flex-1 flex flex-col border-r border-gray-400">
-            <div className="bg-gray-500 p-3 text-center font-bold text-xl text-white">DAF</div>
-            <div className="flex flex-col h-full">
-              <div className="flex flex-row">
-                <div className="w-1/2 bg-yellow-600 p-2 text-center font-semibold text-white border border-black">GESTION DES RESSOURCES</div>
-                <div className="w-1/2 bg-green-200 p-2 text-center font-semibold border border-black">OPERATIONS ADMISTRATIVES</div>
-              </div>
-              <div className="flex flex-row">
-                <div className="w-1/3 bg-orange-400 p-2 text-center font-semibold border border-black">RH</div>
-                <div className="w-1/3 bg-green-600 p-2 text-center font-semibold border border-black">RM</div>
-                <div className="w-1/3 bg-purple-500 p-2 text-center font-semibold border border-black">RF</div>
-              </div>
-              <div className="bg-red-600 p-2 text-center font-semibold text-white border border-black">OPERATIONS FINANCIERES</div>
-              <div className="bg-green-500 p-2 text-center font-semibold mt-auto border border-black">PLANNING - DAF</div>
-            </div>
-          </div>
-
-          {/* DMC Section */}
-          <div className="flex-1 flex flex-col border-r border-gray-400">
-            <div className="bg-orange-500 p-3 text-center font-bold text-xl">DMC</div>
-            <div className="flex flex-col h-full">
-              <div className="flex">
-                <div className="w-1/2">
-                  {["PRODUITS", "PRIX", "PROMOTIONS", "DISTRIBUTION / VENTE"].map(item => (
-                    <div
-                      key={item}
-                      className="bg-yellow-700 p-2 text-center font-semibold border border-black text-white cursor-pointer"
-                      onClick={() => handleSectionClick(item)}
-                    >
-                      {item}
-                    </div>
-                  ))}
-                </div>
-                <div className="w-1/2 flex flex-col">
-                  <div
-                    className="bg-amber-700 p-2 h-24 text-center font-semibold flex items-center justify-center border border-black text-white cursor-pointer"
-                    onClick={() => handleSectionClick("TABLEAU DE BORD")}
-                  >
-                    TABLEAU DE BORD/Performances équipe
-                  </div>
-                  <div
-                    className="bg-pink-700 p-2 h-24 text-center font-semibold flex items-center justify-center text-white border border-black cursor-pointer"
-                    onClick={() => handleSectionClick("DOSSIERS DMC")}
-                  >
-                    DOSSIERS DMC
-                  </div>
-                </div>
-              </div>
-              <div className="bg-green-500 p-2 text-center font-semibold mt-auto border border-black">PLANNING - DCM</div>
-            </div>
-          </div>
-
-          {/* DSEI Section */}
-          <div className="flex-1 flex flex-col">
-            <div className="bg-blue-500 p-3 text-center font-bold text-xl text-white">DSEI</div>
-            <div className="flex flex-col h-full">
-              <div className="flex">
-                <div className="w-1/2">
-                  <div
-                    className="bg-yellow-300 p-2 h-14 text-center font-semibold flex items-center justify-center border border-black cursor-pointer"
-                    onClick={() => handleSectionClick("INTERVENTION TECHNIQUES")}
-                  >
-                    INTERVENTION TECHNIQUES
-                  </div>
-                  <div
-                    className="bg-pink-200 p-2 text-center font-semibold border border-black cursor-pointer"
-                    onClick={() => handleSectionClick("LABO")}
-                  >
-                    LABO
-                  </div>
-                </div>
-                <div className="w-1/2">
-                  <div
-                    className="bg-orange-300 p-2 h-20 text-center font-semibold flex items-center justify-center border border-black cursor-pointer"
-                    onClick={() => handleSectionClick("PROJETS")}
-                  >
-                    PROJETS
-                  </div>
-                </div>
-              </div>
-              <div
-                className="bg-blue-400 p-2 h-24 text-center font-semibold flex items-center justify-center border border-black cursor-pointer"
-                onClick={() => handleSectionClick("DOSSIERS DSEI")}
-              >
-                DOSSIERS DSEI
-              </div>
-              <div className="bg-green-500 p-2 text-center font-semibold mt-auto border border-black">PLANNING - DSEI</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex flex-col md:flex-row">
-          <div
-            className="flex-1 bg-yellow-50 p-3 text-center font-semibold border border-gray-300 cursor-pointer"
-            onClick={() => handleSectionClick("MANUEL DES PROCEDURES")}
-          >
-            MANUEL DES PROCEDURES
-          </div>
-          <div
-            className="flex-1 bg-blue-50 p-3 text-center font-semibold border border-gray-300 cursor-pointer"
-            onClick={() => handleSectionClick("LISTE-CONTACTS")}
-          >
-            LISTE-CONTACTS - PLANNING DU PERSONNEL ET DES PRESTATAIRES
-          </div>
+          </main>
+          
+          <Footer onNavigate={handleNavigation} />
         </div>
       </div>
     </Layout>
   );
 };
 
-export default DCATInterface;
+export default AnotherDashboardPage;
