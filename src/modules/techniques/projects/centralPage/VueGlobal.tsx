@@ -14,10 +14,10 @@ import {
 } from "recharts";
 import { format, subDays, parseISO, isWithinInterval } from "date-fns";
 import { fr } from "date-fns/locale";
-import { getInterventions } from "../../Interventions/api/intervention";
+import { getInterventions } from "../../interventions/api/intervention";
 import { fetchAllProjets } from "../projet/api/projets";
 import { getTachesByProjet } from "../tasks/api/taches";
-import { Intervention } from "../../Interventions/interface/interface";
+import { Intervention } from "../../interventions/interface/interface";
 import { Projet, Tache } from "../types/types";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
