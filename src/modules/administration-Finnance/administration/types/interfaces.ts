@@ -93,7 +93,7 @@ export interface Contrat {
   id_partenaire?: number;
 }
 
-export interface Document {
+export interface EmployeDocument {
   id_documents: number;
   libelle_document: string;
   classification_document: string;
@@ -101,4 +101,5 @@ export interface Document {
   etat_document?: string; // Optionnel
   date_document: string; // ISO date string
   id_nature_document: number;
+  id_contrat?:number;
 }

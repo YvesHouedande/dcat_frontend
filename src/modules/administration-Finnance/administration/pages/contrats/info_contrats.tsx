@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
-import { Contrat, Document } from "../../types/interfaces";
+import { Contrat, EmployeDocument } from "../../types/interfaces";
 
 const InfoContract: React.FC = () => {
   const navigate = useNavigate();
@@ -47,30 +47,33 @@ const InfoContract: React.FC = () => {
     specialite: "Solutions Numériques Durables",
   };
 
-  const documents: Document[] = [
+  const documents: EmployeDocument[] = [
     {
-      id_document: 1,
-      libele_document: "Contrat Principal",
+      id_documents: 1,
+      libelle_document: "Contrat Principal",
       date_document: "01/03/2025",
       lien_document: "contrat_maintenance_it.pdf",
       id_contrat: 20250042, // Changé de string à number
       id_nature_document: 1,
+      classification_document: "Contrat Principal",
     },
     {
-      id_document: 2,
-      libele_document: "Annexe 1 - Tarifs",
+      id_documents: 2,
+      libelle_document: "Annexe 1 - Tarifs",
       date_document: "01/03/2025",
       lien_document: "annexe_1_tarifs.pdf",
       id_contrat: 20250042, // Changé de string à number
       id_nature_document: 2,
+      classification_document: "Annexe 1 - Tarifs",
     },
     {
-      id_document: 3,
-      libele_document: "Conditions Générales",
+      id_documents: 3,
+      libelle_document: "Conditions Générales",
       date_document: "01/03/2025",
       lien_document: "conditions_generales.pdf",
       id_contrat: 20250042, // Changé de string à number
       id_nature_document: 3,
+      classification_document: "Conditions Générales",
     },
   ];
 
@@ -525,7 +528,7 @@ const InfoContract: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {documents.map((document) => (
                 <Card
-                  key={document.id_document}
+                  key={document.id_documents}
                   className="overflow-hidden hover:shadow-md transition-shadow"
                 >
                   <div className="bg-gray-50 p-4 border-b">
@@ -549,7 +552,7 @@ const InfoContract: React.FC = () => {
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-medium text-gray-800 mb-1">
-                      {document.libele_document}
+                      {document.libelle_document}
                     </h3>
                     <p className="text-sm text-gray-500 mb-4">
                       {document.id_nature_document === 1
@@ -605,7 +608,7 @@ const InfoContract: React.FC = () => {
                 <div className="text-center p-8">
                   <FileText size={64} className="mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500">
-                    Aperçu du document {documents[0].libele_document}
+                    Aperçu du document {documents[0].libelle_document}
                   </p>
                   <p className="text-gray-400 text-sm mt-2">
                     Dans une application réelle, le PDF serait affiché ici

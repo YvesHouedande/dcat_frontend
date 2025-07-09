@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { Contrat} from '../../administration-Finnance/administration/types/interfaces';
+import { EmployeDocument } from "../administration/types/interfaces";
 
 const API_URL = import.meta.env.VITE_APP_API_URL;
 
@@ -132,7 +133,7 @@ export const addDocument = async (documentData: Omit<Document, 'id_document'>, f
     Object.keys(documentData).forEach((key) => {
       const value = documentData[key as keyof Omit<Document, 'id_document'>];
       if (value !== undefined) {
-        formData.append(key, value.toString());
+        formData.append(key, value ? value.toString() : "");
       }
     });
     formData.append('file', file);
@@ -156,7 +157,7 @@ export const updateDocument = async (id: string | number, updates: Partial<Docum
     Object.keys(updates).forEach((key) => {
       const value = updates[key as keyof Partial<Document>];
       if (value !== undefined) {
-        formData.append(key, value.toString());
+        formData.append(key, value ? value.toString() : "");
       }
     });
     if (file) {
@@ -200,7 +201,7 @@ export const fetchDocumentsByProjetId = async (id_projet: number) => {
 };
 
 // Récupérer tous les documents d'un employé
-export const fetchEmployeDocuments = async (id_employes: number): Promise<Document[]> => {
+export const fetchEmployeDocuments = async (id_employes: number): Promise<EmployeDocument[]> => {
   try {
     console.log(`Appel API: GET ${API_URL}/administration/employes/${id_employes}/documents`);
     const response = await axios.get(`${API_URL}/administration/employes/${id_employes}/documents`);

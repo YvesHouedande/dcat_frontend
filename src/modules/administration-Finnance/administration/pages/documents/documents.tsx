@@ -24,14 +24,14 @@ import {
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Document } from "../../types/interfaces";
+import { EmployeDocument } from "../../types/interfaces";
 
 
 
-export const documents: Document[] = [
+export const documents: EmployeDocument[] = [
   {
-    id_document: 1,
-    libele_document: "Rapport annuel 2024",
+    id_documents: 1,
+    libelle_document: "Rapport annuel 2024",
     lien_document: "rapport-annuel-2024.pdf",
     etat_document: "private",
     id_nature_document: 1,
@@ -39,8 +39,8 @@ export const documents: Document[] = [
     classification_document: "confidentiel"
   },
   {
-    id_document: 2,
-    libele_document: "Présentation du projet Alpha",
+    id_documents: 2,
+    libelle_document: "Présentation du projet Alpha",
     lien_document: "presentation-projet-alpha.pptx",
     etat_document: "public",
     id_nature_document: 2,
@@ -48,8 +48,8 @@ export const documents: Document[] = [
     classification_document: "interne"
   },
   {
-    id_document: 3,
-    libele_document: "Manuel d'utilisation ERP",
+    id_documents: 3,
+    libelle_document: "Manuel d'utilisation ERP",
     lien_document: "manuel-erp.pdf",
     etat_document: "private",
     id_nature_document: 3,
@@ -57,8 +57,8 @@ export const documents: Document[] = [
     classification_document: "public"
   },
   {
-    id_document: 4,
-    libele_document: "Contrat de service client",
+    id_documents: 4,
+    libelle_document: "Contrat de service client",
     lien_document: "contrat-service.docx",
     etat_document: "public",
     id_nature_document: 4,
@@ -66,8 +66,8 @@ export const documents: Document[] = [
     classification_document: "personnel"
   },
   {
-    id_document: 5,
-    libele_document: "Analyse de marché Q1 2024",
+    id_documents: 5,
+    libelle_document: "Analyse de marché Q1 2024",
     lien_document: "analyse-marche-q1.xlsx",
     etat_document: "private",
     id_nature_document: 5,
@@ -75,8 +75,8 @@ export const documents: Document[] = [
     classification_document: "restreint"
   },
   {
-    id_document: 6,
-    libele_document: "Spécifications techniques",
+    id_documents: 6,
+    libelle_document: "Spécifications techniques",
     lien_document: "specs-techniques.pdf",
     etat_document: "public",
     id_nature_document: 1,
@@ -84,8 +84,8 @@ export const documents: Document[] = [
     classification_document: "confidentiel"
   },
   {
-    id_document: 7,
-    libele_document: "Calendrier des formations",
+    id_documents: 7,
+    libelle_document: "Calendrier des formations",
     lien_document: "calendrier-formations.xlsx",
     etat_document: "private",
     id_nature_document: 2,
@@ -93,8 +93,8 @@ export const documents: Document[] = [
     classification_document: "interne"
   },
   {
-    id_document: 8,
-    libele_document: "Procédures internes",
+    id_documents: 8,
+    libelle_document: "Procédures internes",
     lien_document: "procedures-internes.pdf",
     etat_document: "public",
     id_nature_document: 3,
@@ -114,7 +114,7 @@ const ModernDocumentGrid: React.FC = () => {
   const filteredDocuments = searchQuery
     ? documents.filter(
         (document) =>
-          document.libele_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          document.libelle_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
           document.lien_document?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           document.classification_document?.toLowerCase().includes(searchQuery.toLowerCase())
       )
@@ -254,9 +254,9 @@ const ModernDocumentGrid: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {filteredDocuments.map((document) => (
               <Card
-                key={document.id_document}
+                key={document.id_documents}
                 className="overflow-hidden hover:shadow-md transition-all duration-200 group cursor-pointer"
-                onClick={() => handleViewDocument(document.id_document)}
+                onClick={() => handleViewDocument(document.id_documents)}
               >
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-2">
@@ -269,7 +269,7 @@ const ModernDocumentGrid: React.FC = () => {
                   </div>
 
                   <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-1 h-10">
-                    {document.libele_document}
+                    {document.libelle_document}
                   </h3>
 
                   <div className="flex justify-between items-center text-xs text-gray-500">
@@ -292,7 +292,7 @@ const ModernDocumentGrid: React.FC = () => {
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleViewDocument(document.id_document);
+                              handleViewDocument(document.id_documents);
                             }}
                             className="cursor-pointer text-xs py-1"
                           >
@@ -337,14 +337,14 @@ const ModernDocumentGrid: React.FC = () => {
               <tbody>
                 {filteredDocuments.map((document, index) => (
                   <tr
-                    key={document.id_document}
+                    key={document.id_documents}
                     className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                   >
                     <td className="p-3">
                       <div className="flex items-center">
                         {getFileIcon(document.lien_document || "")}
                         <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-800">{document.libele_document}</p>
+                          <p className="text-sm font-medium text-gray-800">{document.libelle_document}</p>
                           <p className="text-xs text-gray-500 md:hidden">{document.lien_document}</p>
                         </div>
                       </div>
@@ -364,7 +364,7 @@ const ModernDocumentGrid: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0"
-                          onClick={() => handleViewDocument(document.id_document)}
+                          onClick={() => handleViewDocument(document.id_documents)}
                         >
                           <Eye size={14} />
                         </Button>

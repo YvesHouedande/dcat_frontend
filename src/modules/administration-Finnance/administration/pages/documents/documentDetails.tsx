@@ -20,7 +20,7 @@ const DocumentDetailPage: React.FC = () => {
 
  
 
-  const document = documents.find(doc => doc.id_document === Number(id)) || documents[0];
+  const document = documents.find(doc => doc.id_documents === Number(id)) || documents[0];
 
   const getNatureLabel = (natureId?: number): string => {
     if (!natureId) return "Inconnu";
@@ -145,7 +145,7 @@ const DocumentDetailPage: React.FC = () => {
 
       <div className="flex flex-col md:flex-row items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{document.libele_document}</h1>
+          <h1 className="text-2xl font-bold">{document.libelle_document}</h1>
           <div className="flex items-center mt-2 space-x-2">
             {document.classification_document && (
               <Badge className={getClassificationBadge(document.classification_document)}>
@@ -162,7 +162,7 @@ const DocumentDetailPage: React.FC = () => {
             variant="outline"
             size="sm"
             className="flex items-center"
-            onClick={() => navigate(`/administration/documents/${document.id_document}/editer`)}
+            onClick={() => navigate(`/administration/documents/${document.id_documents}/editer`)}
           >
             <Pencil className="mr-2 h-4 w-4" /> Modifier
           </Button>
@@ -203,11 +203,11 @@ const DocumentDetailPage: React.FC = () => {
                     <dl className="space-y-4">
                       <div>
                         <dt className="text-sm font-medium text-gray-500">ID Document</dt>
-                        <dd className="mt-1 text-sm text-gray-900">{document.id_document}</dd>
+                        <dd className="mt-1 text-sm text-gray-900">{document.id_documents}</dd>
                       </div>
                       <div>
                         <dt className="text-sm font-medium text-gray-500">Libellé</dt>
-                        <dd className="mt-1 text-sm text-gray-900">{document.libele_document}</dd>
+                        <dd className="mt-1 text-sm text-gray-900">{document.libelle_document}</dd>
                       </div>
                       <div>
                         <dt className="text-sm font-medium text-gray-500">Type de fichier</dt>
@@ -303,8 +303,8 @@ const DocumentDetailPage: React.FC = () => {
         <CardFooter>
           <div className="flex items-center text-sm text-gray-500">
             <AlertCircle className="h-4 w-4 mr-2 text-blue-500" />
-            {document.id_document && (
-              <span>Document ID: {document.id_document} - </span>
+            {document.id_documents && (
+              <span>Document ID: {document.id_documents} - </span>
             )}
             Dernière mise à jour: {formatDate(document.date_document)}
           </div>

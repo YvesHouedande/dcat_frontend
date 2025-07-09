@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Contrat, Document } from '../../administration-Finnance/administration/types/interfaces';
+import { Contrat } from '../../administration-Finnance/administration/types/interfaces';
 
 const API_URL = import.meta.env.VITE_APP_API_URL;
 
@@ -121,7 +121,7 @@ export const addDocumentToContrat = async (contratId: string | number, documentD
     Object.keys(documentData).forEach((key) => {
       const value = documentData[key as keyof Omit<Document, 'id_document'>];
       if (value !== undefined) {
-        formData.append(key, value.toString());
+        formData.append(key, value ? value.toString() : "");
       }
     });
     // Ajouter le fichier

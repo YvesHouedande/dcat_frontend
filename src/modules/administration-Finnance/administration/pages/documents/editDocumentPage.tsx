@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+// import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Save, UploadCloud, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Document } from "../../types/interfaces";
+import { EmployeDocument } from "../../types/interfaces";
 
 const EditDocumentPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,9 +24,9 @@ const EditDocumentPage: React.FC = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
 
   // États du formulaire
-  const [formData, setFormData] = useState<Document>({
-    id_document: 0,
-    libele_document: "",
+  const [formData, setFormData] = useState<EmployeDocument>({
+    id_documents: 0,
+    libelle_document: "",
     classification_document: "",
     lien_document: "",
     etat_document: "private",
@@ -93,7 +93,7 @@ const EditDocumentPage: React.FC = () => {
       const fileName = selectedFile.name.split(".")[0];
       setFormData({
         ...formData,
-        libele_document: fileName,
+        libelle_document: fileName,
         lien_document: selectedFile.name
       });
 
@@ -123,7 +123,7 @@ const EditDocumentPage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!formData.libele_document || !formData.id_nature_document) {
+    if (!formData.libelle_document || !formData.id_nature_document) {
       setIsSubmitting(false);
       alert("Veuillez remplir tous les champs obligatoires");
       return;
@@ -203,7 +203,7 @@ const EditDocumentPage: React.FC = () => {
                         id="libele_document"
                         name="libele_document"
                         placeholder="Entrez le libellé du document"
-                        value={formData.libele_document}
+                        value={formData.libelle_document}
                         onChange={handleInputChange}
                         required
                       />
@@ -360,7 +360,7 @@ const EditDocumentPage: React.FC = () => {
                     Informations complémentaires
                   </h2>
 
-                  <div className="grid grid-cols-1 gap-4">
+                  {/* <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="notes">Notes ou commentaires</Label>
                       <Textarea
@@ -372,7 +372,7 @@ const EditDocumentPage: React.FC = () => {
                         onChange={handleInputChange}
                       />
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </CardContent>

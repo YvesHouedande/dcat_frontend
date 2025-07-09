@@ -21,7 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Contrat, Document } from "../../types/interfaces";
+import { Contrat, EmployeDocument } from "../../types/interfaces";
 import { addContrat, fetchNaturesDocument } from "../../../services/contratService"; // Importation du nouveau service
 import { fetchPartners } from "../../../services/partenaireService"; // Importation du service existant
 
@@ -46,13 +46,14 @@ const NouveauContrat: React.FC = () => {
     id_partenaire: undefined,
   });
 
-  const [documentData, setDocumentData] = useState<Document>({
-    id_document: 0,
-    libele_document: "",
+  const [documentData, setDocumentData] = useState<EmployeDocument>({
+    id_documents: 0,
+    libelle_document: "",
     date_document: new Date().toISOString().split('T')[0], // Date du jour
     lien_document: "",
-    id_contrat: undefined,
-    id_nature_document: undefined,
+    classification_document: "",
+    id_contrat: 0,
+    id_nature_document: 0,
   });
 
   // Chargement des partenaires et des natures de document depuis l'API
@@ -61,7 +62,10 @@ const NouveauContrat: React.FC = () => {
       try {
         // Chargement des partenaires
         const partenairesData = await fetchPartners();
-        setPartenaires(partenairesData);
+        setPartenaires(partenairesData.map(partenaire => ({
+          id: partenaire.id_partenaire,
+          nom: partenaire.nom_partenaire
+        })));
         
         // Chargement des natures de document
         const naturesDocumentData = await fetchNaturesDocument();
@@ -416,11 +420,11 @@ const NouveauContrat: React.FC = () => {
                         id="libele_document"
                         name="libele_document"
                         placeholder="Entrez le libellé du document"
-                        value={documentData.libele_document}
+                        value={documentData.libelle_document}
                         onChange={(e) =>
                           setDocumentData({
                             ...documentData,
-                            libele_document: e.target.value,
+                            libelle_document: e.target.value,
                           })
                         }
                         required

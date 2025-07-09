@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { UploadCloud, File, X, AlertCircle } from "lucide-react";
-import { Document } from "../../types/interfaces";
+import { EmployeDocument } from "../../types/interfaces";
 
 // Fonction utilitaire pour fusionner les classes conditionnellement
 const cn = (...classes: (string | boolean | undefined)[]) => {
@@ -39,8 +39,8 @@ const AddDocumentPage: React.FC = () => {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [documentInfo, setDocumentInfo] = useState<Partial<Document>>({
-    libele_document: "",
+  const [documentInfo, setDocumentInfo] = useState<Partial<EmployeDocument>>({
+    libelle_document: "",
     classification_document: "",
     etat_document: "private",
     id_nature_document: 0,
@@ -85,7 +85,7 @@ const AddDocumentPage: React.FC = () => {
     setFile(newFile);
 
     // Si aucun libellé n'est défini, utiliser le nom du fichier
-    if (!documentInfo.libele_document) {
+    if (!documentInfo.libelle_document) {
       const fileName = newFile.name.split(".")[0]; // Enlever l'extension
       syncDocumentNames(fileName);
     }
@@ -110,7 +110,7 @@ const AddDocumentPage: React.FC = () => {
       newErrors.classification_document = "La classification est obligatoire";
     }
 
-    if (!documentInfo.libele_document) {
+    if (!documentInfo.libelle_document) {
       newErrors.libele_document = "Le libellé est obligatoire";
     }
 
@@ -135,7 +135,7 @@ const AddDocumentPage: React.FC = () => {
     const formData = new FormData();
 
     // Ajouter les informations du document
-    formData.append('libele_document', documentInfo.libele_document || '');
+    formData.append('libelle_document', documentInfo.libelle_document || '');
     formData.append('classification_document', documentInfo.classification_document || '');
     formData.append('etat_document', documentInfo.etat_document || 'private');
     formData.append('id_nature_document', documentInfo.id_nature_document?.toString() || '0');
@@ -307,7 +307,7 @@ const AddDocumentPage: React.FC = () => {
                     id="libele_document"
                     name="libele_document"
                     placeholder="Entrez un libellé"
-                    value={documentInfo.libele_document || ""}
+                    value={documentInfo.libelle_document || ""}
                     onChange={handleInfoChange}
                     className={errors.libele_document ? "border-red-500" : ""}
                   />
@@ -417,7 +417,7 @@ const AddDocumentPage: React.FC = () => {
             onClick={handleUpload}
             disabled={
               uploading ||  !documentInfo.classification_document ||
-              !documentInfo.libele_document ||
+              !documentInfo.libelle_document ||
               !documentInfo.id_nature_document ||
               !file
             }

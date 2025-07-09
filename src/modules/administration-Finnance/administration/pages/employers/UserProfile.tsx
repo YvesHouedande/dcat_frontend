@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
-import { Employe, Document } from "../../types/interfaces";
+import { Employe, EmployeDocument } from "../../types/interfaces";
 import { fetchEmployeById } from "../../../services/employeService";
 import { fetchFonctionById } from "../../../services/fonctionService";
 import { fetchEmployeDocuments, downloadDocument } from "../../../services/documentService";
@@ -35,7 +35,7 @@ const ModernUserProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [jobTitle, setJobTitle] = useState<string>("Non spécifié");
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<EmployeDocument[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
 
   useEffect(() => {
@@ -78,7 +78,7 @@ const ModernUserProfile: React.FC = () => {
         try {
           setLoadingDocuments(true);
           const docs = await fetchEmployeDocuments(data.id_employes);
-          setDocuments(docs || []);
+          setDocuments(docs || []); // Type assertion pour Document[]
         } catch (err) {
           console.error("Erreur lors du chargement des documents:", err);
           // Ne pas bloquer l'affichage du profil si les documents ne se chargent pas
@@ -397,15 +397,15 @@ const ModernUserProfile: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {documents.map((doc) => (
                   <Card
-                    key={doc.id}
+                    key={doc.id_documents}
                     className="overflow-hidden hover:shadow-md transition-shadow"
                   >
                     <div className="bg-gray-50 p-4 border-b">
                       <div className="flex justify-between">
-                        <Badge className={getStatusColor(doc.status)}>
-                          {doc.status}
+                        <Badge className={getStatusColor(doc.etat_document || "")}>
+                          {doc.etat_document}
                         </Badge>
-                        <span className="text-xs text-gray-500">{doc.date}</span>
+                        <span className="text-xs text-gray-500">{doc.date_document}</span>
                       </div>
                       <div className="mt-6 mb-4 flex justify-center">
                         <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
@@ -415,15 +415,15 @@ const ModernUserProfile: React.FC = () => {
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-medium text-gray-800 mb-1">
-                        {doc.name}
+                        {doc.libelle_document}
                       </h3>
-                      <p className="text-sm text-gray-500 mb-4">{doc.type}</p>
+                      <p className="text-sm text-gray-500 mb-4">{doc.lien_document}</p>
                       <div className="flex justify-between">
                         <Button
                           variant="outline"
                           size="sm"
                           className="text-gray-600 text-xs"
-                          onClick={() => navigate(`/administration/documents/${doc.id}/editer`)}
+                          onClick={() => navigate(`/administration/documents/${doc.id_documents}/editer`)}
                         >
                           <Edit size={14} className="mr-1" />
                           Mettre à jour
@@ -432,7 +432,7 @@ const ModernUserProfile: React.FC = () => {
                           variant="outline"
                           size="sm"
                           className="text-blue-600 text-xs"
-                          onClick={() => handleDownloadDocument(doc.id)}
+                          onClick={() => handleDownloadDocument(doc.id_documents.toString())}
                         >
                           <Download size={14} className="mr-1" />
                           Télécharger

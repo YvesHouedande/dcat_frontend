@@ -21,7 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Contrat, Document } from "../../types/interfaces";
+import { Contrat, EmployeDocument } from "../../types/interfaces";
 import { useApiCall } from "@/hooks/useAPiCall";
 import {
   fetchContratById,
@@ -48,23 +48,22 @@ const EditerContrat: React.FC = () => {
     id_partenaire: 0,
   });
 
-  const [documentData, setDocumentData] = useState<Document>({
-    id_document: 0,
-    libele_document: "",
+  const [documentData, setDocumentData] = useState<EmployeDocument>({
+    id_documents: 0,
+    libelle_document: "",
     date_document: new Date().toISOString().split('T')[0],
     lien_document: "",
     id_contrat: 0,
     id_nature_document: 0,
+    classification_document: "",
   });
-
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   // Appels API avec useApiCall
   const { call: fetchContrat } = useApiCall(fetchContratById);
   const { call: updateContratCall, loading: updatingContrat } = useApiCall(updateContrat);
   const { call: fetchPartnersCall } = useApiCall(fetchPartners);
   const { call: fetchDocumentTypesCall } = useApiCall(fetchNaturesDocument);
-  const { call: addDocumentCall, loading: addingDocument } = useApiCall(addDocumentToContrat);
+  const { loading: addingDocument } = useApiCall(addDocumentToContrat);
 
   const [partenaires, setPartenaires] = useState<Array<{ id: number; nom: string }>>([]);
   const [naturesDocument, setNaturesDocument] = useState<Array<{ id_nature_document: number; libelle_td: string }>>([]);
@@ -84,7 +83,10 @@ const EditerContrat: React.FC = () => {
           fetchPartnersCall(),
           fetchDocumentTypesCall()
         ]);
-        setPartenaires(partenairesData);
+        setPartenaires(partenairesData.map(partenaire => ({
+          id: partenaire.id_partenaire,
+          nom: partenaire.nom_partenaire
+        })));
         setNaturesDocument(naturesData);
       } catch (error) {
         console.error("Erreur lors du chargement des données:", error);
@@ -109,7 +111,6 @@ const EditerContrat: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setUploadedFile(file);
       setDocumentData({
         ...documentData,
         lien_document: URL.createObjectURL(file),
@@ -149,18 +150,21 @@ const EditerContrat: React.FC = () => {
         }
       );
   
-      // 2. Si un nouveau document est uploadé
-      if (uploadedFile) {
-        await addDocumentCall(
-          formData.id_contrat,
-          {
-            libele_document: documentData.libele_document,
-            date_document: documentData.date_document,
-            id_nature_document: documentData.id_nature_document
-          },
-          uploadedFile
-        );
-      }
+      // // 2. Si un nouveau document est uploadé
+      // if (uploadedFile) {
+      //   await addDocumentCall(
+      //     formData.id_contrat,
+      //     {
+      //       libelle_document: documentData.libelle_document,
+      //       lien_document: documentData.lien_document,
+      //       etat_document: documentData.etat_document,
+      //       date_document: documentData.date_document,
+      //       id_nature_document: documentData.id_nature_document,
+      //       classification_document: documentData.classification_document
+      //     },
+      //     uploadedFile
+      //   );
+      // }
   
       // Redirection après succès
       navigate(`/administration/contrats/${formData.id_contrat}`);
@@ -365,11 +369,11 @@ const EditerContrat: React.FC = () => {
                         id="libele_document"
                         name="libele_document"
                         placeholder="Entrez le libellé du document"
-                        value={documentData.libele_document}
+                        value={documentData.libelle_document}
                         onChange={(e) =>
                           setDocumentData({
                             ...documentData,
-                            libele_document: e.target.value,
+                            libelle_document: e.target.value,
                           })
                         }
                         required
