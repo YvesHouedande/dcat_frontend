@@ -27,12 +27,8 @@ export const administrationFinanceMenu: MenuItem[] = [
         url: "/administration/contrats",
       },
       {
-        title: "Comptabilité",
-        url: "/administration/comptabilite",
-      },
-      {
-        title: "Finances",
-        url: "/administration/finance",
+        title: "Finance & Comptabilité",
+        url: "/administration/finance-compta/finance",
       },
       {
         title: "Documents",

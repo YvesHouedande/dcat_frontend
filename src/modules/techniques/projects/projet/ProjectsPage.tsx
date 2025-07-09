@@ -306,10 +306,11 @@ const ProjetsPage = () => {
             <FileText className="mr-2 h-4 w-4" />
             Voir tous les projets
           </Button>
-          <Button variant="outline" onClick={handleRefresh}>
+          
+          {/* <Button variant="outline" onClick={handleRefresh}>
             <RefreshCcw className="mr-2 h-4 w-4" />
-            Actualiser
-          </Button>
+            Actualiser 
+          </Button> */}
           {/* Bouton de rapports temporairement désactivé */}
           {/* <Button variant="outline" onClick={() => navigate('/technique/projets/rapports')}>
               <BarChart3Icon className="mr-2 h-4 w-4" />

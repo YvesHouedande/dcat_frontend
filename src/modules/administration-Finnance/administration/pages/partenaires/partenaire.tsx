@@ -23,9 +23,57 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
-import { Partenaires } from "../../types/interfaces";
-import { fetchPartners } from "@/modules/administration-Finnance/services/partenaireService";
+import { Entite, Interlocuteur, Partenaires } from "../../types/interfaces";
+import { fetchPartners, fetchEntites } from "@/modules/administration-Finnance/services/partenaireService";
 import { useApiCall } from "@/hooks/useAPiCall";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Interface pour les entités
+
+
+// Store singleton pour cacher les données entre les navigations
+class PartenairesStore {
+  private static instance: PartenairesStore;
+  private _partenaires: Partenaires[] | null = null;
+  private _entites: Entite[] | null = null;
+  private _lastFetchTime: number = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
+
+  private constructor() {}
+
+  public static getInstance(): PartenairesStore {
+    if (!PartenairesStore.instance) {
+      PartenairesStore.instance = new PartenairesStore();
+    }
+    return PartenairesStore.instance;
+  }
+
+  get partenaires(): Partenaires[] | null {
+    return this._partenaires;
+  }
+
+  set partenaires(data: Partenaires[] | null) {
+    this._partenaires = data;
+    this._lastFetchTime = Date.now();
+  }
+
+  get entites(): Entite[] | null {
+    return this._entites;
+  }
+
+  set entites(data: Entite[] | null) {
+    this._entites = data;
+  }
+
+  get shouldRefetch(): boolean {
+    return (
+      !this._partenaires ||
+      Date.now() - this._lastFetchTime > this.CACHE_DURATION
+    );
+  }
+}
+
+const store = PartenairesStore.getInstance();
 
 const getInitials = (name: string) => {
   if (!name) return "";
@@ -41,16 +89,56 @@ const getInitials = (name: string) => {
 const ModernPartenaireGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
+  // État local pour stocker les partenaires affichés
+  const [displayedPartenaires, setDisplayedPartenaires] = useState<Partenaires[] | null>(store.partenaires);
+  const [entites, setEntites] = useState<Entite[] | null>(store.entites);
 
   // Use the useApiCall hook to fetch partners
-  const { data: partenaires, error, call } = useApiCall<Partenaires[]>(fetchPartners);
+  const { data: partenaires, loading, error, call } = useApiCall<Partenaires[]>(fetchPartners);
+  const { data: entitesData, loading: entitesLoading, call: callEntites } = useApiCall<Entite[]>(fetchEntites);
 
   useEffect(() => {
-    call();
-  }, [call]);
+    // Si nous avons des données en cache et qu'elles sont récentes
+    if (!store.shouldRefetch) {
+      setDisplayedPartenaires(store.partenaires);
+    } else {
+      // Sinon, on fait l'appel API
+      call();
+    }
 
-  const filteredPartenaires = searchQuery && partenaires
-    ? partenaires.filter(
+    // Récupérer les entités si pas encore en cache
+    if (!store.entites) {
+      callEntites();
+    } else {
+      setEntites(store.entites);
+    }
+  }, [call, callEntites]);
+
+  // Quand les données de l'API changent, mettre à jour le store et l'affichage
+  useEffect(() => {
+    if (partenaires) {
+      store.partenaires = partenaires;
+      setDisplayedPartenaires(partenaires);
+    }
+  }, [partenaires]);
+
+  useEffect(() => {
+    if (entitesData) {
+      store.entites = entitesData;
+      setEntites(entitesData);
+    }
+  }, [entitesData]);
+
+  // Fonction pour obtenir le nom de l'entité à partir de son ID
+  const getEntiteName = (idEntite: number | string): string => {
+    if (!entites) return `Entité ${idEntite}`;
+    
+    const entite = entites.find(e => e.id_entite === Number(idEntite));
+    return entite ? entite.denomination : `Entité ${idEntite}`;
+  };
+
+  const filteredPartenaires = searchQuery && displayedPartenaires
+    ? displayedPartenaires.filter(
         (partenaire) =>
           partenaire.nom_partenaire
             .toLowerCase()
@@ -64,14 +152,17 @@ const ModernPartenaireGrid: React.FC = () => {
           partenaire.type_partenaire
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          partenaire.interlocuteurs.some(
+          getEntiteName(partenaire.id_entite)
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          (partenaire.interlocuteurs && partenaire.interlocuteurs.some(
             (interlocuteur) =>
               `${interlocuteur.prenom_interlocuteur} ${interlocuteur.nom_interlocuteur}`
                 .toLowerCase()
                 .includes(searchQuery.toLowerCase())
-          )
+          ))
       )
-    : partenaires || [];
+    : displayedPartenaires || [];
 
   const getAvatarColor = (id: number) => {
     const colors = [
@@ -114,8 +205,70 @@ const ModernPartenaireGrid: React.FC = () => {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "actif":
+        return "bg-green-100 text-green-800";
+      case "inactif":
+        return "bg-red-100 text-red-800";
+      case "en attente":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   const handleClickVoirProfile = (id: string | number) => {
     navigate(`/administration/partenaires/profil/${id}`);
+  };
+
+  // Fonction pour afficher les interlocuteurs dans une tooltip
+  const renderInterlocuteursList = (interlocuteurs: Interlocuteur[] | undefined) => {
+    if (!interlocuteurs || interlocuteurs.length === 0) {
+      return "Aucun interlocuteur";
+    }
+
+    return (
+      <div className="p-2">
+        {interlocuteurs.map((interlocuteur, index) => (
+          <div key={interlocuteur.id_interlocuteur} className={`${index > 0 ? 'mt-2 pt-2 border-t' : ''}`}>
+            <p className="font-medium">{`${interlocuteur.prenom_interlocuteur} ${interlocuteur.nom_interlocuteur}`}</p>
+            <p className="text-sm text-gray-500">{interlocuteur.fonction_interlocuteur}</p>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Rendu d'un squelette de chargement
+  const renderSkeletons = () => {
+    return Array(8)
+      .fill(0)
+      .map((_, index) => (
+        <Card key={`skeleton-${index}`} className="overflow-hidden">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="ml-3">
+                  <Skeleton className="h-5 w-32 mb-1" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </div>
+          </CardContent>
+          <CardFooter className="bg-gray-50 border-t p-3 flex justify-between">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-24" />
+          </CardFooter>
+        </Card>
+      ));
   };
 
   const renderPartenairesList = () => {
@@ -132,7 +285,11 @@ const ModernPartenaireGrid: React.FC = () => {
       );
     }
 
-    if (filteredPartenaires.length === 0) {
+    if ((loading && !displayedPartenaires) || entitesLoading) {
+      return renderSkeletons();
+    }
+
+    if (!displayedPartenaires || filteredPartenaires.length === 0) {
       const message = searchQuery 
         ? "Aucun partenaire ne correspond à votre recherche" 
         : "Aucun partenaire disponible pour le moment";
@@ -184,9 +341,14 @@ const ModernPartenaireGrid: React.FC = () => {
                     >
                       {partenaire.nom_partenaire}
                     </h3>
-                    <p className="text-sm text-gray-500">
-                      {partenaire.specialite}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-gray-500">
+                        {partenaire.specialite}
+                      </p>
+                      <Badge className={getStatusColor(partenaire.statut)}>
+                        {partenaire.statut}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
                 <div className="relative">
@@ -234,14 +396,19 @@ const ModernPartenaireGrid: React.FC = () => {
                 </div>
                 <div className="flex items-center text-sm">
                   <Building size={14} className="mr-2 text-gray-500" />
-                  <p>{partenaire.id_entite}</p>
+                  <p>{getEntiteName(partenaire.id_entite)}</p>
                 </div>
-                <div className="flex items-center text-sm">
+                <div className="flex items-center text-sm group relative">
                   <Users size={14} className="mr-2 text-gray-500" />
-                  <p>
-                    {partenaire.interlocuteurs.length} interlocuteur
-                    {partenaire.interlocuteurs.length > 1 ? "s" : ""}
-                  </p>
+                  <div className="group relative inline-block">
+                    <p className="cursor-help">
+                      {partenaire.interlocuteurs?.length || 0} interlocuteur
+                      {(partenaire.interlocuteurs?.length || 0) > 1 ? "s" : ""}
+                    </p>
+                    <div className="invisible group-hover:visible absolute z-10 w-64 bg-white rounded-lg shadow-lg p-2 text-sm mt-1 left-0">
+                      {renderInterlocuteursList(partenaire.interlocuteurs)}
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <Badge
@@ -293,7 +460,7 @@ const ModernPartenaireGrid: React.FC = () => {
               Annuaire des partenaires
             </h1>
             <p className="text-gray-500">
-              Consultez les profils et contactez nos partenaires
+              {filteredPartenaires.length} partenaire{filteredPartenaires.length > 1 ? 's' : ''} trouvé{filteredPartenaires.length > 1 ? 's' : ''}
             </p>
           </div>
 
@@ -319,7 +486,7 @@ const ModernPartenaireGrid: React.FC = () => {
               size={18}
             />
             <Input
-              placeholder="Rechercher par nom, spécialité, localisation, type ou interlocuteur..."
+              placeholder="Rechercher par nom, spécialité, localisation, type, entité ou interlocuteur..."
               className="pl-10 py-6 border-gray-300 rounded-lg"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

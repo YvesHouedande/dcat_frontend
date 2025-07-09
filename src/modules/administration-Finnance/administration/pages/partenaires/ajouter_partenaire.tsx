@@ -14,38 +14,39 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Save, Building, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Interlocuteur, Partenaires } from "../../types/interfaces";
-import { 
-  addPartner, 
-  fetchEntites, 
-  addEntite, 
-  deleteEntite 
+import { Entite, Interlocuteur, Partenaires } from "../../types/interfaces";
+import {
+  addPartner,
+  fetchEntites,
+  addEntite,
+  deleteEntite, 
+  addMultipleInterlocuteurs
 } from '@/modules/administration-Finnance/services/partenaireService';
 import { useApiCall } from '@/hooks/useAPiCall';
+import { omit } from "@/lib/utils";
+import axios from "axios";
 
-interface Entite {
-  id: number;
-  nom: string;
+// Interface pour les interlocuteurs temporaires (sans id_partenaire)
+interface TempInterlocuteur extends Omit<Interlocuteur, 'id_partenaire' | 'id_interlocuteur'> {
+  id_interlocuteur: number;
 }
 
 const AddPartnerForm: React.FC = () => {
   const navigate = useNavigate();
 
-  // Utilisation du hook pour les entités
-  const { 
-    data: entites, 
-    loading: loadingEntites, 
-    // Renommé pour éviter l'avertissement "déclaré mais jamais lu"
-    error: entitesErrorData, 
-    call: fetchEntitesData 
+  const {
+    data: entites,
+    loading: loadingEntites,
+    error: entitesErrorData,
+    call: fetchEntitesData
   } = useApiCall<Entite[]>(fetchEntites);
 
-  // Correction du typage pour l'ajout de partenaire
-  const { 
-    call: submitPartnerData, 
-    loading: isSubmitting 
-  } = useApiCall<Partenaires, [Partenaires]>(addPartner);
+  const {
+    call: submitPartnerData,
+    loading: isSubmitting
+  } = useApiCall<Partenaires, [Omit<Partenaires, 'id_partenaire'>]>(addPartner);
 
+  // État pour les données du partenaire
   const [formData, setFormData] = useState<Partenaires>({
     id_partenaire: 0,
     nom_partenaire: "",
@@ -55,28 +56,28 @@ const AddPartnerForm: React.FC = () => {
     localisation: "",
     type_partenaire: "",
     id_entite: 0,
-    statut: "Actif", // Ajout du statut par défaut
-    interlocuteurs: [],
+    statut: "Actif",
   });
+
+  // État séparé pour les interlocuteurs temporaires
+  const [tempInterlocuteurs, setTempInterlocuteurs] = useState<TempInterlocuteur[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [interlocuteurErrors, setInterlocuteurErrors] = useState<Record<number, Record<string, string>>>({});
-  const [newInterlocuteur, setNewInterlocuteur] = useState<Interlocuteur>({
+  const [newInterlocuteur, setNewInterlocuteur] = useState<TempInterlocuteur>({
     id_interlocuteur: 0,
     nom_interlocuteur: "",
     prenom_interlocuteur: "",
     fonction_interlocuteur: "",
     contact_interlocuteur: "",
-    mail_interlocuteur: "",
+    email_interlocuteur: "",
   });
 
   const [newEntiteNom, setNewEntiteNom] = useState("");
   const [showAddEntite, setShowAddEntite] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
-  // État local pour entités à utiliser avec setEntites
   const [localEntites, setLocalEntites] = useState<Entite[]>([]);
 
-  // Mise à jour de localEntites quand entites change
   useEffect(() => {
     if (entites) {
       setLocalEntites(entites);
@@ -104,7 +105,6 @@ const AddPartnerForm: React.FC = () => {
     "Autres",
   ];
 
-  // Options pour le statut du partenaire
   const statuts = [
     "Actif",
     "Inactif",
@@ -154,9 +154,9 @@ const AddPartnerForm: React.FC = () => {
     if (!newEntiteNom.trim()) return;
 
     try {
-      const newEntite = await addEntite({ nom: newEntiteNom });
+      const newEntite = await addEntite({ denomination: newEntiteNom });
       setLocalEntites([...(localEntites || []), newEntite]);
-      setFormData(prev => ({ ...prev, id_entite: newEntite.id }));
+      setFormData(prev => ({ ...prev, id_entite: newEntite.id_entite }));
       setNewEntiteNom("");
       setShowAddEntite(false);
     } catch (error) {
@@ -165,20 +165,29 @@ const AddPartnerForm: React.FC = () => {
     }
   };
 
-  const handleDeleteEntite = async (id: number) => {
-    if (formData.id_entite === id) {
+  const handleDeleteEntite = async (id: number | string) => {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+  
+    if (isNaN(numericId)) {
+      console.error("ID invalide:", id);
+      alert("ID d'entité invalide");
+      return;
+    }
+  
+    if (formData.id_entite === numericId) {
       alert("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
       return;
     }
-
+  
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement cette entité ?`)) {
       try {
-        await deleteEntite(id);
-        setLocalEntites((prevEntites) => prevEntites.filter(entite => entite.id !== id));
+        await deleteEntite(numericId);
+        setLocalEntites(prevEntites => prevEntites?.filter(entite => entite.id_entite !== numericId) || []);
         setDeleteMode(false);
+        fetchEntitesData();
       } catch (error) {
-        console.error("Failed to delete entite", error);
-        alert("Erreur lors de la suppression de l'entité");
+        console.error("Échec de la suppression:", error);
+        alert(error instanceof Error ? error.message : "Erreur lors de la suppression de l'entité");
       }
     }
   };
@@ -189,60 +198,74 @@ const AddPartnerForm: React.FC = () => {
   };
 
   const addInterlocuteur = () => {
-    const newErrors: Record<string, string> = {};
+    // Validation des champs requis
+    const requiredFields = {
+      nom_interlocuteur: "Nom",
+      prenom_interlocuteur: "Prénom",
+      contact_interlocuteur: "Contact",
+      email_interlocuteur: "Email",
+      fonction_interlocuteur: "Fonction"
+    };
 
-    if (!newInterlocuteur.nom_interlocuteur.trim()) {
-      newErrors.nom_interlocuteur = "Le nom est obligatoire";
-    }
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => !newInterlocuteur[key as keyof typeof newInterlocuteur])
+      .map(([, label]) => label);
 
-    if (!newInterlocuteur.prenom_interlocuteur.trim()) {
-      newErrors.prenom_interlocuteur = "Le prénom est obligatoire";
-    }
-
-    if (!newInterlocuteur.mail_interlocuteur.trim()) {
-      newErrors.mail_interlocuteur = "L'email est obligatoire";
-    } else if (!/^\S+@\S+\.\S+$/.test(newInterlocuteur.mail_interlocuteur)) {
-      newErrors.mail_interlocuteur = "Format d'email invalide";
-    }
-
-    if (!newInterlocuteur.contact_interlocuteur.trim()) {
-      newErrors.contact_interlocuteur = "Le contact est obligatoire";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
+    if (missingFields.length > 0) {
       setInterlocuteurErrors(prev => ({
         ...prev,
-        [formData.interlocuteurs.length]: newErrors
+        [tempInterlocuteurs.length]: {
+          general: `Les champs suivants sont obligatoires : ${missingFields.join(", ")}`
+        }
       }));
       return;
     }
 
-    setFormData(prev => ({
-      ...prev,
-      interlocuteurs: [...prev.interlocuteurs, newInterlocuteur]
-    }));
+    // Validation du format email
+    if (!/^\S+@\S+\.\S+$/.test(newInterlocuteur.email_interlocuteur)) {
+      setInterlocuteurErrors(prev => ({
+        ...prev,
+        [tempInterlocuteurs.length]: {
+          email_interlocuteur: "Le format de l'email est invalide"
+        }
+      }));
+      return;
+    }
 
+    // Préparation des données de l'interlocuteur
+    const formattedInterlocuteur = {
+      ...newInterlocuteur,
+      nom_interlocuteur: newInterlocuteur.nom_interlocuteur.trim(),
+      prenom_interlocuteur: newInterlocuteur.prenom_interlocuteur.trim(),
+      contact_interlocuteur: newInterlocuteur.contact_interlocuteur.trim(),
+      email_interlocuteur: newInterlocuteur.email_interlocuteur.trim(),
+      fonction_interlocuteur: newInterlocuteur.fonction_interlocuteur.trim(),
+      id_interlocuteur: tempInterlocuteurs.length + 1 // ID temporaire pour l'affichage
+    };
+
+    // Ajouter l'interlocuteur aux interlocuteurs temporaires
+    setTempInterlocuteurs(prev => [...prev, formattedInterlocuteur]);
+
+    // Réinitialiser le formulaire d'interlocuteur
     setNewInterlocuteur({
       id_interlocuteur: 0,
       nom_interlocuteur: "",
       prenom_interlocuteur: "",
       fonction_interlocuteur: "",
       contact_interlocuteur: "",
-      mail_interlocuteur: "",
+      email_interlocuteur: "",
     });
 
+    // Nettoyer les erreurs
     setInterlocuteurErrors(prev => {
       const newErrors = { ...prev };
-      delete newErrors[formData.interlocuteurs.length];
+      delete newErrors[tempInterlocuteurs.length];
       return newErrors;
     });
   };
 
   const removeInterlocuteur = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      interlocuteurs: prev.interlocuteurs.filter((_, i) => i !== index)
-    }));
+    setTempInterlocuteurs(prev => prev.filter((_, i) => i !== index));
 
     setInterlocuteurErrors(prev => {
       const newErrors = { ...prev };
@@ -294,18 +317,53 @@ const AddPartnerForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (!validateForm()) {
       return;
     }
-  
+
     try {
-      await submitPartnerData(formData);
+      // 1. Créer le partenaire d'abord
+      const partenaireData = {
+        ...omit(formData, ["id_partenaire"]),
+        id_entite: typeof formData.id_entite === 'string' ? parseInt(formData.id_entite) : formData.id_entite
+      };
+      
+      const createdPartenaire = await submitPartnerData(partenaireData);
+      
+      // 2. Si des interlocuteurs ont été ajoutés, les créer avec l'ID du partenaire
+      if (tempInterlocuteurs.length > 0 && createdPartenaire?.id_partenaire) {
+        const interlocuteursToCreate = tempInterlocuteurs.map(inter => ({
+          nom_interlocuteur: inter.nom_interlocuteur,
+          prenom_interlocuteur: inter.prenom_interlocuteur,
+          contact_interlocuteur: inter.contact_interlocuteur,
+          email_interlocuteur: inter.email_interlocuteur,
+          fonction_interlocuteur: inter.fonction_interlocuteur,
+          id_partenaire: createdPartenaire.id_partenaire
+        }));
+        
+        try {
+          await addMultipleInterlocuteurs(interlocuteursToCreate, createdPartenaire.id_partenaire);
+        } catch (error) {
+          console.error("Erreur lors de l'ajout des interlocuteurs:", error);
+          if (axios.isAxiosError(error)) {
+            alert(`Erreur lors de l'ajout des interlocuteurs: ${error.response?.data?.message || error.message}`);
+          } else {
+            alert("Erreur lors de l'ajout des interlocuteurs");
+          }
+          return;
+        }
+      }
+
       alert("Partenaire ajouté avec succès !");
       navigate("/administration/partenaires");
     } catch (error) {
       console.error("Error details:", error);
-      alert("Erreur lors de l'ajout du partenaire.");
+      if (axios.isAxiosError(error)) {
+        alert(`Erreur lors de l'ajout du partenaire: ${error.response?.data?.message || error.message}`);
+      } else {
+        alert("Erreur lors de l'ajout du partenaire");
+      }
     }
   };
 
@@ -452,66 +510,64 @@ const AddPartnerForm: React.FC = () => {
                         setDeleteMode(false);
                       } else if (value === "__delete__") {
                         setDeleteMode(!deleteMode);
+                        setShowAddEntite(false);
+                      } else if (deleteMode) {
+                        handleDeleteEntite(value);
                       } else {
-                        if (deleteMode) {
-                          handleDeleteEntite(parseInt(value, 10));
-                        } else {
-                          handleSelectChange("id_entite", parseInt(value, 10));
-                        }
+                        handleSelectChange("id_entite", parseInt(value, 10));
                       }
                     }}
                   >
-                    <SelectTrigger 
-                      id="entite" 
+                    <SelectTrigger
+                      id="entite"
                       className={errors.id_entite ? "border-red-500" : ""}
                       disabled={loadingEntites}
                     >
-                      <SelectValue 
+                      <SelectValue
                         placeholder={
-                          loadingEntites ? "Chargement..." : 
-                          deleteMode ? "Choisir une entité à supprimer" : 
-                          "Sélectionner une entité"
-                        } 
+                          loadingEntites 
+                            ? "Chargement..." 
+                            : deleteMode 
+                                ? "Sélectionner une entité à supprimer" 
+                                : "Sélectionner une entité"
+                        }
                       />
                     </SelectTrigger>
-
                     <SelectContent>
-                    {loadingEntites ? (
-                    <div className="py-2 text-center text-sm text-gray-500">
-                      Chargement des entités...
-                    </div>
-                      ) : entitesErrorData ? (
-                        <div className="py-2 text-center text-sm text-red-500">
-                          Erreur: Impossible de charger les entités
-                        </div>
-                      ) : (
-                        <>
-                          {localEntites?.map((entite) => (
-                            <SelectItem
-                              key={entite.id}
-                              value={entite.id.toString()}
-                              className={deleteMode ? "text-red-500 hover:bg-red-50" : ""}
-                            >
-                              {entite.nom}
+                        {loadingEntites ? (
+                          <div className="py-2 text-center text-sm text-gray-500">
+                            Chargement des entités...
+                          </div>
+                        ) : entitesErrorData ? (
+                          <div className="py-2 text-center text-sm text-red-500">
+                            Erreur: Impossible de charger les entités
+                          </div>
+                        ) : (
+                          <>
+                            {localEntites?.map((entite) => (
+                              <SelectItem
+                                key={entite.id_entite}
+                                value={entite.id_entite?.toString()}
+                                className={deleteMode ? "text-red-500 hover:bg-red-50" : ""}
+                              >
+                                {entite.denomination}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="__add__" className="text-blue-600 font-medium">
+                              + Ajouter une entité
                             </SelectItem>
-                          ))}
-
-                          <SelectItem value="__add__" className="text-blue-600 font-medium">
-                            + Ajouter une entité
-                          </SelectItem>
-
-                          {localEntites && localEntites.length > 0 && (
-                            <SelectItem
-                              value="__delete__"
-                              className={deleteMode ? "bg-gray-100 font-medium" : "text-red-600 font-medium"}
-                            >
-                              {deleteMode ? "✕ Annuler la suppression" : "− Supprimer une entité"}
-                            </SelectItem>
-                          )}
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
+                            {localEntites && localEntites.length > 0 && (
+                              <SelectItem
+                                value="__delete__"
+                                className={deleteMode ? "bg-gray-100 font-medium" : "text-red-600 font-medium"}
+                              >
+                                {deleteMode ? "✕ Annuler la suppression" : "− Supprimer une entité"}
+                              </SelectItem>
+                            )}
+                          </>
+                        )}
+                      </SelectContent>
+                </Select>
                 </div>
 
                 {showAddEntite && (
@@ -537,7 +593,7 @@ const AddPartnerForm: React.FC = () => {
                   <p className="text-red-500 text-sm">{errors.id_entite}</p>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="telephone_partenaire">Téléphone</Label>
                 <Input
@@ -590,7 +646,7 @@ const AddPartnerForm: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {formData.interlocuteurs.map((interlocuteur, index) => (
+              {tempInterlocuteurs.map((interlocuteur, index) => (
                 <div key={index} className="border rounded-lg p-4 relative">
                   <button
                     type="button"
@@ -605,7 +661,7 @@ const AddPartnerForm: React.FC = () => {
                       <p className="text-sm text-gray-500">{interlocuteur.fonction_interlocuteur}</p>
                     </div>
                     <div>
-                      <p className="text-sm">{interlocuteur.mail_interlocuteur}</p>
+                      <p className="text-sm">{interlocuteur.email_interlocuteur}</p>
                       <p className="text-sm">{interlocuteur.contact_interlocuteur}</p>
                     </div>
                   </div>
@@ -623,11 +679,11 @@ const AddPartnerForm: React.FC = () => {
                       name="prenom_interlocuteur"
                       value={newInterlocuteur.prenom_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[formData.interlocuteurs.length]?.prenom_interlocuteur ? "border-red-500" : ""}
+                      className={interlocuteurErrors[tempInterlocuteurs.length]?.prenom_interlocuteur ? "border-red-500" : ""}
                     />
-                    {interlocuteurErrors[formData.interlocuteurs.length]?.prenom_interlocuteur && (
+                    {interlocuteurErrors[tempInterlocuteurs.length]?.prenom_interlocuteur && (
                       <p className="text-red-500 text-sm">
-                        {interlocuteurErrors[formData.interlocuteurs.length].prenom_interlocuteur}
+                        {interlocuteurErrors[tempInterlocuteurs.length].prenom_interlocuteur}
                       </p>
                     )}
                   </div>
@@ -639,11 +695,11 @@ const AddPartnerForm: React.FC = () => {
                       name="nom_interlocuteur"
                       value={newInterlocuteur.nom_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[formData.interlocuteurs.length]?.nom_interlocuteur ? "border-red-500" : ""}
+                      className={interlocuteurErrors[tempInterlocuteurs.length]?.nom_interlocuteur ? "border-red-500" : ""}
                     />
-                    {interlocuteurErrors[formData.interlocuteurs.length]?.nom_interlocuteur && (
+                    {interlocuteurErrors[tempInterlocuteurs.length]?.nom_interlocuteur && (
                       <p className="text-red-500 text-sm">
-                        {interlocuteurErrors[formData.interlocuteurs.length].nom_interlocuteur}
+                        {interlocuteurErrors[tempInterlocuteurs.length].nom_interlocuteur}
                       </p>
                     )}
                   </div>
@@ -661,18 +717,18 @@ const AddPartnerForm: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="mail_interlocuteur">Email</Label>
+                    <Label htmlFor="email_interlocuteur">Email</Label>
                     <Input
-                      id="mail_interlocuteur"
-                      name="mail_interlocuteur"
+                      id="email_interlocuteur"
+                      name="email_interlocuteur"
                       type="email"
-                      value={newInterlocuteur.mail_interlocuteur}
+                      value={newInterlocuteur.email_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[formData.interlocuteurs.length]?.mail_interlocuteur ? "border-red-500" : ""}
+                      className={interlocuteurErrors[tempInterlocuteurs.length]?.email_interlocuteur ? "border-red-500" : ""}
                     />
-                    {interlocuteurErrors[formData.interlocuteurs.length]?.mail_interlocuteur && (
+                    {interlocuteurErrors[tempInterlocuteurs.length]?.email_interlocuteur && (
                       <p className="text-red-500 text-sm">
-                        {interlocuteurErrors[formData.interlocuteurs.length].mail_interlocuteur}
+                        {interlocuteurErrors[tempInterlocuteurs.length].email_interlocuteur}
                       </p>
                     )}
                   </div>
@@ -684,11 +740,11 @@ const AddPartnerForm: React.FC = () => {
                       name="contact_interlocuteur"
                       value={newInterlocuteur.contact_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[formData.interlocuteurs.length]?.contact_interlocuteur ? "border-red-500" : ""}
+                      className={interlocuteurErrors[tempInterlocuteurs.length]?.contact_interlocuteur ? "border-red-500" : ""}
                     />
-                    {interlocuteurErrors[formData.interlocuteurs.length]?.contact_interlocuteur && (
+                    {interlocuteurErrors[tempInterlocuteurs.length]?.contact_interlocuteur && (
                       <p className="text-red-500 text-sm">
-                        {interlocuteurErrors[formData.interlocuteurs.length].contact_interlocuteur}
+                        {interlocuteurErrors[tempInterlocuteurs.length].contact_interlocuteur}
                       </p>
                     )}
                   </div>

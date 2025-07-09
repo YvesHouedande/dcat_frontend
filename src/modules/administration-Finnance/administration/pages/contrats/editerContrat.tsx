@@ -45,7 +45,7 @@ const EditerContrat: React.FC = () => {
     Reference: "",
     type_de_contrat: "",
     status: "",
-    id_partenaire: undefined,
+    id_partenaire: 0,
   });
 
   const [documentData, setDocumentData] = useState<Document>({
@@ -53,8 +53,8 @@ const EditerContrat: React.FC = () => {
     libele_document: "",
     date_document: new Date().toISOString().split('T')[0],
     lien_document: "",
-    id_contrat: undefined,
-    id_nature_document: undefined,
+    id_contrat: 0,
+    id_nature_document: 0,
   });
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);

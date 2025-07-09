@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,31 +11,68 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Camera, Save, UserPlus } from "lucide-react";
+import { Camera, Save, UserPlus, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Employe } from "../../types/interfaces"; // Import the Employe interface
+import { Employe, Fonction } from "../../types/interfaces";
+import { fetchFonctions, createFonction } from "@/modules/administration-Finnance/services/fonctionService";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const EditEmployeForm: React.FC = () => {
   const router = useNavigate();
+  const [fonctions, setFonctions] = useState<Fonction[]>([]);
+  const [newFonction, setNewFonction] = useState("");
+  const [isAddingFonction, setIsAddingFonction] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<Employe>({
-    id_employe: 0, // Added id_employe field
+    id_employes: 0,
     nom_employes: "",
     prenom_employes: "",
     email_employes: "",
     contact_employes: "",
     adresse_employes: "",
-    status: "actif",
+    status_employes: "actif",
     date_embauche_employes: "",
     date_de_naissance: "",
-    contrats: "",
+    contrat: "",
     id_fonction: 0,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadFonctions();
+  }, []);
+
+  const loadFonctions = async () => {
+    try {
+      const data = await fetchFonctions();
+      setFonctions(data);
+    } catch (error) {
+      console.error("Erreur lors du chargement des fonctions:", error);
+    }
+  };
+
+  const handleAddFonction = async () => {
+    if (!newFonction.trim()) return;
+
+    try {
+      await createFonction({ nom_fonction: newFonction });
+      await loadFonctions();
+      setNewFonction("");
+      setIsAddingFonction(false);
+    } catch (error) {
+      console.error("Erreur lors de la création de la fonction:", error);
+    }
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -77,7 +114,7 @@ const EditEmployeForm: React.FC = () => {
   const handleStatusChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
-      status: value as "actif" | "absent" | "depart",
+      status_employes: value as "actif" | "absent" | "depart",
     }));
   };
 
@@ -221,7 +258,7 @@ const EditEmployeForm: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="status">Statut</Label>
                 <Select
-                  value={formData.status}
+                  value={formData.status_employes}
                   onValueChange={handleStatusChange}
                 >
                   <SelectTrigger id="status">
@@ -281,6 +318,76 @@ const EditEmployeForm: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          <div className="space-y-2">
+            <Label htmlFor="id_fonction">Fonction</Label>
+            <div className="flex gap-2">
+              <Select
+                value={formData.id_fonction ? formData.id_fonction.toString() : ""}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    id_fonction: parseInt(value),
+                  }))
+                }
+              >
+                <SelectTrigger id="id_fonction" className="flex-1">
+                  <SelectValue placeholder="Sélectionner une fonction" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fonctions.map((fonction) => (
+                    <SelectItem
+                      key={fonction.id_fonction}
+                      value={fonction.id_fonction.toString()}
+                    >
+                      {fonction.nom_fonction}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Dialog open={isAddingFonction} onOpenChange={setIsAddingFonction}>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline">
+                    <Plus size={16} className="mr-2" />
+                    Nouvelle fonction
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Ajouter une nouvelle fonction</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-fonction">Nom de la fonction</Label>
+                      <Input
+                        id="new-fonction"
+                        value={newFonction}
+                        onChange={(e) => setNewFonction(e.target.value)}
+                        placeholder="ex: Développeur Frontend"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsAddingFonction(false)}
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleAddFonction}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        Ajouter
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
 
           <div className="flex justify-end gap-3">
             <Button

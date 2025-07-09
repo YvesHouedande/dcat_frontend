@@ -23,68 +23,79 @@ import {
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
-import { Employe } from "../../types/interfaces"; // Import the Employe interface
-import { profilesList } from "./employe"; // Import the profilesList
-
-export const jobFunctions: Record<number, string> = {
-  1: "Développeur",
-  2: "Technicien Réseau",
-  3: "Directeur Général",
-  4: "Comptable",
-  5: "Agent Commercial",
-  6: "Directeur Technique",
-  7: "Administrateur Réseau",
-};
-
-export const getJobFunction = (id_fonction: number | undefined): string => {
-  if (id_fonction !== undefined && id_fonction in jobFunctions) {
-    return jobFunctions[id_fonction];
-  }
-  return "Non spécifié";
-};
+import { Employe, Document } from "../../types/interfaces";
+import { fetchEmployeById } from "../../../services/employeService";
+import { fetchFonctionById } from "../../../services/fonctionService";
+import { fetchEmployeDocuments, downloadDocument } from "../../../services/documentService";
 
 const ModernUserProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [userInfo, setUserInfo] = useState<Employe | null>(null);
-
-  // Define job functions with type safety
-
-
-  // Example data for documents
-  const documents = [
-    {
-      id: "1",
-      name: "Demande de congés annuels",
-      type: "Formulaire RH",
-      date: "12/03/2025",
-      status: "En cours",
-    },
-    {
-      id: "2",
-      name: "Note de frais - Mars 2025",
-      type: "Finance",
-      date: "28/03/2025",
-      status: "Approuvé",
-    },
-    {
-      id: "3",
-      name: "CV et lettre de motivation",
-      type: "Personnel",
-      date: "15/02/2025",
-      status: "Complété",
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [jobTitle, setJobTitle] = useState<string>("Non spécifié");
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
 
   useEffect(() => {
-    // Fetch profile data based on the ID
-    const fetchProfileData = () => {
-      const profile = profilesList.find((p) => p.id_employe === Number(id));
-      setUserInfo(profile || null);
+    const loadEmploye = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (!id) {
+          throw new Error("L'identifiant de l'employé est manquant dans l'URL");
+        }
+
+        const employeId = parseInt(id);
+        if (isNaN(employeId) || employeId <= 0) {
+          throw new Error("L'identifiant de l'employé est invalide");
+        }
+
+        // Charger les données de l'employé
+        const data = await fetchEmployeById(employeId);
+        
+        // Vérifier les données reçues
+        if (!data || !data.id_employes) {
+          throw new Error("Les données de l'employé sont invalides ou incomplètes");
+        }
+
+        setUserInfo(data);
+
+        // Charger le titre du poste si disponible
+        if (data.id_fonction) {
+          try {
+            const fonctionData = await fetchFonctionById(data.id_fonction);
+            setJobTitle(fonctionData?.nom_fonction || "Non spécifié");
+          } catch (err) {
+            console.error("Erreur lors du chargement de la fonction:", err);
+            setJobTitle("Non spécifié");
+          }
+        }
+
+        // Charger les documents
+        try {
+          setLoadingDocuments(true);
+          const docs = await fetchEmployeDocuments(data.id_employes);
+          setDocuments(docs || []);
+        } catch (err) {
+          console.error("Erreur lors du chargement des documents:", err);
+          // Ne pas bloquer l'affichage du profil si les documents ne se chargent pas
+        } finally {
+          setLoadingDocuments(false);
+        }
+
+      } catch (err) {
+        console.error("Erreur lors du chargement des données:", err);
+        setError(err instanceof Error ? err.message : "Une erreur inattendue s'est produite");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchProfileData();
-  }, [id]);
+    loadEmploye();
+  }, [id]); // Dépendance unique sur l'ID
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -100,14 +111,58 @@ const ModernUserProfile: React.FC = () => {
   };
 
   const handleClick = (id: string | number | undefined) => {
+    if (!id) {
+      console.error("ID manquant pour la modification");
+      return;
+    }
     navigate(`/administration/employers/${id}/editer`);
   };
 
-  // Helper function to safely get job function name
+  const handleDownloadDocument = async (docId: string) => {
+    try {
+      const blob = await downloadDocument(docId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `document-${docId}`; // Le nom du fichier sera défini par le Content-Disposition du serveur
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Erreur lors du téléchargement:", err);
+      alert("Erreur lors du téléchargement du document");
+    }
+  };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen">
+        <div className="mb-4">Chargement...</div>
+        <div className="text-sm text-gray-500">
+          <div>ID dans l'URL: {id || 'Non défini'}</div>
+          <div>Chemin complet: {window.location.pathname}</div>
+        </div>
+      </div>
+    );
+  }
 
-  if (!userInfo) {
-    return <div>Loading...</div>;
+  if (error || !userInfo) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen text-red-500">
+        <div className="mb-4">{error || "Employé non trouvé"}</div>
+        <div className="text-sm">
+          <div>ID dans l'URL: {id || 'Non défini'}</div>
+          <div>Chemin complet: {window.location.pathname}</div>
+          <button 
+            onClick={() => navigate('/administration/employers')}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retour à la liste
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -126,13 +181,13 @@ const ModernUserProfile: React.FC = () => {
               <h1 className="text-2xl font-bold">
                 {userInfo.prenom_employes} {userInfo.nom_employes}
               </h1>
-              <p className="text-blue-100">{getJobFunction(userInfo.id_fonction)}</p>
+              <p className="text-blue-100">{jobTitle}</p>
               <div className="mt-2">
                 <Badge
                   variant="outline"
                   className="bg-blue-500/20 text-white border-blue-200"
                 >
-                  {userInfo.status}
+                  {userInfo.status_employes}
                 </Badge>
               </div>
             </div>
@@ -193,7 +248,7 @@ const ModernUserProfile: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Poste</p>
-                        <p className="font-medium">{getJobFunction(userInfo.id_fonction)}</p>
+                        <p className="font-medium">{jobTitle}</p>
                       </div>
                     </div>
 
@@ -319,11 +374,9 @@ const ModernUserProfile: React.FC = () => {
           </TabsContent>
           <TabsContent value="documents" className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">Mes documents</h2>
+              <h2 className="text-xl font-bold text-gray-800">Documents</h2>
               <Button
-                onClick={() => {
-                  navigate(`/administration/documents/nouveau`);
-                }}
+                onClick={() => navigate('/administration/documents/nouveau')}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <Upload size={16} className="mr-2" />
@@ -331,52 +384,65 @@ const ModernUserProfile: React.FC = () => {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {documents.map((doc) => (
-                <Card
-                  key={doc.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-gray-50 p-4 border-b">
-                    <div className="flex justify-between">
-                      <Badge className={getStatusColor(doc.status)}>
-                        {doc.status}
-                      </Badge>
-                      <span className="text-xs text-gray-500">{doc.date}</span>
-                    </div>
-                    <div className="mt-6 mb-4 flex justify-center">
-                      <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
-                        <FileText size={24} className="text-gray-400" />
+            {loadingDocuments ? (
+              <div className="text-center py-8">
+                <p>Chargement des documents...</p>
+              </div>
+            ) : documents.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <FileText size={48} className="mx-auto mb-4 text-gray-300" />
+                <p>Aucun document disponible</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {documents.map((doc) => (
+                  <Card
+                    key={doc.id}
+                    className="overflow-hidden hover:shadow-md transition-shadow"
+                  >
+                    <div className="bg-gray-50 p-4 border-b">
+                      <div className="flex justify-between">
+                        <Badge className={getStatusColor(doc.status)}>
+                          {doc.status}
+                        </Badge>
+                        <span className="text-xs text-gray-500">{doc.date}</span>
+                      </div>
+                      <div className="mt-6 mb-4 flex justify-center">
+                        <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
+                          <FileText size={24} className="text-gray-400" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-gray-800 mb-1">
-                      {doc.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">{doc.type}</p>
-                    <div className="flex justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-gray-600 text-xs"
-                      >
-                        <Edit size={14} className="mr-1" />
-                        Mettre à jour
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-blue-600 text-xs"
-                      >
-                        <Download size={14} className="mr-1" />
-                        Télécharger
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-medium text-gray-800 mb-1">
+                        {doc.name}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-4">{doc.type}</p>
+                      <div className="flex justify-between">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-gray-600 text-xs"
+                          onClick={() => navigate(`/administration/documents/${doc.id}/editer`)}
+                        >
+                          <Edit size={14} className="mr-1" />
+                          Mettre à jour
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 text-xs"
+                          onClick={() => handleDownloadDocument(doc.id)}
+                        >
+                          <Download size={14} className="mr-1" />
+                          Télécharger
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
           <TabsContent value="settings" className="p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-6">
@@ -393,7 +459,10 @@ const ModernUserProfile: React.FC = () => {
                       Modifier vos informations de profil
                     </p>
                   </div>
-                  <Button variant="outline">
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleClick(id)}
+                  >
                     <ExternalLink size={16} className="mr-2" />
                     Accéder
                   </Button>
@@ -435,7 +504,11 @@ const ModernUserProfile: React.FC = () => {
                   </div>
                   <Button
                     variant="outline"
-                    className="border-red-200 text-red-600 hover:bg-red-50 cursor-pointer"
+                    className="border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => {
+                      // TODO: Implémenter la logique de suspension
+                      alert("Fonctionnalité en cours de développement");
+                    }}
                   >
                     Suspendre
                   </Button>

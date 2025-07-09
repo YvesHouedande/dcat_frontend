@@ -4,7 +4,6 @@ import ExampleAdministrationPage from "./pages/ExampleAdministrationPage";
 import NotFound from "@/pages/NotFound";
 import Employer from "./pages/employers/employe";
 import UserProfile from "./pages/employers/UserProfile";
-import AddEmployeForm from "./pages/employers/ajouter_employe";
 import EditEmployeForm from "./pages/employers/editer_employe";
 import AddPartnerForm from "./pages/partenaires/ajouter_partenaire";
 import AdministrationLayout from "./pages/administrationLayout";
@@ -20,17 +19,11 @@ import AddDocumentPage from "./pages/documents/AddDocumentPage";
 import DemandesAnnuaire from "./pages/demandes/demandes";
 import NouvelleDemandePage from "./pages/demandes/nouveau";
 import ModifierDemandePage from "./pages/demandes/modifier_demande";
-import AddFinance from "../finance/addFinance";
-import FinanceGrid from "../finance/finances";
 import DocumentDetailPage from "./pages/documents/documentDetails";
-import FinanceDetailPage from "../finance/detailFinance";
-import EditFinance from "../finance/editFinance";
-import EditDocumentPage from "./pages/documents/editDocumentPage";
-import AddComptabilite from "../comptabilite/addComptabilite";
-import ComptabiliteGrid from "../comptabilite/comptabilite";
-import ComptabiliteDetailPage from "../comptabilite/detailComptabilite";
-import EditComptabilite from "../comptabilite/editComptabilite";
 import DemandeDetailPage from "./pages/demandes/info_demandes";
+import EditDocumentPage from "./pages/documents/editDocumentPage";
+import FinanceComptaRoutes from "../finance_compta/FinanceComptaRoutes";
+
 const AdministrationRoutes: React.FC = () => {
   return (
     <Routes>
@@ -38,11 +31,10 @@ const AdministrationRoutes: React.FC = () => {
       {/* Routes /employers */}
       <Route path="/employers" element={<AdministrationLayout />}>
         <Route index element={<Employer />} />
-        <Route path="nouvel_employer" element={<AddEmployeForm />} />
         <Route path="profil/:id" element={<UserProfile />} />
         <Route path=":id/editer" element={<EditEmployeForm />} />
       </Route>
-      {/* Routes /epartenaires */}
+      {/* Routes /partenaires */}
       <Route path="/partenaires" element={<AdministrationLayout />}>
         <Route index element={<ModernPartenaireGrid />} />
         <Route path="ajouter" element={<AddPartnerForm />} />
@@ -70,19 +62,9 @@ const AdministrationRoutes: React.FC = () => {
         <Route path=":id/editer" element={<EditDocumentPage />} />
         <Route path="nouveau" element={<AddDocumentPage />} />
       </Route>
-      {/* Routes /finance */}
-      <Route path="/finance" element={<AdministrationLayout />}>
-        <Route index element={<FinanceGrid />} />
-        <Route path=":id/details" element={<FinanceDetailPage />} />
-        <Route path="nouveau" element={<AddFinance />} />
-        <Route path=":id/editer" element={<EditFinance />} />
-      </Route>
-      {/* Routes /comptabilité */}
-      <Route path="/comptabilite" element={<AdministrationLayout />}>
-        <Route index element={<ComptabiliteGrid />} />
-        <Route path=":id/details" element={<ComptabiliteDetailPage />} />
-        <Route path="nouveau" element={<AddComptabilite />} />
-        <Route path=":id/editer" element={<EditComptabilite />} />
+      {/* Routes /finance-compta (unifié) */}
+      <Route path="/finance-compta/*" element={<AdministrationLayout />}>
+        <Route path="*" element={<FinanceComptaRoutes />} />
       </Route>
       <Route path="/*" element={<NotFound />} />
     </Routes>

@@ -255,7 +255,7 @@ const LivrablesPage: React.FC = () => {
                 livrables={currentLivrables}
                 onDelete={handleDelete}
                 onEdit={(id) => navigate(`/technique/projets/livrables/${id}/editer`)}
-                onView={(id) => navigate(`/technique/projets/livrables/${id}`)}
+                onView={(id) => navigate(`/technique/projets/livrables/${id}/details`)}
                 projets={projets} // Passez les projets pour mapper les noms
               />
               <LivrablePagination

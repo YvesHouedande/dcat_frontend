@@ -1,20 +1,45 @@
 import axios from 'axios';
-import { Interlocuteur, Partenaires } from '../administration/types/interfaces';
+// import { Interlocuteur, Partenaires, Entite, Projet } from '../administration/types/interfaces';
+import { Interlocuteur, Partenaires, Entite} from '../administration/types/interfaces';
 
 const API_URL = import.meta.env.VITE_APP_API_URL;
 
 // Services des partenaires
-export const fetchPartners = async () => {
+export const fetchPartners = async (): Promise<Partenaires[]> => {
   try {
+    // Récupérer tous les partenaires
     const response = await axios.get(`${API_URL}/administration/partenaires`);
-    return response.data;
+    const partenaires = response.data;
+
+    // Pour chaque partenaire, récupérer ses interlocuteurs
+    const partenairesWithInterlocuteurs = await Promise.all(
+      partenaires.map(async (partenaire: Partenaires) => {
+        try {
+          const interlocuteursResponse = await axios.get(
+            `${API_URL}/administration/interlocuteurs/partenaire/${partenaire.id_partenaire}`
+          );
+          return {
+            ...partenaire,
+            interlocuteurs: interlocuteursResponse.data
+          };
+        } catch (error) {
+          console.error(`Erreur lors de la récupération des interlocuteurs pour le partenaire ${partenaire.id_partenaire}:`, error);
+          return {
+            ...partenaire,
+            interlocuteurs: []
+          };
+        }
+      })
+    );
+
+    return partenairesWithInterlocuteurs;
   } catch (error) {
     console.error("Erreur de recherche de partenaires:", error);
     throw error;
   }
 };
 
-export const fetchPartnerById = async (id: string | undefined) => {
+export const fetchPartnerById = async (id: string | number): Promise<Partenaires> => {
   try {
     const response = await axios.get(`${API_URL}/administration/partenaires/${id}`);
     return response.data;
@@ -24,7 +49,7 @@ export const fetchPartnerById = async (id: string | undefined) => {
   }
 };
 
-export const addPartner = async (partnerData: Partenaires) => {
+export const addPartner = async (partnerData: Omit<Partenaires, 'id_partenaire'>): Promise<Partenaires> => {
   try {
     const response = await axios.post(`${API_URL}/administration/partenaires`, partnerData);
     return response.data;
@@ -34,20 +59,30 @@ export const addPartner = async (partnerData: Partenaires) => {
   }
 };
 
-export const updatePartner = async (id: string | number, partnerData: Partenaires) => {
+export const updatePartner = async (id: string | number, partnerData: Partial<Partenaires>): Promise<Partenaires> => {
   try {
+    console.log('Données envoyées pour la mise à jour du partenaire:', {
+      id,
+      data: partnerData
+    });
     const response = await axios.put(`${API_URL}/administration/partenaires/${id}`, partnerData);
     return response.data;
   } catch (error) {
-    console.error("Erreur de mise à jour du partenaire:", error);
+    if (axios.isAxiosError(error)) {
+      console.error('Erreur détaillée lors de la mise à jour du partenaire:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+    }
     throw error;
   }
 };
 
-export const deletePartner = async (id: string | number) => {
+export const deletePartner = async (id: string | number): Promise<void> => {
   try {
-    const response = await axios.delete(`${API_URL}/administration/partenaires/${id}`);
-    return response.data;
+    await axios.delete(`${API_URL}/administration/partenaires/${id}`);
   } catch (error) {
     console.error("Erreur de suppression du partenaire:", error);
     throw error;
@@ -55,55 +90,139 @@ export const deletePartner = async (id: string | number) => {
 };
 
 // Services pour les interlocuteurs
-export const fetchInterlocuteurs = async (partnerId: string | number) => {
+export const fetchInterlocuteursByPartenaire = async (id_partenaire: number): Promise<Interlocuteur[]> => {
   try {
-    const response = await axios.get(`${API_URL}/administration/partenaires/${partnerId}/interlocuteurs`);
+    const response = await axios.get(`${API_URL}/administration/interlocuteurs/partenaire/${id_partenaire}`);
     return response.data;
   } catch (error) {
-    console.error("Erreur de récupération des interlocuteurs:", error);
+    console.error('Erreur lors de la récupération des interlocuteurs:', error);
     throw error;
   }
 };
 
-export const addInterlocuteur = async (partnerId: string | number, interlocuteurData: Omit<Interlocuteur, 'id_interlocuteur'>) => {
+export const addInterlocuteur = async (interlocuteur: Omit<Interlocuteur, 'id_interlocuteur'>): Promise<Interlocuteur> => {
   try {
-    const response = await axios.post(`${API_URL}/administration/partenaires/${partnerId}/interlocuteurs`, interlocuteurData);
+    // Formatage des données selon la structure attendue par l'API
+    const formattedData = {
+      nom_interlocuteur: interlocuteur.nom_interlocuteur,
+      prenom_interlocuteur: interlocuteur.prenom_interlocuteur,
+      contact_interlocuteur: interlocuteur.contact_interlocuteur,
+      email_interlocuteur: interlocuteur.email_interlocuteur,
+      fonction_interlocuteur: interlocuteur.fonction_interlocuteur,
+      id_partenaire: interlocuteur.id_partenaire
+    };
+
+    console.log('Données formatées pour l\'ajout de l\'interlocuteur:', formattedData);
+
+    const response = await axios.post(`${API_URL}/administration/interlocuteurs`, formattedData);
     return response.data;
   } catch (error) {
-    console.error("Erreur lors de l'ajout d'un interlocuteur:", error);
+    if (axios.isAxiosError(error)) {
+      console.error('Erreur détaillée lors de l\'ajout de l\'interlocuteur:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+    }
     throw error;
   }
 };
 
-export const updateInterlocuteur = async (
-  partnerId: string | number,
-  interlocuteurId: string | number,
-  interlocuteurData: Partial<Interlocuteur>
-) => {
+export const updateInterlocuteur = async (id: number, interlocuteur: Partial<Interlocuteur>): Promise<Interlocuteur> => {
   try {
-    const response = await axios.put(
-      `${API_URL}/administration/partenaires/${partnerId}/interlocuteurs/${interlocuteurId}`,
-      interlocuteurData
+    // Formatage des données selon la structure attendue par l'API
+    const formattedData = {
+      nom_interlocuteur: interlocuteur.nom_interlocuteur,
+      prenom_interlocuteur: interlocuteur.prenom_interlocuteur,
+      contact_interlocuteur: interlocuteur.contact_interlocuteur,
+      email_interlocuteur: interlocuteur.email_interlocuteur,
+      fonction_interlocuteur: interlocuteur.fonction_interlocuteur,
+      id_partenaire: interlocuteur.id_partenaire
+    };
+
+    console.log('Données formatées pour la mise à jour de l\'interlocuteur:', {
+      id,
+      data: formattedData
+    });
+
+    const response = await axios.put(`${API_URL}/administration/interlocuteurs/${id}`, formattedData);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Erreur détaillée lors de la mise à jour de l\'interlocuteur:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        url: `${API_URL}/administration/interlocuteurs/${id}`
+      });
+    }
+    throw error;
+  }
+};
+
+export const deleteInterlocuteur = async (id: number): Promise<void> => {
+  try {
+    await axios.delete(`${API_URL}/administration/interlocuteurs/${id}`);
+  } catch (error) {
+    console.error('Erreur lors de la suppression de l\'interlocuteur:', error);
+    throw error;
+  }
+};
+
+export const fetchInterlocuteurById = async (id: number): Promise<Interlocuteur> => {
+  try {
+    const response = await axios.get(`${API_URL}/administration/interlocuteurs/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'interlocuteur:', error);
+    throw error;
+  }
+};
+
+export const addMultipleInterlocuteurs = async (
+  interlocuteurs: Omit<Interlocuteur, 'id_interlocuteur' | 'id_partenaire'>[],
+  id_partenaire: number
+): Promise<Interlocuteur[]> => {
+  try {
+    console.log('Tentative d\'ajout multiple d\'interlocuteurs:', {
+      nombre: interlocuteurs.length,
+      id_partenaire,
+      interlocuteurs
+    });
+
+    const responses = await Promise.all(
+      interlocuteurs.map(interlocuteur => {
+        // Formatage des données pour chaque interlocuteur
+        const formattedData = {
+          nom_interlocuteur: interlocuteur.nom_interlocuteur,
+          prenom_interlocuteur: interlocuteur.prenom_interlocuteur,
+          contact_interlocuteur: interlocuteur.contact_interlocuteur,
+          email_interlocuteur: interlocuteur.email_interlocuteur,
+          fonction_interlocuteur: interlocuteur.fonction_interlocuteur,
+          id_partenaire
+        };
+
+        return axios.post(`${API_URL}/administration/interlocuteurs`, formattedData);
+      })
     );
-    return response.data;
+    return responses.map(response => response.data);
   } catch (error) {
-    console.error("Erreur de mise à jour d'un interlocuteur:", error);
-    throw error;
-  }
-};
-
-export const deleteInterlocuteur = async (partnerId: string | number, interlocuteurId: string | number) => {
-  try {
-    const response = await axios.delete(`${API_URL}/administration/partenaires/${partnerId}/interlocuteurs/${interlocuteurId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Erreur de suppression d'un interlocuteur:", error);
+    if (axios.isAxiosError(error)) {
+      console.error('Erreur détaillée lors de l\'ajout multiple des interlocuteurs:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+    }
     throw error;
   }
 };
 
 // Services pour les entités
-export const fetchEntites = async () => {
+export const fetchEntites = async (): Promise<Entite[]> => {
   try {
     const response = await axios.get(`${API_URL}/administration/entites`);
     return response.data;
@@ -113,7 +232,7 @@ export const fetchEntites = async () => {
   }
 };
 
-export const fetchEntiteById = async (id: string | number) => {
+export const fetchEntiteById = async (id: string | number): Promise<Entite> => {
   try {
     const response = await axios.get(`${API_URL}/administration/entites/${id}`);
     return response.data;
@@ -123,7 +242,7 @@ export const fetchEntiteById = async (id: string | number) => {
   }
 };
 
-export const addEntite = async (entiteData: { nom: string }) => {
+export const addEntite = async (entiteData: { denomination: string }): Promise<Entite> => {
   try {
     const response = await axios.post(`${API_URL}/administration/entites`, entiteData);
     return response.data;
@@ -133,7 +252,7 @@ export const addEntite = async (entiteData: { nom: string }) => {
   }
 };
 
-export const updateEntite = async (id: string | number, entiteData: { nom: string }) => {
+export const updateEntite = async (id: string | number, entiteData: { denomination: string }): Promise<Entite> => {
   try {
     const response = await axios.put(`${API_URL}/administration/entites/${id}`, entiteData);
     return response.data;
@@ -143,12 +262,24 @@ export const updateEntite = async (id: string | number, entiteData: { nom: strin
   }
 };
 
-export const deleteEntite = async (id: string | number) => {
+export const deleteEntite = async (id: number): Promise<void> => {
   try {
-    const response = await axios.delete(`${API_URL}/administration/entites/${id}`);
-    return response.data;
+    await axios.delete(`${API_URL}/administration/entites/${id}`);
   } catch (error) {
-    console.error("Erreur de suppression d'une entité:", error);
+    console.error('Erreur de suppression de l\'entité:', error);
     throw error;
   }
 };
+
+// Services pour les projets
+// export const fetchProjetsByPartenaire = async (id_partenaire: number): Promise<Projet[]> => {
+//   try {
+//     const response = await axios.get(`${API_URL}/administration/projets/partenaire/${id_partenaire}`);
+//     return response.data;
+//   } catch (error) {
+//     console.error('Erreur lors de la récupération des projets:', error);
+//     // Si l'endpoint n'existe pas (404) ou autre erreur, retourner un tableau vide
+//     // pour ne pas bloquer l'affichage du reste du profil
+//     return [];
+//   }
+// };

@@ -194,7 +194,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
         {/* Header contextuel */}
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/technique/projets/${id}/details/taches`)}>
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/technique/projets/taches`)}>
               <ArrowLeft className="h-4 w-4 mr-1" /> Retour
             </Button>
             <span className="hidden sm:inline">/</span>

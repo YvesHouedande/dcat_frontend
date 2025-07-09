@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,99 +21,89 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Document } from "../administration/types/interfaces"; // Importation de l'interface Document depuis votre fichier interface.ts
+import { DemandeDocument, NatureDocument } from "../administration/types/interfaces";
+import { getAllNatureDocuments, getDocumentsByNature, deleteDocument } from "../services/finance_comptaService";
 
-// Données d'exemple utilisant l'interface Document
-export const documents: Document[] = [
-  {
-    "id_document": 1,
-    "libele_document": "Bilan comptable annuel 2024",
-    "lien_document": "bilan-comptable-2024.pdf",
-    "etat_document": "actif",
-    "id_nature_document": 1,
-    "date_document": "2024-05-10T14:20:00"
-  },
-  {
-    "id_document": 2,
-    "libele_document": "Journal général trimestriel Q1 2024",
-    "lien_document": "journal-general-q1-2024.xlsx",
-    "etat_document": "actif",
-    "id_nature_document": 2,
-    "date_document": "2024-04-28T09:45:00"
-  },
-  {
-    "id_document": 3,
-    "libele_document": "Plan comptable 2025",
-    "lien_document": "plan-comptable-2025.xlsx",
-    "etat_document": "actif",
-    "id_nature_document": 3,
-    "date_document": "2024-04-15T16:30:00"
-  },
-  {
-    "id_document": 4,
-    "libele_document": "Grand livre général",
-    "lien_document": "grand-livre-general.pdf",
-    "etat_document": "actif",
-    "id_nature_document": 1,
-    "date_document": "2024-04-05T11:10:00"
-  },
-  {
-    "id_document": 5,
-    "libele_document": "Procédures de clôture mensuelle",
-    "lien_document": "procedures-cloture-mensuelle.docx",
-    "etat_document": "actif",
-    "id_nature_document": 2,
-    "date_document": "2024-03-22T13:25:00"
-  },
-  {
-    "id_document": 6,
-    "libele_document": "Rapport d'audit comptable 2023",
-    "lien_document": "audit-comptable-2023.pdf",
-    "etat_document": "actif",
-    "id_nature_document": 1,
-    "date_document": "2024-03-18T10:15:00"
-  },
-  {
-    "id_document": 7,
-    "libele_document": "Tableau des amortissements",
-    "lien_document": "amortissements.xlsx",
-    "etat_document": "actif",
-    "id_nature_document": 3,
-    "date_document": "2024-03-10T14:50:00"
-  },
-  {
-    "id_document": 8,
-    "libele_document": "Contrat avec expert-comptable",
-    "lien_document": "contrat-expert-comptable.pdf",
-    "etat_document": "actif",
-    "id_nature_document": 1,
-    "date_document": "2024-02-28T15:40:00"
-  },
-  {
-    "id_document": 9,
-    "libele_document": "Manuel des procédures comptables",
-    "lien_document": "manuel-procedures-comptables.pdf",
-    "etat_document": "actif",
-    "id_nature_document": 1,
-    "date_document": "2024-02-15T09:30:00"
-  },
-  {
-    "id_document": 10,
-    "libele_document": "Analyse des écarts budgétaires",
-    "lien_document": "analyse-ecarts-budgetaires.pptx",
-    "etat_document": "actif",
-    "id_nature_document": 2,
-    "date_document": "2024-02-05T11:20:00"
-  }
-];
+// Ajoute un type local pour la structure de réponse API attendue
+type DocsApiResponse = { success: boolean; data: DemandeDocument[] };
 
-const ComptabiliteGrid: React.FC = () => {
+const FinanceComptaGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [activeTab, setActiveTab] = useState<"finance" | "comptabilite">("finance");
+  const [documents, setDocuments] = useState<DemandeDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      setDocuments([]); // Toujours réinitialiser les documents au début
+
+      try {
+        // Étape 1: Charger les natures de documents
+        const natures = await getAllNatureDocuments();
+        
+        const financeNature = natures.find(n => 
+          n.libelle && (n.libelle.toLowerCase().includes('finance') || n.libelle.toLowerCase().includes('financier'))
+        );
+        
+        const comptabiliteNature = natures.find(n => 
+          n.libelle && (n.libelle.toLowerCase().includes('comptabilite') || n.libelle.toLowerCase().includes('comptable') || n.libelle.toLowerCase().includes('compta'))
+        );
+
+        // Étape 2: Déterminer la nature à utiliser en fonction de l'onglet actif
+        let natureToUse: NatureDocument | undefined;
+        if (activeTab === "finance") {
+          natureToUse = financeNature;
+        } else {
+          natureToUse = comptabiliteNature;
+        }
+        
+        // Étape 3: Charger les documents si une nature a été trouvée
+        if (natureToUse) {
+          const response = await getDocumentsByNature(natureToUse.id_nature_document);
+          if (
+            response &&
+            typeof response === 'object' &&
+            'success' in response &&
+            Array.isArray((response as unknown as DocsApiResponse).data)
+          ) {
+            setDocuments((response as unknown as DocsApiResponse).data);
+          } else if (Array.isArray(response)) {
+            setDocuments(response);
+          } else {
+            console.error("Format de réponse API inattendu:", response);
+            setDocuments([]);
+          }
+        }
+        // Si aucune nature n'est trouvée, documents restera un tableau vide, ce qui est correct.
+
+      } catch (err: unknown) {
+        console.error(`Erreur lors du chargement des données pour l'onglet ${activeTab}:`, err);
+        // Si c'est une erreur 404 (pas de documents), on affiche juste une liste vide.
+        if (typeof err === 'object' && err !== null && 'response' in err) {
+          const errorObj = err as { response?: { status?: number } };
+          if (errorObj.response?.status === 404) {
+            setDocuments([]);
+            return;
+          }
+        }
+        setError("Erreur lors du chargement des données.");
+      } finally {
+        // Étape 4: Toujours arrêter le chargement à la fin
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [activeTab]); // L'effet se déclenchera uniquement lorsque l'onglet change
 
   // Fonction pour extraire le type de fichier à partir de l'extension
   const getFileType = (filename: string): string => {
@@ -123,20 +113,33 @@ const ComptabiliteGrid: React.FC = () => {
 
   // Filtrage des documents basé sur la recherche
   const filteredDocuments = searchQuery
-    ? documents.filter(
+    ? (documents || []).filter(
         (document) =>
-          document.libele_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          document.libelle_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
           document.lien_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
           getFileType(document.lien_document).toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : documents;
+    : (documents || []);
 
   const handleAddDocument = () => {
-    navigate("/administration/comptabilite/nouveau");
+    navigate(`/administration/finance-compta/${activeTab}/nouveau`);
   };
 
   const handleViewDocument = (id: number) => {
-    navigate(`/administration/comptabilite/${id}/details`);
+    navigate(`/administration/finance-compta/${activeTab}/${id}/details`);
+  };
+
+  const handleDeleteDocument = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) {
+      try {
+        await deleteDocument(id);
+        setDocuments(docs => docs.filter(doc => doc.id_documents !== id));
+      } catch (err) {
+        console.error("Erreur lors de la suppression:", err);
+        alert("Erreur lors de la suppression du document");
+      }
+    }
   };
 
   const getFileTypeColor = (filename: string) => {
@@ -172,7 +175,6 @@ const ComptabiliteGrid: React.FC = () => {
     }
   };
 
-  // Fonction modifiée pour utiliser date_document (timestamp) au lieu de date_ajout (string)
   const formatDate = (dateString?: string) => {
     if (!dateString) return "-";
     try {
@@ -180,7 +182,7 @@ const ComptabiliteGrid: React.FC = () => {
       return format(date, "dd MMM", { locale: fr });
     } catch (err) {
       console.error("Erreur de formatage de date:", err);
-      return dateString.split('T')[0]; // Retourne juste la partie date si le parsing échoue
+      return dateString.split('T')[0];
     }
   };
   
@@ -191,9 +193,31 @@ const ComptabiliteGrid: React.FC = () => {
       return format(date, "HH:mm", { locale: fr });
     } catch (err) {
       console.error("Erreur de formatage d'heure:", err);
-      return dateString.split('T')[1]?.substring(0, 5) || "-"; // Retourne juste l'heure si le parsing échoue
+      return dateString.split('T')[1]?.substring(0, 5) || "-";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-600">
+        {error}
+      </div>
+    );
+  }
+
+  // Vérification de sécurité supplémentaire
+  if (!Array.isArray(filteredDocuments)) {
+    console.error("filteredDocuments n'est pas un tableau:", filteredDocuments);
+    return <div className="flex justify-center items-center h-64 text-red-600">Erreur de format de données</div>;
+  }
 
   return (
     <div className="bg-gray-50 p-4 min-h-screen">
@@ -202,7 +226,7 @@ const ComptabiliteGrid: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <div>
             <h1 className="text-xl font-bold text-gray-800">
-              Annuaire des documents des Comptabilités
+              Gestion des Documents Finance & Comptabilité
             </h1>
             <p className="text-sm text-gray-500">
               {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} disponible{filteredDocuments.length !== 1 ? 's' : ''}
@@ -255,6 +279,14 @@ const ComptabiliteGrid: React.FC = () => {
           </div>
         </div>
 
+        {/* Onglets Finance/Comptabilité */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "finance" | "comptabilite")} className="mb-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="finance">Finance</TabsTrigger>
+            <TabsTrigger value="comptabilite">Comptabilité</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Barre de recherche */}
         <div className="mb-4">
           <div className="relative">
@@ -276,9 +308,9 @@ const ComptabiliteGrid: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {filteredDocuments.map((document) => (
               <Card
-                key={document.id_document}
+                key={document.id_documents}
                 className="overflow-hidden hover:shadow-md transition-all duration-200 group cursor-pointer"
-                onClick={() => handleViewDocument(document.id_document)}
+                onClick={() => handleViewDocument(document.id_documents)}
               >
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-2">
@@ -291,7 +323,7 @@ const ComptabiliteGrid: React.FC = () => {
                   </div>
                   
                   <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-1 h-10">
-                    {document.libele_document}
+                    {document.libelle_document}
                   </h3>
                   
                   <div className="flex justify-between items-center text-xs text-gray-500">
@@ -314,7 +346,7 @@ const ComptabiliteGrid: React.FC = () => {
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleViewDocument(document.id_document);
+                              handleViewDocument(document.id_documents);
                             }}
                             className="cursor-pointer text-xs py-1"
                           >
@@ -329,7 +361,10 @@ const ComptabiliteGrid: React.FC = () => {
                             <Share2 size={12} className="mr-2" />
                             Partager
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-xs py-1 text-red-500">
+                          <DropdownMenuItem 
+                            className="cursor-pointer text-xs py-1 text-red-500"
+                            onClick={(e) => handleDeleteDocument(document.id_documents, e)}
+                          >
                             <Trash2 size={12} className="mr-2" />
                             Supprimer
                           </DropdownMenuItem>
@@ -359,14 +394,14 @@ const ComptabiliteGrid: React.FC = () => {
               <tbody>
                 {filteredDocuments.map((document, index) => (
                   <tr 
-                    key={document.id_document} 
+                    key={document.id_documents} 
                     className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                   >
                     <td className="p-3">
                       <div className="flex items-center">
                         {getFileIcon(document.lien_document)}
                         <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-800">{document.libele_document}</p>
+                          <p className="text-sm font-medium text-gray-800">{document.libelle_document}</p>
                           <p className="text-xs text-gray-500 md:hidden">{document.lien_document}</p>
                         </div>
                       </div>
@@ -388,7 +423,7 @@ const ComptabiliteGrid: React.FC = () => {
                           variant="ghost" 
                           size="sm" 
                           className="h-7 w-7 p-0"
-                          onClick={() => handleViewDocument(document.id_document)}
+                          onClick={() => handleViewDocument(document.id_documents)}
                         >
                           <Eye size={14} />
                         </Button>
@@ -406,7 +441,10 @@ const ComptabiliteGrid: React.FC = () => {
                               <Share2 size={14} className="mr-2" />
                               Partager
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer text-xs text-red-500">
+                            <DropdownMenuItem 
+                              className="cursor-pointer text-xs text-red-500"
+                              onClick={(e) => handleDeleteDocument(document.id_documents, e)}
+                            >
                               <Trash2 size={14} className="mr-2" />
                               Supprimer
                             </DropdownMenuItem>
@@ -426,11 +464,26 @@ const ComptabiliteGrid: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-8 bg-white rounded-lg border mt-4">
             <FileText size={48} className="text-gray-300 mb-2" />
             <p className="text-gray-600 mb-2">
-              Aucun document ne correspond à votre recherche
+              {searchQuery 
+                ? "Aucun document ne correspond à votre recherche"
+                : `Aucun document ${activeTab === "finance" ? "de finance" : "de comptabilité"} n'a encore été ajouté`
+              }
             </p>
-            <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>
-              Réinitialiser la recherche
-            </Button>
+            {searchQuery ? (
+              <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>
+                Réinitialiser la recherche
+              </Button>
+            ) : (
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleAddDocument}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <PlusCircle size={14} className="mr-1" />
+                Ajouter le premier document
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -438,4 +491,4 @@ const ComptabiliteGrid: React.FC = () => {
   );
 };
 
-export default ComptabiliteGrid;
+export default FinanceComptaGrid; 

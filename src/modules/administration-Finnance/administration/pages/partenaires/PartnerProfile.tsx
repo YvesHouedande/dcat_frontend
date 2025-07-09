@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -17,39 +17,185 @@ import {
   Tag,
   Users,
   UserPlus,
-  X,
+  X
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fetchPartnerById, updatePartner } from '@/modules/administration-Finnance/services/partenaireService';
-import { useApiCall } from "@/hooks/useAPiCall";
+import { 
+  fetchPartnerById, 
+  fetchInterlocuteursByPartenaire,
+  addInterlocuteur,
+  deleteInterlocuteur
+} from '@/modules/administration-Finnance/services/partenaireService';
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
 
 const ModernPartnerProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur'>>({
+  // États pour gérer les données et le loading
+  const [partnerInfo, setPartnerInfo] = useState<Partenaires | null>(null);
+  const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur' | 'id_partenaire'>>({
     nom_interlocuteur: "",
     prenom_interlocuteur: "",
     fonction_interlocuteur: "",
     contact_interlocuteur: "",
-    mail_interlocuteur: "",
+    email_interlocuteur: "",
   });
   const [isAddingInterlocuteur, setIsAddingInterlocuteur] = useState(false);
 
-  const { data: partnerInfo, loading, error, call } = useApiCall<Partenaires>(() => fetchPartnerById(id));
-
-  useEffect(() => {
-    if (id) {
-      call();
+  // Fonction pour charger les données du partenaire et ses interlocuteurs
+  const loadPartnerData = async () => {
+    if (!id) {
+      setError("ID du partenaire manquant");
+      setLoading(false);
+      return;
     }
-  }, [id, call]);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!partnerInfo) return <div>No partner data available.</div>;
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Charger d'abord les données essentielles
+      const [partnerData, interlocuteursData] = await Promise.all([
+        fetchPartnerById(id),
+        fetchInterlocuteursByPartenaire(parseInt(id))
+      ]);
+      
+      setPartnerInfo(partnerData);
+      setInterlocuteurs(interlocuteursData);
+    } catch (err) {
+      console.error("Erreur lors du chargement:", err);
+      setError(err instanceof Error ? err.message : "Erreur lors du chargement des données");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Charger les données au montage du composant
+  useEffect(() => {
+    loadPartnerData();
+  }, [loadPartnerData]);
+
+  const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewInterlocuteur(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addNewInterlocuteur = async () => {
+    if (!id) return;
+
+    // Validation des champs requis
+    const requiredFields = {
+      nom_interlocuteur: "Nom",
+      prenom_interlocuteur: "Prénom",
+      contact_interlocuteur: "Contact",
+      email_interlocuteur: "Email",
+      fonction_interlocuteur: "Fonction"
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => !newInterlocuteur[key as keyof typeof newInterlocuteur])
+      .map(([, label]) => label);
+
+    if (missingFields.length > 0) {
+      alert(`Les champs suivants sont obligatoires : ${missingFields.join(", ")}`);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Préparation des données pour l'API
+      const interlocuteurData = {
+        ...newInterlocuteur,
+        id_partenaire: parseInt(id)
+      };
+
+      await addInterlocuteur(interlocuteurData);
+      
+      // Réinitialiser le formulaire
+      setNewInterlocuteur({
+        nom_interlocuteur: "",
+        prenom_interlocuteur: "",
+        fonction_interlocuteur: "",
+        contact_interlocuteur: "",
+        email_interlocuteur: "",
+      });
+      
+      setIsAddingInterlocuteur(false);
+      
+      // Recharger les interlocuteurs
+      await loadPartnerData();
+    } catch (error) {
+      console.error('Error adding interlocuteur:', error);
+      alert("Erreur lors de l'ajout de l'interlocuteur");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeInterlocuteur = async (id_interlocuteur: number) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet interlocuteur ?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deleteInterlocuteur(id_interlocuteur);
+      await loadPartnerData(); // Recharger les données
+    } catch (error) {
+      console.error('Error removing interlocuteur:', error);
+      alert("Erreur lors de la suppression de l'interlocuteur");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Affichage des états de chargement et d'erreur
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement des informations du partenaire...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            Erreur: {error}
+          </div>
+          <Button onClick={loadPartnerData} className="bg-indigo-600 hover:bg-indigo-700">
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!partnerInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Aucune donnée de partenaire disponible.</p>
+          <Button onClick={() => navigate('/administration/partenaires')} variant="outline">
+            Retour à la liste
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -83,79 +229,6 @@ const ModernPartnerProfile: React.FC = () => {
       .join("")
       .substring(0, 2)
       .toUpperCase();
-  };
-
-  const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewInterlocuteur(prev => ({ ...prev, [name]: value }));
-  };
-
-  const addInterlocuteur = async () => {
-    if (id === undefined || !partnerInfo) {
-      console.error("ID is undefined or partner info not loaded");
-      return;
-    }
-
-    if (
-      !newInterlocuteur.nom_interlocuteur ||
-      !newInterlocuteur.prenom_interlocuteur ||
-      !newInterlocuteur.mail_interlocuteur ||
-      !newInterlocuteur.contact_interlocuteur
-    ) {
-      return;
-    }
-
-    const maxId = partnerInfo.interlocuteurs.length > 0
-      ? Math.max(...partnerInfo.interlocuteurs.map(i => i.id_interlocuteur))
-      : 0;
-
-    const newInterlocuteurWithId = {
-      ...newInterlocuteur,
-      id_interlocuteur: maxId + 1,
-    };
-
-    try {
-      const updatedPartnerData = {
-        ...partnerInfo,
-        interlocuteurs: [...partnerInfo.interlocuteurs, newInterlocuteurWithId],
-      };
-
-      await updatePartner(id, updatedPartnerData);
-      setNewInterlocuteur({
-        nom_interlocuteur: "",
-        prenom_interlocuteur: "",
-        fonction_interlocuteur: "",
-        contact_interlocuteur: "",
-        mail_interlocuteur: "",
-      });
-      setIsAddingInterlocuteur(false);
-      call();
-    } catch (error) {
-      console.error('Error updating partner:', error);
-    }
-  };
-
-  const removeInterlocuteur = async (id_interlocuteur: number) => {
-    if (id === undefined || !partnerInfo) {
-      console.error("ID is undefined or partner info not loaded");
-      return;
-    }
-
-    try {
-      const updatedInterlocuteurs = partnerInfo.interlocuteurs.filter(
-        i => i.id_interlocuteur !== id_interlocuteur
-      );
-
-      const updatedPartnerData = {
-        ...partnerInfo,
-        interlocuteurs: updatedInterlocuteurs,
-      };
-
-      await updatePartner(id, updatedPartnerData);
-      call();
-    } catch (error) {
-      console.error('Error updating partner:', error);
-    }
   };
 
   return (
@@ -205,10 +278,11 @@ const ModernPartnerProfile: React.FC = () => {
 
       <div className="container mx-auto px-4 -mt-4 rounded-lg shadow-md">
         <Tabs defaultValue="profil" className="mb-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profil">Profil</TabsTrigger>
-            <TabsTrigger value="interlocuteurs">Interlocuteurs</TabsTrigger>
-            <TabsTrigger value="projects">Projets</TabsTrigger>
+            <TabsTrigger value="interlocuteurs">
+              Interlocuteurs ({interlocuteurs.length})
+            </TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
           </TabsList>
 
@@ -392,7 +466,7 @@ const ModernPartnerProfile: React.FC = () => {
           <TabsContent value="interlocuteurs" className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-800">
-                Interlocuteurs ({partnerInfo.interlocuteurs.length})
+                Interlocuteurs ({interlocuteurs.length})
               </h2>
               <Button
                 className="bg-indigo-600 hover:bg-indigo-700"
@@ -450,12 +524,12 @@ const ModernPartnerProfile: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div className="space-y-2">
-                      <Label htmlFor="mail_interlocuteur">Email</Label>
+                      <Label htmlFor="email_interlocuteur">Email</Label>
                       <Input
-                        id="mail_interlocuteur"
-                        name="mail_interlocuteur"
+                        id="email_interlocuteur"
+                        name="email_interlocuteur"
                         type="email"
-                        value={newInterlocuteur.mail_interlocuteur}
+                        value={newInterlocuteur.email_interlocuteur}
                         onChange={handleInterlocuteurChange}
                       />
                     </div>
@@ -479,7 +553,7 @@ const ModernPartnerProfile: React.FC = () => {
                     </Button>
                     <Button
                       className="bg-indigo-600 hover:bg-indigo-700"
-                      onClick={addInterlocuteur}
+                      onClick={addNewInterlocuteur}
                     >
                       Ajouter l'interlocuteur
                     </Button>
@@ -489,7 +563,7 @@ const ModernPartnerProfile: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {partnerInfo.interlocuteurs.map((interlocuteur) => (
+              {interlocuteurs.map((interlocuteur) => (
                 <Card key={interlocuteur.id_interlocuteur}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
@@ -514,7 +588,7 @@ const ModernPartnerProfile: React.FC = () => {
                     <div className="space-y-3">
                       <div className="flex items-center text-sm">
                         <Mail size={14} className="mr-2 text-gray-500" />
-                        <p>{interlocuteur.mail_interlocuteur}</p>
+                        <p>{interlocuteur.email_interlocuteur}</p>
                       </div>
                       <div className="flex items-center text-sm">
                         <Phone size={14} className="mr-2 text-gray-500" />
@@ -536,22 +610,12 @@ const ModernPartnerProfile: React.FC = () => {
                 </Card>
               ))}
             </div>
-          </TabsContent>
 
-          <TabsContent value="projects" className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                Projets en cours
-              </h2>
-              <Button className="bg-indigo-600 hover:bg-indigo-700">
-                <Calendar size={16} className="mr-2" />
-                Nouveau projet
-              </Button>
-            </div>
-
-            <div className="text-center text-gray-500">
-              <p>Aucun projet trouvé pour ce partenaire</p>
-            </div>
+            {interlocuteurs.length === 0 && (
+              <div className="text-center text-gray-500 py-8">
+                <p>Aucun interlocuteur trouvé pour ce partenaire</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="documents" className="p-6">
