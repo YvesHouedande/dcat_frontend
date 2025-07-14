@@ -26,6 +26,7 @@ type FormData = {
   mode_intervention: string;
   employes: number[];
   superviseur: number;
+  id_contrat?: number | null;
 };
 import { Button } from "@/components/ui/button";
 import { Home, FileText, BarChart3, ArrowLeft } from "lucide-react";
@@ -72,8 +73,15 @@ export const InterventionEditPage: React.FC = () => {
         statut_intervention: intervention?.statut_intervention || "en cours",
         type: intervention?.type || "intervention",
         id_contrat: data.id_contrat ?? null, // Correction : valeur du formulaire
-        employes: data.employes, // Correction : valeur du formulaire
-        superviseur: data.superviseur, // Correction : valeur du formulaire
+        employes: data.employes
+          ? data.employes.map((id) => ({
+              id_employes: id,
+              nom_employes: '',
+              prenom_employes: '',
+              email_employes: '',
+              // Ajoute d'autres champs requis par le type Employe si besoin
+            }))
+          : [],
       };
 
       await updateIntervention(parseInt(id), interventionData as Intervention);

@@ -161,7 +161,7 @@ export const InterventionsPage: React.FC = () => {
     mode_intervention: string;
     employes: number[];
     superviseur: number;
-    id_contrat: number | null;
+    id_contrat?: number | null;
   };
 
   const handleCreateSubmit = async (data: FormData) => {
@@ -466,7 +466,7 @@ export const InterventionsPage: React.FC = () => {
                 Créez une nouvelle fiche d'intervention
               </DialogDescription>
             </DialogHeader>
-            <InterventionForm onSubmit={handleCreateSubmit} isLoading={isLoading} />
+            <InterventionForm onSubmit={handleCreateSubmit} isLoading={isLoading} />  
           </DialogContent>
         </Dialog>
 
