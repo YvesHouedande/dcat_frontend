@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import logoSrc from "/dcat-logo.png";
 
 import {
   Table,
@@ -39,13 +38,13 @@ import { fetchPartners } from "@/modules/administration-Finnance/services/parten
 import { FileDown, Eye, ChevronDown, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
-// Interface pour la réponse de l'API partenaire (non utilisée pour le moment)
-// interface InterventionWithDetails {
-//   intervention: Intervention;
-//   partenaire: Partenaire;
-//   contrat: Contrat;
-//   employes: Employe[];
-// }
+const logoSrc = "/dcat-logo.png";
+
+// Interface pour la structure de données reçue de l'API
+interface InterventionData {
+  intervention: Intervention;
+  partenaire: Partenaire;
+}
 
 interface PartenaireReportProps {
   onViewIntervention?: (intervention: Intervention) => void;
@@ -56,8 +55,9 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 }) => {
   const navigate = useNavigate();
   const [selectedPartenaireId, setSelectedPartenaireId] = useState<string>("");
+  // La liste des interventions doit maintenant correspondre à la structure de données réelle
+  const [interventionsData, setInterventionsData] = useState<InterventionData[]>([]);
   const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
-  const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState("");
@@ -85,14 +85,11 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
   const loadPartenaires = async () => {
     try {
       const partenairesData = await fetchPartners();
-      // Adapter les données selon l'interface Partenaire de interface.ts
-      const adaptedPartenaires: Partenaire[] = partenairesData.map(
-        (p: Partenaire) => ({
-          id_partenaire: p.id_partenaire,
-          nom_partenaire: p.nom_partenaire,
-        })
-      );
-      setPartenaires(adaptedPartenaires);
+      setPartenaires(partenairesData);
+      // Sélectionnez le premier partenaire par défaut si la liste n'est pas vide
+      if (partenairesData.length > 0 && !selectedPartenaireId) {
+        setSelectedPartenaireId(partenairesData[0].id_partenaire.toString());
+      }
     } catch (error) {
       console.error("Erreur lors du chargement des partenaires:", error);
       toast.error("Erreur lors du chargement des partenaires");
@@ -100,42 +97,59 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
   };
 
   const loadInterventions = useCallback(async () => {
-    if (!selectedPartenaireId) return;
-  
+    if (!selectedPartenaireId) {
+      setInterventionsData([]); // Utilisez la nouvelle variable d'état
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await getInterventionsByPartenaire(
         parseInt(selectedPartenaireId)
       );
-      setInterventions(response.data || []);
-    } catch (error) {
-      console.error("Erreur lors du chargement des interventions:", error);
-      toast.error("Erreur lors du chargement des interventions");
+      // On s'assure que response.data est bien un tableau de InterventionData
+      // Si ce n'est pas le cas, on transforme les données reçues
+      if (Array.isArray(response.data)) {
+        // Utilise le type guard pour garantir la sécurité de typage
+        const interventionsData = (response.data as unknown[]).map((item) => {
+          if (isInterventionData(item)) {
+            return item;
+          }
+          return {
+            intervention: item as Intervention,
+            partenaire: getSelectedPartenaire()!,
+          };
+        });
+        setInterventionsData(interventionsData);
+      } else {
+        setInterventionsData([]);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPartenaireId]); // dépend de selectedPartenaireId
-  
+  }, [selectedPartenaireId]);
+
   useEffect(() => {
-    if (selectedPartenaireId) {
-      loadInterventions();
-    }
-  }, [selectedPartenaireId, loadInterventions]);
+    loadInterventions();
+  }, [loadInterventions]);
 
   const calculateTotalDuration = () => {
     let totalMinutes = 0;
-    interventions.forEach((item) => {
-      const duration = item.duree;
-      const matches = duration.match(/(\d+)h(?:(\d+))?/);
-      if (matches) {
-        const hours = parseInt(matches[1]) || 0;
-        const minutes = parseInt(matches[2]) || 0;
-        totalMinutes += hours * 60 + minutes;
+    interventionsData.forEach((item) => { // Itérez sur interventionsData
+      const duration = item.intervention.duree; // Accès corrigé
+      if (typeof duration === 'string' && duration) {
+        const matches = duration.match(/(\d+)h(?:(\d+))?/);
+        if (matches) {
+          const hours = parseInt(matches[1]) || 0;
+          const minutes = parseInt(matches[2]) || 0;
+          totalMinutes += hours * 60 + minutes;
+        }
       }
     });
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    return `${hours}h${minutes ? minutes : ""}`;
+    return `${hours}h${minutes ? minutes.toString().padStart(2, '0') : ""}`;
   };
 
   const getSelectedPartenaire = () => {
@@ -154,35 +168,25 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 
   const generateExcelContent = () => {
     const selectedPartenaire = getSelectedPartenaire();
-    const headers = [
-      "Date",
-      "Type",
-      "Problème",
-      "Cause",
-      "Actions",
-      "Durée",
-      "Lieu",
-      "Statut",
-    ];
-    const rows = interventions.map((item) => [
-      format(new Date(item.date_intervention), "dd/MM/yyyy"),
-      item.type_intervention,
-      item.probleme_signale,
-      item.cause_defaillance,
-      item.rapport_intervention,
-      item.duree,
-      item.lieu,
-      item.statut_intervention,
+    const headers = ["Date", "Type", "Problème", "Cause", "Actions", "Durée"];
+    const rows = interventionsData.map((item) => [ // Itérez sur interventionsData
+      (() => {
+        const date = new Date(item.intervention.date_intervention); // Accès corrigé
+        return isNaN(date.getTime()) ? '-' : format(date, "dd/MM/yyyy");
+      })(),
+      item.intervention.type_intervention ?? "",
+      item.intervention.probleme_signale ?? "",
+      item.intervention.cause_defaillance ?? "",
+      item.intervention.rapport_intervention ?? "",
+      item.intervention.duree ?? "",
     ]);
 
     const csvContent = [
-      `Rapport d'interventions - ${
-        selectedPartenaire?.nom_partenaire || "Partenaire"
-      }`,
+      `Rapport d'interventions - ${selectedPartenaire?.nom_partenaire || "Partenaire"}`,
       `Généré le: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: fr })}`,
       "",
       headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
     ].join("\n");
 
     return csvContent;
@@ -190,18 +194,18 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 
   const generatePDFContent = () => {
     const selectedPartenaire = getSelectedPartenaire();
-    const partenaireName =
-      selectedPartenaire?.nom_partenaire || "Partenaire inconnu";
+    const partenaireName = selectedPartenaire?.nom_partenaire || "Partenaire inconnu";
 
-    const rows = interventions.map((item) => [
-      format(new Date(item.date_intervention), "dd/MM/yyyy"),
-      item.type_intervention,
-      item.probleme_signale,
-      item.cause_defaillance,
-      item.rapport_intervention,
-      item.duree,
-      item.lieu,
-      item.statut_intervention,
+    const rows = interventionsData.map((item) => [ // Itérez sur interventionsData
+      (() => {
+        const date = new Date(item.intervention.date_intervention); // Accès corrigé
+        return isNaN(date.getTime()) ? '-' : format(date, "dd/MM/yyyy");
+      })(),
+      item.intervention.type_intervention ?? "",
+      item.intervention.probleme_signale ?? "",
+      item.intervention.cause_defaillance ?? "",
+      item.intervention.rapport_intervention ?? "",
+      item.intervention.duree ?? "",
     ]);
 
     const content = `
@@ -255,8 +259,8 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
           }
           .stats { margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background-color: #2563eb; color: white; padding: 10px; }
-          td { padding: 8px; border: 1px solid #ddd; }
+          th { background-color: #2563eb; color: white; padding: 10px; text-align: left; }
+          td { padding: 8px; border: 1px solid #ddd; vertical-align: top; }
           tr:nth-child(even) { background-color: #f8f9fa; }
           .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
         </style>
@@ -277,15 +281,11 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
         
         <div class="partenaire-info">
           <h3>Informations du partenaire</h3>
-          <p><strong>Nom :</strong> ${
-            selectedPartenaire?.nom_partenaire || "N/A"
-          }</p>
+          <p><strong>Nom :</strong> ${selectedPartenaire?.nom_partenaire || "N/A"}</p>
         </div>
         
         <div class="stats">
-          <p><strong>Nombre total d'interventions :</strong> ${
-            interventions.length
-          }</p>
+          <p><strong>Nombre total d'interventions :</strong> ${interventionsData.length}</p>
           <p><strong>Durée totale :</strong> ${calculateTotalDuration()}</p>
           <p><strong>Date de génération :</strong> ${format(
             new Date(),
@@ -303,8 +303,6 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
               <th>Cause</th>
               <th>Actions</th>
               <th>Durée</th>
-              <th>Lieu</th>
-              <th>Statut</th>
             </tr>
           </thead>
           <tbody>
@@ -330,10 +328,14 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     return content;
   };
 
-  const handleExport = async (format: "pdf" | "excel") => {
+  const handleExport = async (formatType: "pdf" | "excel") => {
     if (!selectedPartenaireId) {
-      toast.error("Veuillez sélectionner un partenaire");
+      toast.error("Veuillez sélectionner un partenaire pour générer le rapport.");
       return;
+    }
+    if (interventionsData.length === 0) { // Vérifiez interventionsData
+        toast.info("Aucune intervention à exporter pour le partenaire sélectionné.");
+        return;
     }
 
     setIsGeneratingReport(true);
@@ -341,25 +343,23 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
       const selectedPartenaire = getSelectedPartenaire();
       let content, fileName, type;
 
-      if (format === "excel") {
+      if (formatType === "excel") {
         content = generateExcelContent();
         fileName = `rapport-interventions-${
-          selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") ||
-          "partenaire"
+          selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") || "partenaire"
         }.csv`;
-        type = "text/csv";
+        type = "text/csv;charset=utf-8;";
       } else {
         content = generatePDFContent();
         fileName = `rapport-interventions-${
-          selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") ||
-          "partenaire"
+          selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") || "partenaire"
         }.pdf`;
         type = "text/html";
       }
 
       const blob = new Blob([content], { type });
 
-      if (format === "pdf") {
+      if (formatType === "pdf") {
         const printWindow = window.open("", "_blank");
         if (printWindow) {
           printWindow.document.write(content);
@@ -379,16 +379,24 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
         document.body.removeChild(a);
       }
 
-      toast.success(
-        `Rapport exporté avec succès en format ${format.toUpperCase()}`
-      );
+      toast.success(`Rapport exporté avec succès en format ${formatType.toUpperCase()}`);
     } catch (error) {
       console.error("Erreur lors de la génération du rapport:", error);
-      toast.error(`Erreur lors de l'export en ${format.toUpperCase()}`);
+      toast.error(`Erreur lors de l'export en ${formatType.toUpperCase()}`);
     } finally {
       setIsGeneratingReport(false);
     }
   };
+
+  // Type guard pour vérifier si un objet est de type InterventionData
+  function isInterventionData(obj: unknown): obj is InterventionData {
+    return (
+      typeof obj === "object" &&
+      obj !== null &&
+      "intervention" in obj &&
+      "partenaire" in obj
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -410,17 +418,23 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                   <SelectValue placeholder="Sélectionner un partenaire" />
                 </SelectTrigger>
                 <SelectContent>
-                  {partenaires.map((partenaire) => (
-                    <SelectItem
-                      key={partenaire.id_partenaire}
-                      value={partenaire.id_partenaire.toString()}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        {partenaire.nom_partenaire}
-                      </div>
+                  {partenaires.length === 0 ? (
+                    <SelectItem value="no-partenaire" disabled>
+                      Aucun partenaire disponible
                     </SelectItem>
-                  ))}
+                  ) : (
+                    partenaires.map((partenaire) => (
+                      <SelectItem
+                        key={partenaire.id_partenaire}
+                        value={partenaire.id_partenaire.toString()}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          {partenaire.nom_partenaire}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
 
@@ -431,7 +445,8 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                     disabled={
                       isGeneratingReport ||
                       !selectedPartenaireId ||
-                      interventions.length === 0
+                      interventionsData.length === 0 || // Utilisez interventionsData
+                      partenaires.length === 0
                     }
                   >
                     <FileDown className="mr-2 h-4 w-4" />
@@ -452,13 +467,17 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
           </div>
         </CardHeader>
         <CardContent>
-          {!selectedPartenaireId ? (
+          {!selectedPartenaireId && partenaires.length > 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Sélectionnez un partenaire pour voir ses interventions</p>
+              <p>Sélectionnez un partenaire pour voir ses interventions.</p>
+            </div>
+          ) : partenaires.length === 0 && !isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+                <p>Aucun partenaire n'est disponible.</p>
             </div>
           ) : isLoading ? (
-            <div className="text-center py-4">Chargement...</div>
+            <div className="text-center py-4">Chargement des interventions...</div>
           ) : (
             <>
               {getSelectedPartenaire() && (
@@ -466,18 +485,16 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                   <h3 className="font-semibold text-blue-900 mb-2">
                     Informations du partenaire
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Nom :</span>{" "}
-                      {getSelectedPartenaire()?.nom_partenaire}
-                    </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Nom :</span>{" "}
+                    {getSelectedPartenaire()?.nom_partenaire}
                   </div>
                 </div>
               )}
 
               <div className="mb-4">
                 <p className="text-sm text-muted-foreground">
-                  Nombre total d'interventions : {interventions.length}
+                  Nombre total d'interventions : {interventionsData.length}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Durée totale : {calculateTotalDuration()}
@@ -495,58 +512,42 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                       <TableHead>Actions</TableHead>
                       <TableHead>Recommandations</TableHead>
                       <TableHead>Durée</TableHead>
-                      <TableHead>Lieu</TableHead>
-                      <TableHead>Statut</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {interventions.length === 0 ? (
+                    {interventionsData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center">
+                        <TableCell colSpan={8} className="text-center">
                           Aucune intervention pour ce partenaire
                         </TableCell>
                       </TableRow>
                     ) : (
-                      interventions.map((item) => (
-                        <TableRow key={item.id_intervention}>
+                      interventionsData.map((item) => ( // Itérez sur interventionsData
+                        <TableRow key={item.intervention.id_intervention}>
                           <TableCell>
                             {format(
-                              new Date(item.date_intervention),
+                              new Date(item.intervention.date_intervention), // Accès corrigé
                               "dd/MM/yyyy"
                             )}
                           </TableCell>
-                          <TableCell>{item.type_intervention}</TableCell>
+                          <TableCell>{item.intervention.type_intervention}</TableCell>
                           <TableCell className="max-w-xs truncate">
-                            {item.probleme_signale}
+                            {item.intervention.probleme_signale}
                           </TableCell>
-                          <TableCell>{item.cause_defaillance}</TableCell>
+                          <TableCell>{item.intervention.cause_defaillance}</TableCell>
                           <TableCell className="max-w-xs truncate">
-                            {item.rapport_intervention}
+                            {item.intervention.rapport_intervention}
                           </TableCell>
                           <TableCell className="max-w-xs truncate">
-                            {item.recommandation}
+                            {item.intervention.recommandation}
                           </TableCell>
-                          <TableCell>{item.duree}</TableCell>
-                          <TableCell>{item.lieu}</TableCell>
-                          <TableCell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                item.statut_intervention === "terminé"
-                                  ? "bg-green-100 text-green-800"
-                                  : item.statut_intervention === "en cours"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {item.statut_intervention}
-                            </span>
-                          </TableCell>
+                          <TableCell>{item.intervention.duree}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleViewIntervention(item)}
+                              onClick={() => handleViewIntervention(item.intervention)} // Passer l'objet intervention réel
                               className="hover:bg-gray-100"
                             >
                               <Eye className="h-4 w-4" />

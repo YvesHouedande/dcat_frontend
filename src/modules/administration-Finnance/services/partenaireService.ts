@@ -283,3 +283,48 @@ export const deleteEntite = async (id: number): Promise<void> => {
 //     return [];
 //   }
 // };
+
+// Type pour la réponse d'une intervention liée à un partenaire
+export interface TypeInterventionPartenaire {
+  intervention: {
+    id_intervention: number;
+    date_intervention: string;
+    cause_defaillance: string;
+    rapport_intervention: string;
+    type_intervention: string;
+    type_defaillance: string;
+    id_partenaire: number;
+    id_contrat: number;
+  };
+  partenaire: {
+    id_partenaire: number;
+    nom_partenaire: string;
+  };
+  contrat: {
+    id_contrat: number;
+    nom_contrat: string;
+    duree_contrat: string;
+    date_debut: string;
+    date_fin: string;
+    reference: string;
+    type_de_contrat: string;
+    statut: string;
+  };
+  employes: Array<{
+    id_employes: number;
+    nom_employes: string;
+    prenom_employes: string;
+  }>;
+}
+
+// Récupérer toutes les interventions d'un partenaire
+export const fetchInterventionsByPartenaire = async (id_partenaire: number): Promise<TypeInterventionPartenaire[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/technique/interventions/partenaire/${id_partenaire}`);
+    // On suppose que la réponse est de la forme { success, message, data: [...] }
+    return response.data.data;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des interventions du partenaire:", error);
+    throw error;
+  }
+};

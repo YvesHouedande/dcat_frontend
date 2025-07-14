@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -11,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Save, Upload } from "lucide-react";
+import { Calendar as CalendarIcon, Save, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,66 +20,75 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Contrat, EmployeDocument } from "../../types/interfaces";
-import { addContrat, fetchNaturesDocument } from "../../../services/contratService"; // Importation du nouveau service
-import { fetchPartners } from "../../../services/partenaireService"; // Importation du service existant
+import { MutationError, CreateContratData } from "../../types/interfaces";
+import { addContrat } from "../../../services/contratService";
+import { fetchPartners } from "../../../services/partenaireService";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import DocumentSheet from "./DocumentSheet";
+
+
+// Type pour le formulaire de création (sans duree_contrat car calculé automatiquement)
+type ContratFormData = CreateContratData;
 
 const NouveauContrat: React.FC = () => {
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const [partenaires, setPartenaires] = useState<Array<{ id: number; nom: string }>>([]);
-  const [naturesDocument, setNaturesDocument] = useState<Array<{ id_nature_document: number; libelle_td: string }>>([]);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
-
-  // États du formulaire
-  const [formData, setFormData] = useState<Omit<Contrat, 'id_contrat'>>({
-    nom_contrat: "",
-    duree_Contrat: "",
-    date_debut: "",
-    date_fin: "",
-    Reference: "",
-    type_de_contrat: "standard", // Valeur par défaut
-    status: "actif", // Valeur par défaut
-    id_partenaire: undefined,
+  const [createdContratId, setCreatedContratId] = useState<number | null>(null);
+  const [isDocumentSheetOpen, setIsDocumentSheetOpen] = useState(false);
+  const [formData, setFormData] = useState<ContratFormData>(() => {
+    // Préremplir le partenaire si passé dans le state
+    const partenaireId = location.state?.partenaireId;
+    return {
+      nom_contrat: "",
+      type_de_contrat: "standard",
+      date_debut: "",
+      date_fin: "",
+      reference: "",
+      statut: "actif",
+      id_partenaire: partenaireId ?? undefined,
+    };
   });
 
-  const [documentData, setDocumentData] = useState<EmployeDocument>({
-    id_documents: 0,
-    libelle_document: "",
-    date_document: new Date().toISOString().split('T')[0], // Date du jour
-    lien_document: "",
-    classification_document: "",
-    id_contrat: 0,
-    id_nature_document: 0,
-  });
-
-  // Chargement des partenaires et des natures de document depuis l'API
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Chargement des partenaires
         const partenairesData = await fetchPartners();
         setPartenaires(partenairesData.map(partenaire => ({
           id: partenaire.id_partenaire,
           nom: partenaire.nom_partenaire
         })));
-        
-        // Chargement des natures de document
-        const naturesDocumentData = await fetchNaturesDocument();
-        setNaturesDocument(naturesDocumentData);
       } catch (error) {
-        console.error("Erreur lors du chargement des données:", error);
+        console.error("Erreur lors du chargement des partenaires:", error);
       }
     };
-
     loadData();
   }, []);
 
-  // Gérer les changements des champs de texte
+  const mutation = useMutation(
+    (data: CreateContratData) => addContrat(data),
+    {
+      onSuccess: (data) => {
+        toast.success('Contrat créé avec succès !');
+        // Stocker l'ID du contrat créé
+        if (data && data.id_contrat) {
+          setCreatedContratId(data.id_contrat);
+        }
+        // Invalider le cache pour rafraîchir la liste
+        queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      },
+      onError: (error: MutationError) => {
+        toast.error('Erreur lors de la création du contrat', {
+          description: error.message || 'Une erreur inattendue s\'est produite',
+        });
+      },
+    }
+  );
+
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value } = e.target;
     setFormData({
@@ -89,70 +97,56 @@ const NouveauContrat: React.FC = () => {
     });
   };
 
-  // Gérer le changement de fichier
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setUploadedFile(file);
-      
-      // Créer une URL locale pour prévisualisation si nécessaire
-      const objectUrl = URL.createObjectURL(file);
-      setDocumentData({
-        ...documentData,
-        lien_document: objectUrl,
-      });
-    }
-  };
-
-  // Soumission du formulaire
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError(null);
-  
-    try {
-      // Préparation des données à envoyer
-      const contratToSubmit = {
-        ...formData,
-        date_debut: new Date(formData.date_debut).toISOString().split('T')[0],
-        date_fin: new Date(formData.date_fin).toISOString().split('T')[0],
-      };
-  
-      // Appel à l'API pour ajouter le contrat
-      const newContrat = await addContrat(contratToSubmit, uploadedFile || undefined);
-      
-      // Utilisation de la réponse
-      console.log('Contrat créé avec ID:', newContrat.id_contrat);
-      
-      setSubmitSuccess(true);
-      
-      // Rediriger vers la page de détail du nouveau contrat
-      setTimeout(() => {
-        navigate(`/administration/contrats/${newContrat.id_contrat}`);
-      }, 1500);
-    } catch (error) {
-      console.error("Erreur lors de l'ajout du contrat:", error);
-      setSubmitError(error instanceof Error ? error.message : "Une erreur est survenue lors de l'enregistrement du contrat.");
-    } finally {
-      setIsSubmitting(false);
+
+    // Validation des champs obligatoires
+    if (!formData.nom_contrat || !formData.date_debut || !formData.date_fin || !formData.reference) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
     }
-  };
 
-  // Calculer automatiquement la date de fin en fonction de la date de début et de la durée
-  const updateEndDate = (duree: string, startDate: Date) => {
-    if (!startDate) return;
+    // Calculer automatiquement la durée du contrat
+    let duree_contrat = "";
+    if (formData.date_debut && formData.date_fin) {
+      const dateDebut = new Date(formData.date_debut);
+      const dateFin = new Date(formData.date_fin);
+      
+      // Vérifier que la date de fin est après la date de début
+      if (dateFin <= dateDebut) {
+        toast.error('La date de fin doit être postérieure à la date de début');
+        return;
+      }
+      
+      const diffTime = Math.abs(dateFin.getTime() - dateDebut.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffMonths = Math.ceil(diffDays / 30);
+      const diffYears = Math.floor(diffMonths / 12);
+      const remainingMonths = diffMonths % 12;
+      
+      if (diffYears > 0) {
+        duree_contrat = `${diffYears} an${diffYears > 1 ? 's' : ''}`;
+        if (remainingMonths > 0) {
+          duree_contrat += ` et ${remainingMonths} mois`;
+        }
+      } else {
+        duree_contrat = `${diffMonths} mois`;
+      }
+    }
 
-    const durationMatch = duree.match(/(\d+)/);
-    if (!durationMatch) return;
+    // Préparation des données à envoyer
+    const dataToSend: CreateContratData = {
+      nom_contrat: formData.nom_contrat.trim(),
+      type_de_contrat: formData.type_de_contrat,
+      date_debut: formData.date_debut,
+      date_fin: formData.date_fin,
+      reference: formData.reference.trim(), // Référence saisie par l'utilisateur
+      statut: formData.statut,
+      id_partenaire: formData.id_partenaire ? Number(formData.id_partenaire) : undefined,
+      duree_contrat: duree_contrat, // Durée calculée automatiquement
+    };
 
-    const months = parseInt(durationMatch[1]);
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + months);
-
-    setFormData({
-      ...formData,
-      date_fin: format(endDate, "yyyy-MM-dd"),
-    });
+    mutation.mutate(dataToSend as CreateContratData);
   };
 
   return (
@@ -166,20 +160,6 @@ const NouveauContrat: React.FC = () => {
             </h1>
           </div>
         </div>
-
-        {/* Message de succès */}
-        {submitSuccess && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-            <span className="block sm:inline">Contrat enregistré avec succès!</span>
-          </div>
-        )}
-
-        {/* Message d'erreur */}
-        {submitError && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            <span className="block sm:inline">{submitError}</span>
-          </div>
-        )}
 
         {/* Formulaire */}
         <form onSubmit={handleSubmit}>
@@ -214,6 +194,7 @@ const NouveauContrat: React.FC = () => {
                         Partenaire <span className="text-red-500">*</span>
                       </Label>
                       <Select
+                        value={formData.id_partenaire?.toString()}
                         onValueChange={(value) =>
                           setFormData({
                             ...formData,
@@ -237,33 +218,55 @@ const NouveauContrat: React.FC = () => {
                         </SelectContent>
                       </Select>
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="duree_Contrat">
-                        Durée du contrat <span className="text-red-500">*</span>
+                      <Label htmlFor="type_de_contrat">
+                        Type de contrat <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        id="duree_Contrat"
-                        name="duree_Contrat"
-                        onChange={(e) => {
+                      <Select
+                        onValueChange={(value) =>
                           setFormData({
                             ...formData,
-                            duree_Contrat: e.target.value,
-                          });
-                          if (formData.date_debut) {
-                            updateEndDate(
-                              e.target.value,
-                              new Date(formData.date_debut)
-                            );
-                          }
-                        }}
-                        type="number"
-                        value={formData.duree_Contrat}
+                            type_de_contrat: value,
+                          })
+                        }
+                        defaultValue="standard"
                         required
-                      />
-                      <p className="text-xs text-gray-500 italic">
-                        La durée du contrat doit s'exprimer en mois
-                      </p>
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionner un type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="standard">Standard</SelectItem>
+                          <SelectItem value="cadre">Contrat cadre</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="support">Support</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">
+                        Statut <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            statut: value,
+                          })
+                        }
+                        defaultValue="actif"
+                        required
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionner un statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="actif">Actif</SelectItem>
+                          <SelectItem value="inactif">Inactif</SelectItem>
+                          <SelectItem value="en_attente">En attente</SelectItem>
+                          <SelectItem value="expire">Expiré</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -298,9 +301,6 @@ const NouveauContrat: React.FC = () => {
                                   ...formData,
                                   date_debut: format(date, "yyyy-MM-dd"),
                                 });
-                                if (formData.duree_Contrat) {
-                                  updateEndDate(formData.duree_Contrat, date);
-                                }
                               }
                             }}
                             initialFocus
@@ -308,15 +308,13 @@ const NouveauContrat: React.FC = () => {
                         </PopoverContent>
                       </Popover>
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="date_fin">Date de fin</Label>
+                      <Label htmlFor="date_fin">Date de fin <span className="text-red-500">*</span></Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className="w-full justify-start text-left font-normal"
-                            disabled
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {formData.date_fin ? (
@@ -324,7 +322,7 @@ const NouveauContrat: React.FC = () => {
                                 locale: fr,
                               })
                             ) : (
-                              <span>Calculée automatiquement</span>
+                              <span>Sélectionner une date</span>
                             )}
                           </Button>
                         </PopoverTrigger>
@@ -332,179 +330,74 @@ const NouveauContrat: React.FC = () => {
                           <Calendar
                             mode="single"
                             selected={formData.date_fin ? new Date(formData.date_fin) : undefined}
-                            onSelect={(date) =>
-                              date &&
-                              setFormData({
-                                ...formData,
-                                date_fin: format(date, "yyyy-MM-dd"),
-                              })
-                            }
+                            onSelect={(date) => {
+                              if (date) {
+                                setFormData({
+                                  ...formData,
+                                  date_fin: format(date, "yyyy-MM-dd"),
+                                });
+                              }
+                            }}
                             initialFocus
                           />
                         </PopoverContent>
                       </Popover>
-                      <p className="text-xs text-gray-500 italic">
-                        La date de fin est calculée à partir de la date de début
-                        et de la durée
-                      </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="type_de_contrat">
-                        Type de contrat <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          setFormData({
-                            ...formData,
-                            type_de_contrat: value,
-                          })
-                        }
-                        defaultValue="standard"
-                        required
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Sélectionner un type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="standard">Standard</SelectItem>
-                          <SelectItem value="cadre">Contrat cadre</SelectItem>
-                          <SelectItem value="maintenance">Maintenance</SelectItem>
-                          <SelectItem value="support">Support</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label>Durée du contrat (calculée automatiquement)</Label>
+                      <div className="p-3 bg-gray-50 border rounded-md">
+                        {formData.date_debut && formData.date_fin ? (
+                          <span className="text-sm text-gray-700">
+                            {(() => {
+                              const dateDebut = new Date(formData.date_debut);
+                              const dateFin = new Date(formData.date_fin);
+                              const diffTime = Math.abs(dateFin.getTime() - dateDebut.getTime());
+                              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                              const diffMonths = Math.ceil(diffDays / 30);
+                              const diffYears = Math.floor(diffMonths / 12);
+                              const remainingMonths = diffMonths % 12;
+                              
+                              let durationText = '';
+                              if (diffYears > 0) {
+                                durationText += `${diffYears} an${diffYears > 1 ? 's' : ''}`;
+                                if (remainingMonths > 0) {
+                                  durationText += ` et ${remainingMonths} mois`;
+                                }
+                              } else {
+                                durationText += `${diffMonths} mois`;
+                              }
+                              durationText += ` (${diffDays} jours)`;
+                              
+                              return durationText;
+                            })()}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-500 italic">
+                            Sélectionnez les dates de début et de fin pour calculer la durée
+                          </span>
+                        )}
+                      </div>
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="status">
-                        Statut <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          setFormData({
-                            ...formData,
-                            status: value,
-                          })
-                        }
-                        defaultValue="actif"
-                        required
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Sélectionner un statut" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="actif">Actif</SelectItem>
-                          <SelectItem value="inactif">Inactif</SelectItem>
-                          <SelectItem value="en_attente">En attente</SelectItem>
-                          <SelectItem value="expire">Expiré</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Document */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-medium text-gray-700 border-b pb-2">
-                    Document du contrat
-                  </h2>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="libele_document">
-                        Libellé du document <span className="text-red-500">*</span>
+                      <Label htmlFor="reference">
+                        Référence du contrat <span className="text-red-500">*</span>
                       </Label>
                       <Input
-                        id="libele_document"
-                        name="libele_document"
-                        placeholder="Entrez le libellé du document"
-                        value={documentData.libelle_document}
-                        onChange={(e) =>
-                          setDocumentData({
-                            ...documentData,
-                            libelle_document: e.target.value,
-                          })
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="id_nature_document">
-                        Nature du document <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          setDocumentData({
-                            ...documentData,
-                            id_nature_document: parseInt(value),
-                          })
-                        }
-                        required
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Sélectionner la nature du document" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {naturesDocument.map((nature) => (
-                            <SelectItem
-                              key={nature.id_nature_document}
-                              value={nature.id_nature_document.toString()}
-                            >
-                              {nature.libelle_td}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="fichier">
-                        Fichier du contrat (PDF){" "}
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="fichier"
-                          type="file"
-                          accept=".pdf,.doc,.docx"
-                          className="w-full"
-                          onChange={handleFileChange}
-                          required
-                        />
-                        <Button type="button" variant="outline" size="icon">
-                          <Upload size={16} />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        Formats acceptés: PDF, DOC, DOCX (max. 10 MB)
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-medium text-gray-700 border-b pb-2">
-                    Informations complémentaires
-                  </h2>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="Reference">Notes ou commentaires</Label>
-                      <Textarea
-                        id="Reference"
-                        name="Reference"
-                        placeholder="Ajoutez des notes ou commentaires sur ce contrat..."
-                        rows={4}
-                        value={formData.Reference || ""}
+                        id="reference"
+                        name="reference"
+                        placeholder="Entrez la référence du contrat"
+                        value={formData.reference}
                         onChange={handleInputChange}
+                        required
                       />
                     </div>
                   </div>
                 </div>
+
+
               </div>
             </CardContent>
           </Card>
@@ -522,13 +415,58 @@ const NouveauContrat: React.FC = () => {
             <Button
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
-              disabled={isSubmitting}
+              disabled={mutation.isLoading}
             >
               <Save size={16} className="mr-2" />
-              {isSubmitting ? "Enregistrement..." : "Enregistrer le contrat"}
+              {mutation.isLoading ? "Enregistrement..." : "Enregistrer le contrat"}
             </Button>
           </div>
+
+          {/* Actions après création */}
+          {mutation.isSuccess && createdContratId && (
+            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-green-800">Contrat créé avec succès !</h3>
+                  <p className="text-green-600">Le contrat a été créé avec succès.</p>
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate("/administration/contrats")}
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                  >
+                    Retour à la liste
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => navigate(`/administration/contrats/${createdContratId}/details`)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <FileText size={16} className="mr-2" />
+                    Voir le contrat
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DocumentSheet */}
+          {createdContratId && (
+            <DocumentSheet
+              contratId={createdContratId}
+              isOpen={isDocumentSheetOpen}
+              onOpenChange={setIsDocumentSheetOpen}
+              onDocumentAdded={() => {
+                // Rafraîchir la liste des contrats si nécessaire
+                queryClient.invalidateQueries({ queryKey: ['contrats'] });
+              }}
+            />
+          )}
         </form>
+
+
       </div>
     </div>
   );

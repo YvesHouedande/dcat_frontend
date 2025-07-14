@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,57 +23,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
-import { Entite, Interlocuteur, Partenaires } from "../../types/interfaces";
-import { fetchPartners, fetchEntites } from "@/modules/administration-Finnance/services/partenaireService";
-import { useApiCall } from "@/hooks/useAPiCall";
+import {  Interlocuteur } from "../../types/interfaces";
+import { fetchPartners, fetchEntites, deletePartner } from "@/modules/administration-Finnance/services/partenaireService";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Interface pour les entités
 
 
-// Store singleton pour cacher les données entre les navigations
-class PartenairesStore {
-  private static instance: PartenairesStore;
-  private _partenaires: Partenaires[] | null = null;
-  private _entites: Entite[] | null = null;
-  private _lastFetchTime: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
-
-  private constructor() {}
-
-  public static getInstance(): PartenairesStore {
-    if (!PartenairesStore.instance) {
-      PartenairesStore.instance = new PartenairesStore();
-    }
-    return PartenairesStore.instance;
-  }
-
-  get partenaires(): Partenaires[] | null {
-    return this._partenaires;
-  }
-
-  set partenaires(data: Partenaires[] | null) {
-    this._partenaires = data;
-    this._lastFetchTime = Date.now();
-  }
-
-  get entites(): Entite[] | null {
-    return this._entites;
-  }
-
-  set entites(data: Entite[] | null) {
-    this._entites = data;
-  }
-
-  get shouldRefetch(): boolean {
-    return (
-      !this._partenaires ||
-      Date.now() - this._lastFetchTime > this.CACHE_DURATION
-    );
-  }
-}
-
-const store = PartenairesStore.getInstance();
+// Supprimer le singleton PartenairesStore et ses usages
 
 const getInitials = (name: string) => {
   if (!name) return "";
@@ -89,56 +49,43 @@ const getInitials = (name: string) => {
 const ModernPartenaireGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-  // État local pour stocker les partenaires affichés
-  const [displayedPartenaires, setDisplayedPartenaires] = useState<Partenaires[] | null>(store.partenaires);
-  const [entites, setEntites] = useState<Entite[] | null>(store.entites);
+  const queryClient = useQueryClient();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
-  // Use the useApiCall hook to fetch partners
-  const { data: partenaires, loading, error, call } = useApiCall<Partenaires[]>(fetchPartners);
-  const { data: entitesData, loading: entitesLoading, call: callEntites } = useApiCall<Entite[]>(fetchEntites);
+  // Charger les partenaires avec React Query
+  const { data: partenaires, isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['partenaires'],
+    queryFn: fetchPartners,
+  });
 
-  useEffect(() => {
-    // Si nous avons des données en cache et qu'elles sont récentes
-    if (!store.shouldRefetch) {
-      setDisplayedPartenaires(store.partenaires);
-    } else {
-      // Sinon, on fait l'appel API
-      call();
-    }
+  // Charger les entités avec React Query
+  const { data: entites, isLoading: entitesLoading } = useQuery({
+    queryKey: ['entites'],
+    queryFn: fetchEntites,
+  });
 
-    // Récupérer les entités si pas encore en cache
-    if (!store.entites) {
-      callEntites();
-    } else {
-      setEntites(store.entites);
-    }
-  }, [call, callEntites]);
-
-  // Quand les données de l'API changent, mettre à jour le store et l'affichage
-  useEffect(() => {
-    if (partenaires) {
-      store.partenaires = partenaires;
-      setDisplayedPartenaires(partenaires);
-    }
-  }, [partenaires]);
-
-  useEffect(() => {
-    if (entitesData) {
-      store.entites = entitesData;
-      setEntites(entitesData);
-    }
-  }, [entitesData]);
+  // Mutation pour supprimer un partenaire
+  const { mutate: deletePartenaire, isLoading: deleting } = useMutation({
+    mutationFn: deletePartner,
+    onSuccess: () => {
+      toast.success("Partenaire supprimé avec succès !");
+      setConfirmDeleteId(null);
+      queryClient.invalidateQueries({ queryKey: ['partenaires'] });
+    },
+    onError: () => {
+      toast.error("Erreur lors de la suppression du partenaire.");
+    },
+  });
 
   // Fonction pour obtenir le nom de l'entité à partir de son ID
   const getEntiteName = (idEntite: number | string): string => {
     if (!entites) return `Entité ${idEntite}`;
-    
     const entite = entites.find(e => e.id_entite === Number(idEntite));
     return entite ? entite.denomination : `Entité ${idEntite}`;
   };
 
-  const filteredPartenaires = searchQuery && displayedPartenaires
-    ? displayedPartenaires.filter(
+  const filteredPartenaires = searchQuery && partenaires
+    ? partenaires.filter(
         (partenaire) =>
           partenaire.nom_partenaire
             .toLowerCase()
@@ -162,7 +109,7 @@ const ModernPartenaireGrid: React.FC = () => {
                 .includes(searchQuery.toLowerCase())
           ))
       )
-    : displayedPartenaires || [];
+    : partenaires || [];
 
   const getAvatarColor = (id: number) => {
     const colors = [
@@ -278,18 +225,18 @@ const ModernPartenaireGrid: React.FC = () => {
           <p className="text-red-600 mb-4">
             Une erreur est survenue lors du chargement des partenaires
           </p>
-          <Button variant="outline" onClick={() => call()}>
+          <Button variant="outline" onClick={() => refetch()}>
             Réessayer
           </Button>
         </div>
       );
     }
 
-    if ((loading && !displayedPartenaires) || entitesLoading) {
+    if ((loading && !partenaires) || entitesLoading) {
       return renderSkeletons();
     }
 
-    if (!displayedPartenaires || filteredPartenaires.length === 0) {
+    if (!partenaires || filteredPartenaires.length === 0) {
       const message = searchQuery 
         ? "Aucun partenaire ne correspond à votre recherche" 
         : "Aucun partenaire disponible pour le moment";
@@ -298,9 +245,7 @@ const ModernPartenaireGrid: React.FC = () => {
         <div className="col-span-full flex flex-col items-center justify-center py-12">
           <p className="text-gray-600 mb-4">{message}</p>
           {searchQuery && (
-            <Button variant="outline" onClick={() => setSearchQuery("")}>
-              Réinitialiser la recherche
-            </Button>
+            <Button variant="outline" onClick={() => setSearchQuery("")}>Réinitialiser la recherche</Button>
           )}
           <Button 
             onClick={() => navigate("/administration/partenaires/ajouter")}
@@ -384,6 +329,13 @@ const ModernPartenaireGrid: React.FC = () => {
                           Appeler
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer text-red-600 hover:bg-red-50"
+                        onClick={() => setConfirmDeleteId(partenaire.id_partenaire)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        Supprimer
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -447,6 +399,32 @@ const ModernPartenaireGrid: React.FC = () => {
             </CardFooter>
           </Card>
         ))}
+        {/* AlertDialog global pour la suppression */}
+        <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+              <AlertDialogDescription>
+                Êtes-vous sûr de vouloir supprimer ce partenaire ? Cette action est irréversible.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirmDeleteId(null)}>
+                Annuler
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => confirmDeleteId && deletePartenaire(confirmDeleteId)}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <span className="flex items-center"><svg className="animate-spin h-4 w-4 mr-2 text-red-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Suppression...</span>
+                ) : (
+                  "Supprimer"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </>
     );
   };

@@ -84,13 +84,14 @@ export interface Demande {
 export interface Contrat {
   id_contrat: number; // Changed to number
   nom_contrat: string;
-  duree_Contrat: string;
+  type_de_contrat: string;
   date_debut: string;
   date_fin: string;
-  Reference?: string;
-  type_de_contrat: string;
-  status: string;
+  reference: string; // Harmonisé avec l'API (minuscule)
+  statut: string; // Harmonisé avec l'API
   id_partenaire?: number;
+  duree_contrat: string; // Ajout de la durée du contrat
+  documents?: ContratDocument | ContratDocument[]; // Documents associés au contrat (peut être un objet unique ou un tableau)
 }
 
 export interface EmployeDocument {
@@ -102,4 +103,65 @@ export interface EmployeDocument {
   date_document: string; // ISO date string
   id_nature_document: number;
   id_contrat?:number;
+}
+
+// Interface pour les documents de contrat
+export interface ContratDocument {
+  id_documents: number;
+  libelle_document: string;
+  classification_document: string;
+  date_document: string; // ISO date string
+  lien_document: string; // Chemin ou URL du document
+  etat_document?: string; // Optionnel
+  id_nature_document: number;
+  id_contrat: number;
+}
+
+// Types pour la gestion des erreurs
+export interface ApiError {
+  message: string;
+  status?: number;
+  response?: {
+    status: number;
+    data?: {
+      message?: string;
+      error?: string;
+    };
+  };
+}
+
+export interface MutationError {
+  message: string;
+  status?: number;
+  response?: {
+    status: number;
+    data?: {
+      message?: string;
+      error?: string;
+    };
+  };
+}
+
+// Types pour les réponses API
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  success: boolean;
+}
+
+export interface ContratResponse extends Contrat {
+  id_contrat: number;
+}
+
+// Types pour les mutations
+export interface CreateContratData extends Omit<Contrat, 'id_contrat' | 'duree_contrat'> {
+  duree_contrat?: string;
+}
+
+export interface UpdateContratData extends Partial<Omit<Contrat, 'id_contrat'>> {
+  duree_contrat?: string;
+}
+
+export interface CreateDocumentData extends Omit<ContratDocument, 'id_documents' | 'id_contrat'> {
+  file: File;
 }

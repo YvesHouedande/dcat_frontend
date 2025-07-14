@@ -48,8 +48,8 @@ export const ProjetFilters = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="tous">Tous états</SelectItem>
-          <SelectItem value="planifié">Planifié</SelectItem>
           <SelectItem value="en_cours">En cours</SelectItem>
+          <SelectItem value="planifié">Planifié</SelectItem>
           <SelectItem value="terminé">Terminé</SelectItem>
           <SelectItem value="annulé">Annulé</SelectItem>
         </SelectContent>

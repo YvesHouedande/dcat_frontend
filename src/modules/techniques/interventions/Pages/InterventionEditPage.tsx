@@ -65,19 +65,16 @@ export const InterventionEditPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Créer un objet Intervention à partir des données du formulaire
-      const { superviseur, ...dataWithoutSuperviseur } = data;
+      // Préparer le payload de mise à jour avec tous les champs nécessaires
       const interventionData: Partial<Intervention> = {
-        ...dataWithoutSuperviseur,
+        ...data,
         id_intervention: parseInt(id),
-        // Garder les valeurs existantes pour les champs non modifiables
         statut_intervention: intervention?.statut_intervention || "en cours",
         type: intervention?.type || "intervention",
-        id_contrat: intervention?.id_contrat || 0,
-        // Exclure le champ employes du spread car il a un type différent
-        employes: intervention?.employes || [], // Garder les employés existants
-      }; 
-      void superviseur; // Supprimer l'avertissement pour la variable non utilisée
+        id_contrat: data.id_contrat ?? null, // Correction : valeur du formulaire
+        employes: data.employes, // Correction : valeur du formulaire
+        superviseur: data.superviseur, // Correction : valeur du formulaire
+      };
 
       await updateIntervention(parseInt(id), interventionData as Intervention);
       toast.success("L'intervention a été mise à jour avec succès");

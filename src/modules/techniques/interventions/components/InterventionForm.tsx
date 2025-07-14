@@ -32,11 +32,14 @@ import {
 import { Intervention, Partenaire, Employe } from '../interface/interface';
 import { getPartenaires } from '../../projects/projet/api/partenaires';
 import { getEmployes } from '../../projects/projet/api/employes';
+import { fetchContrats } from '@/modules/administration-Finnance/services/contratService';
+import { Contrat } from '@/modules/administration-Finnance/administration/types/interfaces';
 
 // Schéma de validation du formulaire
 const formSchema = z.object({
   date_intervention: z.string(),
   id_partenaire: z.number(),
+  id_contrat: z.number().optional(), // <-- ajout du contrat (optionnel ou .nullable() si besoin)
   probleme_signale: z.string().min(1, 'Le problème signalé est requis'),
   type_intervention: z.enum(['Corrective', 'Préventive']),
   type_defaillance: z.enum(['Électrique', 'Matérielle', 'Logiciel']),
@@ -66,12 +69,14 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
 }) => {
   const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
   const [employes, setEmployes] = useState<Employe[]>([]);
+  const [contrats, setContrats] = useState<Contrat[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date_intervention: intervention?.date_intervention || format(new Date(), 'yyyy-MM-dd'),
       id_partenaire: intervention?.id_partenaire || 0,
+      id_contrat: intervention?.id_contrat || undefined, // <-- préremplissage
       probleme_signale: intervention?.probleme_signale || '',
       type_intervention: (intervention?.type_intervention as 'Corrective' | 'Préventive') || 'Corrective',
       type_defaillance: (intervention?.type_defaillance as 'Électrique' | 'Matérielle' | 'Logiciel') || 'Électrique',
@@ -90,12 +95,14 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [partenairesList, employesList] = await Promise.all([
+        const [partenairesList, employesList, contratsList] = await Promise.all([
           getPartenaires(),
           getEmployes(),
+          fetchContrats(),
         ]);
         setPartenaires(partenairesList);
         setEmployes(employesList);
+        setContrats(contratsList);
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
       }
@@ -148,6 +155,37 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                           value={partenaire.id_partenaire.toString()}
                         >
                           {partenaire.nom_partenaire}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="id_contrat"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contrat</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    value={field.value ? field.value.toString() : ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez un contrat" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {contrats.map((contrat) => (
+                        <SelectItem
+                          key={contrat.id_contrat}
+                          value={contrat.id_contrat.toString()}
+                        >
+                          {contrat.nom_contrat} {contrat.duree_contrat ? `- ${contrat.duree_contrat}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

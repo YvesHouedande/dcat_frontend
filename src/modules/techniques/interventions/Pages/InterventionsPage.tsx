@@ -161,6 +161,7 @@ export const InterventionsPage: React.FC = () => {
     mode_intervention: string;
     employes: number[];
     superviseur: number;
+    id_contrat: number | null;
   };
 
   const handleCreateSubmit = async (data: FormData) => {
@@ -195,7 +196,9 @@ export const InterventionsPage: React.FC = () => {
         lieu: truncateText(data.lieu, 50),
         mode_intervention: truncateText(data.mode_intervention || 'Standard', 50),
         type: truncateText(data.type_intervention, 50),
-        id_contrat: null,
+        id_contrat: data.id_contrat ?? null, // Correction : on prend la valeur du formulaire
+        employes: data.employes, // Correction : on envoie les employés sélectionnés
+        superviseur: data.superviseur, // Correction : on envoie le superviseur sélectionné
         statut_intervention: 'à faire'
       };
 

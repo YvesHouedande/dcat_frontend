@@ -1,21 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
-  Upload,
   Edit,
   FileText,
   Mail,
   Phone,
   MapPin,
-  Calendar,
-  Linkedin,
   Building,
   Tag,
-  Users,
   UserPlus,
   X
 } from "lucide-react";
@@ -26,19 +22,72 @@ import {
   fetchPartnerById, 
   fetchInterlocuteursByPartenaire,
   addInterlocuteur,
-  deleteInterlocuteur
+  deleteInterlocuteur,
+  fetchInterventionsByPartenaire
 } from '@/modules/administration-Finnance/services/partenaireService';
-import { Interlocuteur, Partenaires } from "../../types/interfaces";
+import { TypeInterventionPartenaire } from '@/modules/administration-Finnance/services/partenaireService';
+import { Interlocuteur} from "../../types/interfaces";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchContratsByPartenaire } from '@/modules/administration-Finnance/services/contratService';
+import { Contrat } from '../../types/interfaces';
 
 const ModernPartnerProfile: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
 
-  // États pour gérer les données et le loading
-  const [partnerInfo, setPartnerInfo] = useState<Partenaires | null>(null);
-  const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Charger les infos du partenaire
+  const { data: partnerInfo, isLoading: loading, error } = useQuery({
+    queryKey: ['partenaire', id],
+    queryFn: () => fetchPartnerById(id!),
+    enabled: !!id,
+  });
+
+  // Charger les interlocuteurs
+  const { data: interlocuteurs = [], isLoading: loadingInterlocuteurs } = useQuery({
+    queryKey: ['interlocuteurs', id],
+    queryFn: () => fetchInterlocuteursByPartenaire(parseInt(id!)),
+    enabled: !!id,
+  });
+
+  // Charger les interventions
+  const { data: interventions = [], isLoading: loadingInterventions } = useQuery({
+    queryKey: ['interventions', id],
+    queryFn: () => fetchInterventionsByPartenaire(parseInt(id!)),
+    enabled: !!id,
+  });
+
+  // Charger les contrats du partenaire
+  const { data: contrats = [], isLoading: loadingContrats } = useQuery({
+    queryKey: ['contrats-partenaire', id],
+    queryFn: () => fetchContratsByPartenaire(id!),
+    enabled: !!id,
+  });
+
+  // Mutation pour ajouter un interlocuteur
+  const { mutate: addInterlocuteurMutation } = useMutation({
+    mutationFn: (data: Omit<Interlocuteur, 'id_interlocuteur'>) => addInterlocuteur(data),
+    onSuccess: () => {
+      toast.success("Interlocuteur ajouté avec succès !");
+      queryClient.invalidateQueries(['interlocuteurs', id]);
+    },
+    onError: () => {
+      toast.error("Erreur lors de l'ajout de l'interlocuteur");
+    },
+  });
+
+  // Mutation pour supprimer un interlocuteur
+  const { mutate: deleteInterlocuteurMutation} = useMutation({
+    mutationFn: (id_interlocuteur: number) => deleteInterlocuteur(id_interlocuteur),
+    onSuccess: () => {
+      toast.success("Interlocuteur supprimé avec succès !");
+      queryClient.invalidateQueries(['interlocuteurs', id]);
+    },
+    onError: () => {
+      toast.error("Erreur lors de la suppression de l'interlocuteur");
+    },
+  });
 
   const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur' | 'id_partenaire'>>({
     nom_interlocuteur: "",
@@ -48,39 +97,6 @@ const ModernPartnerProfile: React.FC = () => {
     email_interlocuteur: "",
   });
   const [isAddingInterlocuteur, setIsAddingInterlocuteur] = useState(false);
-
-  // Fonction pour charger les données du partenaire et ses interlocuteurs
-  const loadPartnerData = async () => {
-    if (!id) {
-      setError("ID du partenaire manquant");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Charger d'abord les données essentielles
-      const [partnerData, interlocuteursData] = await Promise.all([
-        fetchPartnerById(id),
-        fetchInterlocuteursByPartenaire(parseInt(id))
-      ]);
-      
-      setPartnerInfo(partnerData);
-      setInterlocuteurs(interlocuteursData);
-    } catch (err) {
-      console.error("Erreur lors du chargement:", err);
-      setError(err instanceof Error ? err.message : "Erreur lors du chargement des données");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Charger les données au montage du composant
-  useEffect(() => {
-    loadPartnerData();
-  }, [loadPartnerData]);
 
   const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -104,20 +120,15 @@ const ModernPartnerProfile: React.FC = () => {
       .map(([, label]) => label);
 
     if (missingFields.length > 0) {
-      alert(`Les champs suivants sont obligatoires : ${missingFields.join(", ")}`);
+      toast.error(`Les champs suivants sont obligatoires : ${missingFields.join(", ")}`);
       return;
     }
 
     try {
-      setLoading(true);
-      
-      // Préparation des données pour l'API
-      const interlocuteurData = {
+      addInterlocuteurMutation({
         ...newInterlocuteur,
         id_partenaire: parseInt(id)
-      };
-
-      await addInterlocuteur(interlocuteurData);
+      });
       
       // Réinitialiser le formulaire
       setNewInterlocuteur({
@@ -130,35 +141,42 @@ const ModernPartnerProfile: React.FC = () => {
       
       setIsAddingInterlocuteur(false);
       
-      // Recharger les interlocuteurs
-      await loadPartnerData();
     } catch (error) {
       console.error('Error adding interlocuteur:', error);
-      alert("Erreur lors de l'ajout de l'interlocuteur");
-    } finally {
-      setLoading(false);
+      toast.error("Erreur lors de l'ajout de l'interlocuteur");
     }
   };
 
   const removeInterlocuteur = async (id_interlocuteur: number) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet interlocuteur ?")) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await deleteInterlocuteur(id_interlocuteur);
-      await loadPartnerData(); // Recharger les données
-    } catch (error) {
-      console.error('Error removing interlocuteur:', error);
-      alert("Erreur lors de la suppression de l'interlocuteur");
-    } finally {
-      setLoading(false);
-    }
+    toast.custom(
+      (t) => (
+        <div>
+          <div className="mb-2">Voulez-vous vraiment supprimer cet interlocuteur ?</div>
+          <div className="flex gap-2 justify-end">
+            <button
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-800"
+              onClick={() => toast.dismiss(t)}
+            >
+              Annuler
+            </button>
+            <button
+              className="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                deleteInterlocuteurMutation(id_interlocuteur);
+                toast.dismiss(t);
+              }}
+            >
+              Supprimer
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: 8000 }
+    );
   };
 
   // Affichage des états de chargement et d'erreur
-  if (loading) {
+  if (loading || loadingInterlocuteurs) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -174,9 +192,9 @@ const ModernPartnerProfile: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            Erreur: {error}
+            Erreur: {error instanceof Error ? error.message : "Erreur lors du chargement des données"}
           </div>
-          <Button onClick={loadPartnerData} className="bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={() => queryClient.invalidateQueries(['partenaire', id])} className="bg-indigo-600 hover:bg-indigo-700">
             Réessayer
           </Button>
         </div>
@@ -196,23 +214,6 @@ const ModernPartnerProfile: React.FC = () => {
       </div>
     );
   }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "En cours":
-        return "bg-amber-100 text-amber-800";
-      case "Planifié":
-        return "bg-purple-100 text-purple-800";
-      case "Actif":
-        return "bg-green-100 text-green-800";
-      case "Signé":
-        return "bg-blue-100 text-blue-800";
-      case "Validé":
-        return "bg-teal-100 text-teal-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
 
   const handleEditClick = () => {
     if (id === undefined) {
@@ -278,188 +279,82 @@ const ModernPartnerProfile: React.FC = () => {
 
       <div className="container mx-auto px-4 -mt-4 rounded-lg shadow-md">
         <Tabs defaultValue="profil" className="mb-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="profil">Profil</TabsTrigger>
-            <TabsTrigger value="interlocuteurs">
-              Interlocuteurs ({interlocuteurs.length})
-            </TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsList className="w-full flex-nowrap overflow-x-auto whitespace-nowrap gap-1 px-1" style={{ scrollbarWidth: 'thin' }}>
+            <TabsTrigger value="profil" className="min-w-[120px] px-2 py-1 text-sm">Profil</TabsTrigger>
+            <TabsTrigger value="interlocuteurs" className="min-w-[120px] px-2 py-1 text-sm">Interlocuteurs ({interlocuteurs.length})</TabsTrigger>
+            <TabsTrigger value="contrats" className="min-w-[120px] px-2 py-1 text-sm">Contrats</TabsTrigger>
+            <TabsTrigger value="interventions" className="min-w-[120px] px-2 py-1 text-sm">Interventions</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profil" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="md:col-span-2">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-gray-800">
-                      Informations du partenaire
-                    </h2>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-gray-500 cursor-pointer"
-                      onClick={handleEditClick}
-                    >
-                      <Edit size={16} className="mr-2" />
-                      Modifier
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <Building size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Nom</p>
-                        <p className="font-medium">
-                          {partnerInfo.nom_partenaire}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <Tag size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Spécialité</p>
-                        <p className="font-medium">{partnerInfo.specialite}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <Users size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Type</p>
-                        <p className="font-medium">
-                          {partnerInfo.type_partenaire}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <MapPin size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Localisation</p>
-                        <p className="font-medium">
-                          {partnerInfo.localisation}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <Mail size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium">
-                          {partnerInfo.email_partenaire}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <Phone size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Téléphone</p>
-                        <p className="font-medium">
-                          {partnerInfo.telephone_partenaire}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                        <Tag size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Statut</p>
-                        <Badge className={getStatusColor(partnerInfo.statut)}>
-                          {partnerInfo.statut}
-                        </Badge>
-                      </div>
+            <div className="w-full max-w-4xl mx-auto p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Informations du partenaire</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-gray-500 cursor-pointer"
+                  onClick={handleEditClick}
+                >
+                  <Edit size={16} className="mr-2" />
+                  Modifier
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-indigo-100 p-2 rounded-full"><Building size={20} className="text-indigo-500" /></span>
+                    <div>
+                      <div className="text-sm text-gray-500">Nom</div>
+                      <div className="font-medium text-lg">{partnerInfo.nom_partenaire}</div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">
-                    Actions rapides
-                  </h2>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-indigo-600 hover:border-indigo-200 group"
-                    >
-                      <Calendar
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-indigo-500"
-                      />
-                      Planifier une réunion
-                    </Button>
-                    <Button
-                      onClick={()=> navigate("/administration/contrats/nouveau_contrat")}
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-indigo-600 hover:border-indigo-200 group"
-                    >
-                      <FileText
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-indigo-500"
-                      />
-                      Nouveau contrat
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-indigo-600 hover:border-indigo-200 group"
-                    >
-                      <Upload
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-indigo-500"
-                      />
-                      Partager un document
-                    </Button>
-                  </div>
-
-                  <div className="mt-6">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">
-                      Contacter par
-                    </h3>
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="p-2 h-auto w-auto rounded-full"
-                      >
-                        <Mail size={16} className="text-indigo-600" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="p-2 h-auto w-auto rounded-full"
-                      >
-                        <Phone size={16} className="text-green-600" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="p-2 h-auto w-auto rounded-full"
-                      >
-                        <Linkedin size={16} className="text-blue-700" />
-                      </Button>
+                  <div className="flex items-center gap-3">
+                    <span className="bg-indigo-100 p-2 rounded-full"><Tag size={20} className="text-indigo-500" /></span>
+                    <div>
+                      <div className="text-sm text-gray-500">Type</div>
+                      <div className="font-medium">{partnerInfo.type_partenaire}</div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex items-center gap-3">
+                    <span className="bg-indigo-100 p-2 rounded-full"><Mail size={20} className="text-indigo-500" /></span>
+                    <div>
+                      <div className="text-sm text-gray-500">Email</div>
+                      <div className="font-medium">{partnerInfo.email_partenaire}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="bg-indigo-100 p-2 rounded-full"><Tag size={20} className="text-indigo-500" /></span>
+                    <div>
+                      <div className="text-sm text-gray-500">Statut</div>
+                      <Badge className="bg-green-100 text-green-800">{partnerInfo.statut}</Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-indigo-100 p-2 rounded-full"><Tag size={20} className="text-indigo-500" /></span>
+                    <div>
+                      <div className="text-sm text-gray-500">Spécialité</div>
+                      <div className="font-medium">{partnerInfo.specialite}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="bg-indigo-100 p-2 rounded-full"><MapPin size={20} className="text-indigo-500" /></span>
+                    <div>
+                      <div className="text-sm text-gray-500">Localisation</div>
+                      <div className="font-medium">{partnerInfo.localisation}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="bg-indigo-100 p-2 rounded-full"><Phone size={20} className="text-indigo-500" /></span>
+                    <div>
+                      <div className="text-sm text-gray-500">Téléphone</div>
+                      <div className="font-medium">{partnerInfo.telephone_partenaire}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -618,18 +513,132 @@ const ModernPartnerProfile: React.FC = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="documents" className="p-6">
+          <TabsContent value="contrats" className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">Documents</h2>
-              <Button className="bg-indigo-600 hover:bg-indigo-700">
-                <Upload size={16} className="mr-2" />
-                Ajouter un document
+              <h2 className="text-xl font-bold text-gray-800">Contrats du partenaire</h2>
+              <Button
+                onClick={() => navigate("/administration/contrats/nouveau", { state: { partenaireId: partnerInfo.id_partenaire } })}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <FileText size={16} className="mr-2" />
+                Nouveau contrat
               </Button>
             </div>
+            {loadingContrats ? (
+              <div className="text-center text-gray-500 py-8">
+                <p>Chargement des contrats...</p>
+              </div>
+            ) : contrats.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <p>Aucun contrat trouvé pour ce partenaire</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {contrats.map((contrat: Contrat) => (
+                  <Card key={contrat.id_contrat} className="hover:shadow-lg transition cursor-pointer">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <h3 className="font-medium text-indigo-700">
+                            {contrat.nom_contrat}
+                          </h3>
+                          <p className="text-xs text-gray-500">Réf: {contrat.reference}</p>
+                        </div>
+                        <Badge className="bg-indigo-100 text-indigo-700">
+                          {contrat.statut}
+                        </Badge>
+                      </div>
+                      <div className="mb-2 text-sm text-gray-600">
+                        <span className="block">Type: {contrat.type_de_contrat}</span>
+                        <span className="block">Début: {contrat.date_debut}</span>
+                        <span className="block">Fin: {contrat.date_fin}</span>
+                        <span className="block">Durée: {contrat.duree_contrat}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => navigate(`/administration/contrats/${contrat.id_contrat}/details`)}
+                      >
+                        Voir
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-            <div className="text-center text-gray-500">
-              <p>Aucun document trouvé pour ce partenaire</p>
+          <TabsContent value="interventions" className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-800">Interventions</h2>
             </div>
+            {loadingInterventions ? (
+              <div className="text-center text-gray-500 py-8">
+                <p>Chargement des interventions...</p>
+              </div>
+            ) : interventions.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <p>Aucune intervention trouvée pour ce partenaire</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {interventions.map((item: TypeInterventionPartenaire) => (
+                  <Card
+                    key={item.intervention.id_intervention}
+                    className="cursor-pointer hover:shadow-lg transition"
+                    onClick={() => navigate(`/technique/interventions/${item.intervention.id_intervention}`)}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <h3 className="font-medium text-indigo-700">
+                            Intervention #{item.intervention.id_intervention}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {item.intervention.date_intervention}
+                          </p>
+                        </div>
+                        <Badge className="bg-indigo-100 text-indigo-700">
+                          {item.intervention.type_intervention}
+                        </Badge>
+                      </div>
+                      <div className="mb-2">
+                        <span className="text-sm text-gray-500">Contrat : </span>
+                        {item.contrat && item.contrat.nom_contrat ? (
+                          <span
+                            className="text-indigo-600 underline cursor-pointer"
+                            onClick={e => {
+                              e.stopPropagation();
+                              navigate(`/administration/contrats/${item.contrat.id_contrat}`);
+                            }}
+                          >
+                            {item.contrat.nom_contrat}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">Contrat inconnu</span>
+                        )}
+                        {item.contrat && item.contrat.reference && (
+                          <span className="ml-2 text-xs text-gray-400">({item.contrat.reference})</span>
+                        )}
+                      </div>
+                      <div className="mb-2">
+                        <span className="text-sm text-gray-500">Employés : </span>
+                        {item.employes && item.employes.length > 0 ? (
+                          item.employes.map(emp => (
+                            <span key={emp.id_employes} className="inline-block mr-2 text-xs text-gray-700 bg-gray-100 rounded px-2 py-0.5">
+                              {emp.prenom_employes} {emp.nom_employes}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-400">Aucun</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

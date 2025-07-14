@@ -49,7 +49,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-
+import { fetchContratById } from '@/modules/administration-Finnance/services/contratService';
+import { Contrat } from '@/modules/administration-Finnance/administration/types/interfaces';
 
 
 interface InterventionDetailsProps {
@@ -69,6 +70,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
   const [partenaire, setPartenaire] = useState<Partenaire | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
+  const [contrat, setContrat] = useState<Contrat | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -109,7 +111,21 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    // Charger le contrat si id_contrat existe
+    const loadContrat = async () => {
+      if (intervention.id_contrat) {
+        try {
+          const contratData = await fetchContratById(intervention.id_contrat);
+          setContrat(contratData || null);
+        } catch {
+          setContrat(null);
+        }
+      } else {
+        setContrat(null);
+      }
+    };
+    loadContrat();
+  }, [loadData, intervention.id_contrat]);
 
   const handleDeleteDocument = async (documentId: number) => {
     try {
@@ -251,6 +267,27 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
                   <Badge variant="outline">
                     {intervention.type_intervention}
                   </Badge>
+                </div>
+              </div>
+
+              {/* Affichage du contrat associé */}
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Contrat associé</p>
+                  {contrat ? (
+                    <span
+                      className="text-indigo-600 underline cursor-pointer"
+                      onClick={() => navigate(`/administration/contrats/${contrat.id_contrat}/details`)}
+                    >
+                      {contrat.nom_contrat}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Aucun</span>
+                  )}
+                  {contrat && contrat.duree_contrat && (
+                    <span className="ml-2 text-xs text-gray-400">({contrat.duree_contrat})</span>
+                  )}
                 </div>
               </div>
 

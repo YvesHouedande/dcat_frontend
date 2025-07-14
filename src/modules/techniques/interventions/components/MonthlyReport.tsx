@@ -143,7 +143,10 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
     // Créer le contenu CSV
     const headers = ["Date", "Type", "Problème", "Cause", "Actions", "Durée"];
     const rows = interventions.map((intervention) => [
-      format(new Date(intervention.date_intervention), "dd/MM/yyyy"),
+      (() => {
+        const date = new Date(intervention.date_intervention);
+        return isNaN(date.getTime()) ? '-' : format(date, "dd/MM/yyyy");
+      })(),
       intervention.type_intervention,
       intervention.probleme_signale,
       intervention.cause_defaillance,
@@ -168,12 +171,15 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
     );
 
     const rows = interventions.map((intervention) => [
-      format(new Date(intervention.date_intervention), "dd/MM/yyyy"),
-      intervention.type_intervention,
-      intervention.probleme_signale,
-      intervention.cause_defaillance,
-      intervention.rapport_intervention,
-      intervention.duree,
+      (() => {
+        const date = new Date(intervention.date_intervention);
+        return isNaN(date.getTime()) ? '-' : format(date, "dd/MM/yyyy");
+      })(),
+      intervention.type_intervention ?? "",
+      intervention.probleme_signale ?? "",
+      intervention.cause_defaillance ?? "",
+      intervention.rapport_intervention ?? "",
+      intervention.duree ?? "",
     ]);
 
     // Créer le contenu PDF avec des styles améliorés et le logo

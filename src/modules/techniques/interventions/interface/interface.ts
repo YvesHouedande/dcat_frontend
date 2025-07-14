@@ -35,7 +35,7 @@ export interface Partenaire {
 export interface Contrat {
     id_contrat: number;
     nom_contrat: string;
-  
+    duree_contrat: string;
 }
 
 // Interface de pagination, définie ici pour l'indépendance du module d'intervention

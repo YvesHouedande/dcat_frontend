@@ -27,31 +27,34 @@ import {
   deleteInterlocuteur,
   addInterlocuteur,
 } from '@/modules/administration-Finnance/services/partenaireService';
-import { useApiCall } from '@/hooks/useAPiCall';
 import axios from "axios";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const EditPartnerForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const {
-    data: partnerData,
-    loading: loadingPartner,
-    error: partnerError,
-    call: fetchPartner
-  } = useApiCall<Partenaires>(() => fetchPartnerById(id!));
+  // Charger les données du partenaire
+  const { data: partnerData, isLoading: loadingPartner, error: partnerError } = useQuery({
+    queryKey: ['partenaire', id],
+    queryFn: () => fetchPartnerById(id!),
+    enabled: !!id,
+  });
 
-  const {
-    data: entites,
-    loading: loadingEntites,
-    call: fetchEntitesData
-  } = useApiCall<Entite[]>(fetchEntites);
+  // Charger les entités
+  const { data: entites, isLoading: loadingEntites } = useQuery({
+    queryKey: ['entites'],
+    queryFn: fetchEntites,
+  });
 
-  const {
-    data: initialInterlocuteurs,
-    loading: loadingInterlocuteurs,
-    call: fetchInterlocuteurs
-  } = useApiCall<Interlocuteur[]>(() => fetchInterlocuteursByPartenaire(parseInt(id!)));
+  // Charger les interlocuteurs
+  const { data: initialInterlocuteurs, isLoading: loadingInterlocuteurs } = useQuery({
+    queryKey: ['interlocuteurs', id],
+    queryFn: () => fetchInterlocuteursByPartenaire(parseInt(id!)),
+    enabled: !!id,
+  });
 
   const [formData, setFormData] = useState<Partenaires>({
     id_partenaire: 0,
@@ -81,31 +84,15 @@ const EditPartnerForm: React.FC = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [localEntites, setLocalEntites] = useState<Entite[]>([]);
 
-  // Initialisation des données
+  // Mettre à jour le formData et interlocuteurs quand les données sont chargées
   useEffect(() => {
-    if (id) {
-      fetchPartner();
-      fetchInterlocuteurs();
-      fetchEntitesData();
-    }
-  }, [id]);
-
-  useEffect(() => {
-    if (partnerData) {
-      setFormData(partnerData);
-    }
+    if (partnerData) setFormData(partnerData);
   }, [partnerData]);
-
   useEffect(() => {
-    if (initialInterlocuteurs) {
-      setInterlocuteurs(initialInterlocuteurs);
-    }
+    if (initialInterlocuteurs) setInterlocuteurs(initialInterlocuteurs);
   }, [initialInterlocuteurs]);
-
   useEffect(() => {
-    if (entites) {
-      setLocalEntites(entites);
-    }
+    if (entites) setLocalEntites(entites);
   }, [entites]);
 
   const types_partenaire = [
@@ -157,13 +144,13 @@ const EditPartnerForm: React.FC = () => {
       setShowAddEntite(false);
     } catch (error) {
       console.error("Failed to add entite", error);
-      alert("Erreur lors de l'ajout de l'entité");
+      toast.error("Erreur lors de l'ajout de l'entité");
     }
   };
 
   const handleDeleteEntite = async (id: number) => {
     if (formData.id_entite === id) {
-      alert("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
+      toast.error("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
       return;
     }
 
@@ -174,7 +161,7 @@ const EditPartnerForm: React.FC = () => {
         setDeleteMode(false);
       } catch (error) {
         console.error("Échec de la suppression:", error);
-        alert(error instanceof Error ? error.message : "Erreur lors de la suppression de l'entité");
+        toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression de l'entité");
       }
     }
   };
@@ -234,7 +221,7 @@ const EditPartnerForm: React.FC = () => {
       });
     } catch (error) {
       console.error("Erreur lors de l'ajout de l'interlocuteur", error);
-      alert("Erreur lors de l'ajout de l'interlocuteur");
+      toast.error("Erreur lors de l'ajout de l'interlocuteur");
     }
   };
 
@@ -255,13 +242,13 @@ const EditPartnerForm: React.FC = () => {
         .map(([, label]) => label);
 
       if (missingFields.length > 0) {
-        alert(`Les champs suivants sont obligatoires : ${missingFields.join(", ")}`);
+        toast.error(`Les champs suivants sont obligatoires : ${missingFields.join(", ")}`);
         return;
       }
 
       // Validation du format email
       if (!/^\S+@\S+\.\S+$/.test(interlocuteur.email_interlocuteur)) {
-        alert("Le format de l'email est invalide");
+        toast.error("Le format de l'email est invalide");
         return;
       }
 
@@ -286,14 +273,14 @@ const EditPartnerForm: React.FC = () => {
       const updatedList = [...interlocuteurs];
       updatedList[index] = updated;
       setInterlocuteurs(updatedList);
-      alert("Interlocuteur mis à jour avec succès");
+      toast.success("Interlocuteur mis à jour avec succès");
     } catch (error) {
       console.error("Erreur lors de la mise à jour de l'interlocuteur", error);
       if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message || error.message || 'Une erreur est survenue';
-        alert(`Erreur lors de la mise à jour de l'interlocuteur: ${errorMessage}`);
+        toast.error(`Erreur lors de la mise à jour de l'interlocuteur: ${errorMessage}`);
       } else {
-        alert("Erreur lors de la mise à jour de l'interlocuteur");
+        toast.error("Erreur lors de la mise à jour de l'interlocuteur");
       }
     }
   };
@@ -307,7 +294,7 @@ const EditPartnerForm: React.FC = () => {
       setInterlocuteurs(interlocuteurs.filter((_, i) => i !== index));
     } catch (error) {
       console.error("Erreur lors de la suppression de l'interlocuteur", error);
-      alert("Erreur lors de la suppression de l'interlocuteur");
+      toast.error("Erreur lors de la suppression de l'interlocuteur");
     }
   };
 
@@ -352,6 +339,23 @@ const EditPartnerForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Mutation pour la mise à jour du partenaire
+  const { mutate: updatePartenaire} = useMutation({
+    mutationFn: (data: Partial<Partenaires>) => updatePartner(parseInt(id!), data),
+    onSuccess: () => {
+      toast.success("Partenaire mis à jour avec succès !");
+      queryClient.invalidateQueries(['partenaires']);
+      navigate("/administration/partenaires");
+    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Erreur lors de la mise à jour du partenaire");
+      }
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -359,32 +363,17 @@ const EditPartnerForm: React.FC = () => {
       return;
     }
 
-    try {
-      // S'assurer que les données sont du bon type
-      const partnerDataToUpdate = {
-        nom_partenaire: formData.nom_partenaire,
-        telephone_partenaire: formData.telephone_partenaire,
-        email_partenaire: formData.email_partenaire,
-        specialite: formData.specialite,
-        localisation: formData.localisation,
-        type_partenaire: formData.type_partenaire,
-        statut: formData.statut,
-        id_entite: typeof formData.id_entite === 'string' ? parseInt(formData.id_entite) : formData.id_entite
-      };
-
-      console.log('Tentative de mise à jour du partenaire:', partnerDataToUpdate);
-
-      await updatePartner(parseInt(id!), partnerDataToUpdate);
-      alert("Partenaire mis à jour avec succès !");
-      navigate("/administration/partenaires");
-    } catch (error) {
-      console.error("Error updating partner:", error);
-      if (axios.isAxiosError(error) && error.response?.data) {
-        alert(`Erreur lors de la mise à jour du partenaire: ${error.response.data.message || 'Une erreur est survenue'}`);
-      } else {
-        alert("Erreur lors de la mise à jour du partenaire");
-      }
-    }
+    // Utiliser la mutation updatePartenaire de TanStack Query
+    updatePartenaire({
+      nom_partenaire: formData.nom_partenaire,
+      telephone_partenaire: formData.telephone_partenaire,
+      email_partenaire: formData.email_partenaire,
+      specialite: formData.specialite,
+      localisation: formData.localisation,
+      type_partenaire: formData.type_partenaire,
+      statut: formData.statut,
+      id_entite: typeof formData.id_entite === 'string' ? parseInt(formData.id_entite) : formData.id_entite
+    });
   };
 
   if (loadingPartner || loadingEntites || loadingInterlocuteurs) {

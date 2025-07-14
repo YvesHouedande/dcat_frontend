@@ -4,181 +4,161 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-
 import {
   Download,
-  Upload,
   Edit,
   FileText,
   Calendar,
   Clock,
   Building,
   FileSignature,
-  File,
-  Users,
   ChevronRight,
   AlarmClock,
+  Plus,
+  Trash2,
 } from "lucide-react";
-
 import { useNavigate, useParams } from "react-router-dom";
-import { Contrat, EmployeDocument } from "../../types/interfaces";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchContratById } from '../../../services/contratService';
+import { fetchPartnerById } from '../../../services/partenaireService';
+import { ApiError, MutationError } from '../../types/interfaces';
+import { deleteDocumentFromContrat } from '../../../services/contratService';
+import { toast } from 'sonner';
+import DocumentSheet from './DocumentSheet';
 
 const InfoContract: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const [showFilePreview, setShowFilePreview] = useState(false);
 
-  const contractInfo: Contrat = {
-    id_contrat: 20250042, // Changé de string à number
-    nom_contrat: "Accord de maintenance IT",
-    duree_Contrat: "24 mois",
-    date_debut: "01/03/2025",
-    date_fin: "28/02/2027",
-    id_partenaire: 1,
-    type_de_contrat: "Service",
-    status: "Actif",
+  // Récupération du contrat
+  const { data: contrat, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['contrat', id],
+    queryFn: () => fetchContratById(id!),
+    enabled: !!id,
+  });
+
+
+  
+  // Fonction pour calculer la durée si elle n'existe pas
+  const calculateDuration = (dateDebut: string, dateFin: string) => {
+    if (!dateDebut || !dateFin) return "Non calculée";
+    
+    const debut = new Date(dateDebut);
+    const fin = new Date(dateFin);
+    
+    if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return "Dates invalides";
+    
+    const diffTime = Math.abs(fin.getTime() - debut.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffMonths = Math.ceil(diffDays / 30);
+    const diffYears = Math.floor(diffMonths / 12);
+    const remainingMonths = diffMonths % 12;
+    
+    if (diffYears > 0) {
+      let result = `${diffYears} an${diffYears > 1 ? 's' : ''}`;
+      if (remainingMonths > 0) {
+        result += ` et ${remainingMonths} mois`;
+      }
+      return result;
+    } else {
+      return `${diffMonths} mois`;
+    }
   };
 
-  const partnerInfo = {
-    id_partenaire: 1,
-    nom_partenaire: "EcoTech Solutions",
-    telephone_partenaire: "07 45 23 89 67",
-    Email_partenaire: "contact@ecotech-solutions.ci",
-    specialite: "Solutions Numériques Durables",
+  // Récupération du partenaire associé
+  const { data: partenaire } = useQuery({
+    queryKey: ['partenaire', contrat?.id_partenaire],
+    queryFn: () => contrat?.id_partenaire ? fetchPartnerById(contrat.id_partenaire) : Promise.resolve(undefined),
+    enabled: !!contrat?.id_partenaire,
+  });
+
+  // Mutation pour supprimer un document
+  const deleteDocumentMutation = useMutation({
+    mutationFn: (documentId: number) => deleteDocumentFromContrat(documentId),
+    onSuccess: () => {
+      toast.success('Document supprimé avec succès');
+      queryClient.invalidateQueries({ queryKey: ['contrat', id] });
+    },
+    onError: (error: MutationError) => {
+      toast.error('Erreur lors de la suppression du document', {
+        description: error.message || 'Une erreur inattendue s\'est produite',
+      });
+    },
+  });
+
+  const handleDeleteDocument = (documentId: number) => {
+    deleteDocumentMutation.mutate(documentId);
   };
 
-  const documents: EmployeDocument[] = [
-    {
-      id_documents: 1,
-      libelle_document: "Contrat Principal",
-      date_document: "01/03/2025",
-      lien_document: "contrat_maintenance_it.pdf",
-      id_contrat: 20250042, // Changé de string à number
-      id_nature_document: 1,
-      classification_document: "Contrat Principal",
-    },
-    {
-      id_documents: 2,
-      libelle_document: "Annexe 1 - Tarifs",
-      date_document: "01/03/2025",
-      lien_document: "annexe_1_tarifs.pdf",
-      id_contrat: 20250042, // Changé de string à number
-      id_nature_document: 2,
-      classification_document: "Annexe 1 - Tarifs",
-    },
-    {
-      id_documents: 3,
-      libelle_document: "Conditions Générales",
-      date_document: "01/03/2025",
-      lien_document: "conditions_generales.pdf",
-      id_contrat: 20250042, // Changé de string à number
-      id_nature_document: 3,
-      classification_document: "Conditions Générales",
-    },
-  ];
+  // Get API_URL from environment variables
+  const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
 
-  const amendments = [
-    {
-      id: "1",
-      title: "Modification budgétaire",
-      date: "15/04/2025",
-      status: "Approuvé",
-      description: "Augmentation du budget de maintenance de 10%",
-    },
-    {
-      id: "2",
-      title: "Extension de service",
-      date: "Planifié - 01/06/2025",
-      status: "En attente",
-      description: "Ajout de services de formation pour les utilisateurs",
-    },
-  ];
+  // Determine the base URL for static files (media, documents, etc.)
+  // Assumes API_BASE_URL ends with /api (e.g., https://erpback.dcat.ci/api)
+  // and static files are served from the root domain (e.g., https://erpback.dcat.ci/media/...)
+  const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
+    ? API_BASE_URL.slice(0, -4) // Remove '/api' from the end
+    : API_BASE_URL; // Otherwise, use it as is
 
-  const events = [
-    {
-      id: "1",
-      title: "Signature du contrat",
-      date: "01/03/2025",
-      type: "Administratif",
-    },
-    {
-      id: "2",
-      title: "Premier rapport trimestriel",
-      date: "01/06/2025",
-      type: "Livrable",
-    },
-    {
-      id: "3",
-      title: "Réunion de suivi",
-      date: "15/06/2025",
-      type: "Réunion",
-    },
-    {
-      id: "4",
-      title: "Renouvellement automatique",
-      date: "01/12/2026",
-      type: "Échéance",
-    },
-  ];
 
+
+  // Loader global
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-lg text-gray-600 animate-pulse">Chargement du contrat...</div>
+      </div>
+    );
+  }
+  if (isError || !contrat) {
+    // Gestion explicite du 404
+    const is404 = (error as ApiError)?.response?.status === 404;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <p className="text-red-600 mb-4">
+          {is404 ? "Contrat introuvable (404)." : "Erreur lors du chargement du contrat."}
+        </p>
+        <Button variant="outline" onClick={() => is404 ? navigate('/administration/contrats') : refetch()}>
+          {is404 ? "Retour à la liste des contrats" : "Réessayer"}
+        </Button>
+      </div>
+    );
+  }
+
+  // Calcul du pourcentage de progression du contrat
+  const calculateProgress = () => {
+    const startDate = new Date(contrat.date_debut);
+    const endDate = new Date(contrat.date_fin);
+    const today = new Date();
+    const totalDuration = endDate.getTime() - startDate.getTime();
+    const elapsedDuration = today.getTime() - startDate.getTime();
+    if (elapsedDuration < 0) return 0;
+    if (elapsedDuration > totalDuration) return 100;
+    return Math.round((elapsedDuration / totalDuration) * 100);
+  };
+  const progress = calculateProgress();
+
+  // Statut visuel
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "actif":
       case "Actif":
         return "bg-green-100 text-green-800";
+      case "en_attente":
       case "En attente":
         return "bg-amber-100 text-amber-800";
+      case "approuvé":
       case "Approuvé":
         return "bg-blue-100 text-blue-800";
+      case "expiré":
       case "Expiré":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
-
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case "Administratif":
-        return "bg-blue-100 text-blue-800";
-      case "Livrable":
-        return "bg-purple-100 text-purple-800";
-      case "Réunion":
-        return "bg-teal-100 text-teal-800";
-      case "Échéance":
-        return "bg-amber-100 text-amber-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const handleEdit = (id: string | number | undefined) => {
-    navigate(`/administration/contrats/${id}/editer`);
-  };
-
-  const handlePartnerClick = (id: number) => {
-    navigate(`/administration/partenaires/profil/${id}`);
-  };
-
-  // Calcul du pourcentage de progression du contrat
-  const calculateProgress = () => {
-    const startDate = new Date(
-      contractInfo.date_debut.split("/").reverse().join("-")
-    );
-    const endDate = new Date(
-      contractInfo.date_fin.split("/").reverse().join("-")
-    );
-    const today = new Date();
-
-    const totalDuration = endDate.getTime() - startDate.getTime();
-    const elapsedDuration = today.getTime() - startDate.getTime();
-
-    if (elapsedDuration < 0) return 0;
-    if (elapsedDuration > totalDuration) return 100;
-
-    return Math.round((elapsedDuration / totalDuration) * 100);
-  };
-
-  const progress = calculateProgress();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -189,41 +169,38 @@ const InfoContract: React.FC = () => {
             <div className="bg-white p-4 rounded-lg shadow-md">
               <FileSignature size={48} className="text-emerald-600" />
             </div>
-
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
                   <h1 className="text-2xl font-bold">
-                    {contractInfo.nom_contrat}
+                    {contrat.nom_contrat}
                   </h1>
                   <p className="text-emerald-100">
-                    Référence: {contractInfo.id_contrat}
+                    Référence: {contrat.reference || contrat.id_contrat}
                   </p>
                 </div>
                 <Badge
                   variant="outline"
-                  className="mt-2 md:mt-0 bg-emerald-500/20 text-white border-emerald-200 self-center"
+                  className={`mt-2 md:mt-0 border-emerald-200 self-center ${getStatusColor(contrat.statut)}`}
                 >
-                  {contractInfo.status}
+                  {contrat.statut}
                 </Badge>
               </div>
-
               <div className="mt-4 flex flex-col md:flex-row gap-2 md:gap-6">
                 <div className="flex items-center">
                   <Calendar size={18} className="mr-2 text-emerald-200" />
-                  <span>Début: {contractInfo.date_debut}</span>
+                  <span>Début: {contrat.date_debut}</span>
                 </div>
                 <div className="flex items-center">
                   <Calendar size={18} className="mr-2 text-emerald-200" />
-                  <span>Fin: {contractInfo.date_fin}</span>
+                  <span>Fin: {contrat.date_fin}</span>
                 </div>
                 <div className="flex items-center">
                   <Clock size={18} className="mr-2 text-emerald-200" />
-                  <span>Durée: {contractInfo.duree_Contrat}</span>
+                  <span>Durée: {contrat.duree_contrat || calculateDuration(contrat.date_debut, contrat.date_fin)}</span>
                 </div>
               </div>
             </div>
-
             <Button
               className="bg-white text-emerald-700 hover:bg-emerald-50"
               onClick={() => setShowFilePreview(!showFilePreview)}
@@ -232,7 +209,6 @@ const InfoContract: React.FC = () => {
               VOIR LE CONTRAT
             </Button>
           </div>
-
           <div className="mt-6">
             <div className="flex justify-between text-sm mb-1">
               <span>Progression du contrat</span>
@@ -242,16 +218,13 @@ const InfoContract: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Navigation tabs */}
       <div className="container mx-auto px-4 -mt-4 rounded-lg shadow-md">
         <Tabs defaultValue="details" className="mb-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="details">Détails</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger disabled value="calendar">Échéances</TabsTrigger>
           </TabsList>
-
           <TabsContent value="details" className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className="md:col-span-2">
@@ -264,13 +237,12 @@ const InfoContract: React.FC = () => {
                       variant="outline"
                       size="sm"
                       className="text-gray-500 cursor-pointer"
-                      onClick={() => handleEdit(id)}
+                      onClick={() => navigate(`/administration/contrats/${contrat.id_contrat}/editer`)}
                     >
                       <Edit size={16} className="mr-2" />
                       Modifier
                     </Button>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
@@ -279,41 +251,37 @@ const InfoContract: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Nom du contrat</p>
                         <p className="font-medium">
-                          {contractInfo.nom_contrat}
+                          {contrat.nom_contrat}
                         </p>
                       </div>
                     </div>
-
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
                         <FileSignature size={16} />
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Référence</p>
-                        <p className="font-medium">{contractInfo.id_contrat}</p>
+                        <p className="font-medium">{contrat.reference || contrat.id_contrat}</p>
                       </div>
                     </div>
-
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
                         <Calendar size={16} />
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Date de début</p>
-                        <p className="font-medium">{contractInfo.date_debut}</p>
+                        <p className="font-medium">{contrat.date_debut}</p>
                       </div>
                     </div>
-
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
                         <Calendar size={16} />
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Date de fin</p>
-                        <p className="font-medium">{contractInfo.date_fin}</p>
+                        <p className="font-medium">{contrat.date_fin}</p>
                       </div>
                     </div>
-
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
                         <Clock size={16} />
@@ -321,11 +289,10 @@ const InfoContract: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Durée</p>
                         <p className="font-medium">
-                          {contractInfo.duree_Contrat}
+                          {contrat.duree_contrat || calculateDuration(contrat.date_debut, contrat.date_fin)}
                         </p>
                       </div>
                     </div>
-
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
                         <Building size={16} />
@@ -333,44 +300,44 @@ const InfoContract: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Type de contrat</p>
                         <p className="font-medium">
-                          {contractInfo.type_de_contrat}
+                          {contrat.type_de_contrat}
                         </p>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardContent className="p-6">
                   <div className="mb-4">
                     <h2 className="text-xl font-bold text-gray-800 mb-4">
                       Partenaire associé
                     </h2>
-                    <Button
-                      variant="outline"
-                      className="w-full flex items-center justify-between text-left p-4 mb-4"
-                      onClick={() =>
-                        handlePartnerClick(partnerInfo.id_partenaire)
-                      }
-                    >
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
-                          <Building size={20} />
+                    {partenaire ? (
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center justify-between text-left p-4 mb-4"
+                        onClick={() => navigate(`/administration/partenaires/profil/${partenaire.id_partenaire}`)}
+                      >
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
+                            <Building size={20} />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {partenaire.nom_partenaire}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {partenaire.specialite}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-800">
-                            {partnerInfo.nom_partenaire}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {partnerInfo.specialite}
-                          </p>
-                        </div>
-                      </div>
-                      <ChevronRight size={16} className="text-gray-400" />
-                    </Button>
+                        <ChevronRight size={16} className="text-gray-400" />
+                      </Button>
+                    ) : (
+                      <div className="text-gray-400 italic">Aucun partenaire associé</div>
+                    )}
                   </div>
-
                   <h2 className="text-xl font-bold text-gray-800 mb-4">
                     Actions rapides
                   </h2>
@@ -400,200 +367,96 @@ const InfoContract: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+                      </TabsContent>
+            <TabsContent value="documents" className="p-6">
+              <div className="space-y-6">
+                {/* En-tête avec bouton d'ajout */}
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-bold text-gray-800">Documents du contrat</h2>
+                  <DocumentSheet
+                    contratId={parseInt(id!)}
+                    onDocumentAdded={() => {
+                      queryClient.invalidateQueries({ queryKey: ['contrat', id] });
+                    }}
+                    trigger={
+                      <Button className="bg-blue-600 hover:bg-blue-700">
+                        <Plus size={16} className="mr-2" />
+                        Ajouter un document
+                      </Button>
+                    }
+                  />
+                </div>
 
-          <TabsContent value="amendments" className="p-6">
-            <div className="space-y-4">
-              {amendments.map((amendment) => (
-                <Card
-                  key={amendment.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                      <div className="flex items-start md:items-center mb-4 md:mb-0">
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3 shrink-0">
-                          <FileText size={20} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-gray-800">
-                              {amendment.title}
-                            </h3>
-                            <Badge className={getStatusColor(amendment.status)}>
-                              {amendment.status}
-                            </Badge>
+
+
+                {/* Liste des documents existants */}
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-medium text-gray-700 mb-4">Documents existants</h3>
+                    
+                    {contrat?.documents && Array.isArray(contrat.documents) && contrat.documents.length > 0 ? (
+                      <div className="space-y-3">
+                        {contrat.documents.map((doc) => (
+                          <div key={doc.id_documents} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <FileText className="h-6 w-6 text-blue-500" />
+                              <div>
+                                <p className="font-medium text-gray-900">{doc.libelle_document}</p>
+                                <p className="text-sm text-gray-500">{doc.classification_document}</p>
+                                <p className="text-xs text-gray-400">
+                                  Ajouté le {new Date(doc.date_document).toLocaleDateString('fr-FR')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              {doc.lien_document && (
+                                <a
+                                  href={`${STATIC_FILES_BASE_URL}/${doc.lien_document}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors px-3 py-2 rounded-md hover:bg-blue-50"
+                                  download
+                                >
+                                  <Download size={16} className="mr-2" />
+                                  Télécharger
+                                </a>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteDocument(doc.id_documents)}
+                                disabled={deleteDocumentMutation.isLoading}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 size={16} className="mr-2" />
+                                {deleteDocumentMutation.isLoading ? 'Suppression...' : 'Supprimer'}
+                              </Button>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">
-                            {amendment.date}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-2">
-                            {amendment.description}
-                          </p>
-                        </div>
+                        ))}
                       </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-gray-600"
-                        >
-                          <FileText size={14} className="mr-1" />
-                          Voir
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-emerald-600"
-                        >
-                          <Download size={14} className="mr-1" />
-                          Télécharger
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="calendar" className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                Échéances et événements
-              </h2>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Calendar size={16} className="mr-2" />
-                Ajouter une échéance
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              {events.map((event) => (
-                <Card
-                  key={event.id}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
-                        {event.type === "Administratif" && (
-                          <FileSignature size={20} />
-                        )}
-                        {event.type === "Livrable" && <File size={20} />}
-                        {event.type === "Réunion" && <Users size={20} />}
-                        {event.type === "Échéance" && <AlarmClock size={20} />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-gray-800">
-                            {event.title}
-                          </h3>
-                          <Badge className={getEventColor(event.type)}>
-                            {event.type}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {event.date}
+                    ) : (
+                      <div className="text-center py-8">
+                        <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-gray-500">Aucun document associé à ce contrat</p>
+                        <p className="text-sm text-gray-400 mt-2">
+                          Cliquez sur "Ajouter un document" pour commencer
                         </p>
                       </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-gray-600"
-                        >
-                          <Edit size={14} className="mr-1" />
-                          Modifier
-                        </Button>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="documents" className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">
-                Documents associés
-              </h2>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Upload size={16} className="mr-2" />
-                Ajouter un document
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {documents.map((document) => (
-                <Card
-                  key={document.id_documents}
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="bg-gray-50 p-4 border-b">
-                    <div className="flex justify-between">
-                      <Badge className="bg-emerald-100 text-emerald-800">
-                        {document.id_nature_document === 1
-                          ? "Principal"
-                          : document.id_nature_document === 2
-                          ? "Annexe"
-                          : "Juridique"}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {document.date_document}
-                      </span>
-                    </div>
-                    <div className="mt-6 mb-4 flex justify-center">
-                      <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
-                        <FileText size={24} className="text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-gray-800 mb-1">
-                      {document.libelle_document}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                      {document.id_nature_document === 1
-                        ? "Contrat principal"
-                        : document.id_nature_document === 2
-                        ? "Grille tarifaire"
-                        : "Conditions générales"}
-                    </p>
-                    <div className="flex justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-gray-600 text-xs"
-                      >
-                        <FileText size={14} className="mr-1" />
-                        Voir
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-emerald-600 text-xs"
-                      >
-                        <Download size={14} className="mr-1" />
-                        Télécharger
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       {/* Modal pour la prévisualisation du fichier (simulé) */}
       {showFilePreview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-3/4 flex flex-col">
             <div className="p-4 border-b flex justify-between items-center">
               <h3 className="font-medium text-lg">
-                Aperçu du contrat: {contractInfo.nom_contrat}
+                Aperçu du contrat: {contrat.nom_contrat}
               </h3>
               <Button
                 variant="ghost"
@@ -608,7 +471,7 @@ const InfoContract: React.FC = () => {
                 <div className="text-center p-8">
                   <FileText size={64} className="mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500">
-                    Aperçu du document {documents[0].libelle_document}
+                    Aperçu du contrat
                   </p>
                   <p className="text-gray-400 text-sm mt-2">
                     Dans une application réelle, le PDF serait affiché ici

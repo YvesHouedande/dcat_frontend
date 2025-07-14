@@ -44,7 +44,7 @@ const ProjetsPage = () => {
 
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterEtat, setFilterEtat] = useState("tous");
+  const [filterEtat, setFilterEtat] = useState("en_cours");
   const [filterPartenaire, setFilterPartenaire] = useState<number>(0);
 
   // État pour la pagination du serveur

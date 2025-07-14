@@ -1,160 +1,182 @@
 import axios from 'axios';
-import { Contrat } from '../../administration-Finnance/administration/types/interfaces';
+import { 
+  // Contrat, 
+  // EmployeDocument, 
+  ContratDocument,
+  ContratResponse, 
+  CreateContratData, 
+  UpdateContratData,
+  // CreateDocumentData,
+  ApiResponse 
+} from '../../administration-Finnance/administration/types/interfaces';
 
 const API_URL = import.meta.env.VITE_APP_API_URL;
 
-// Services pour les contrats
+// Lister tous les contrats
 export const fetchContrats = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/contrats`);
-    return response.data;
-  } catch (error) {
-    console.error("Erreur de récupération des contrats:", error);
-    throw error;
-  }
+  const response = await axios.get(`${API_URL}/administration/contrats`);
+  if (Array.isArray(response.data)) return response.data;
+  if (response.data && Array.isArray(response.data.data)) return response.data.data;
+  return [];
 };
 
-export const fetchContratById = async (id: string | number) => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/contrats/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error("Erreur de récupération d'un contrat:", error);
-    throw error;
+// Créer un nouveau contrat
+export const addContrat = async (contratData: CreateContratData, documentFile?: File): Promise<ContratResponse> => {
+  
+  let response;
+  if (documentFile) {
+    const formData = new FormData();
+    Object.keys(contratData).forEach((key) => {
+      const value = contratData[key as keyof CreateContratData];
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+    formData.append('document', documentFile);
+    response = await axios.post<ContratResponse>(`${API_URL}/administration/contrats`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  } else {
+    // Nettoyer les données avant envoi
+    const cleanData = Object.fromEntries(
+      Object.entries(contratData).filter(([, value]) => value !== undefined && value !== null)
+    );
+    response = await axios.post<ContratResponse>(`${API_URL}/administration/contrats`, cleanData);
   }
+  return response.data;
 };
 
-export const addContrat = async (contratData: Omit<Contrat, 'id_contrat'>, documentFile?: File) => {
-  try {
-    let response;
+// Obtenir un contrat par ID
+export const fetchContratById = async (id: string | number): Promise<ContratResponse | null> => {
+  const response = await axios.get<ApiResponse<ContratResponse[]>>(`${API_URL}/administration/contrats/${id}`);
+  
+  if (response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+    const contrat = response.data.data[0];
     
-    // Si un fichier est fourni, nous utilisons FormData pour l'upload
-    if (documentFile) {
-      const formData = new FormData();
-      // Ajouter les données du contrat
-      Object.keys(contratData).forEach((key) => {
-        const value = contratData[key as keyof Omit<Contrat, 'id_contrat'>];
-        if (value !== undefined) {
-          formData.append(key, value.toString());
-        }
-      });
-      // Ajouter le fichier document
-      formData.append('document', documentFile);
-      
-      response = await axios.post(`${API_URL}/administration/contrats`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+    // Normaliser les documents en tableau
+    if (contrat.documents) {
+      if (Array.isArray(contrat.documents)) {
+        // Déjà un tableau, pas de changement
+        // Rien à faire
+      } else {
+        // C'est un objet unique, le convertir en tableau
+        contrat.documents = [contrat.documents];
+      }
     } else {
-      // Si pas de fichier, envoyer simplement les données JSON
-      response = await axios.post(`${API_URL}/administration/contrats`, contratData);
+      // Aucun document
+      contrat.documents = [];
     }
     
-    return response.data;
-  } catch (error) {
-    console.error("Erreur lors de l'ajout d'un contrat:", error);
-    throw error;
+    return contrat;
   }
+  return null;
 };
 
-export const updateContrat = async (id: string | number, contratData: Partial<Contrat>, documentFile?: File) => {
-  try {
-    let response;
-    
-    // Si un fichier est fourni, nous utilisons FormData pour l'upload
-    if (documentFile) {
-      const formData = new FormData();
-      // Ajouter les données du contrat
-      Object.keys(contratData).forEach((key) => {
-        const value = contratData[key as keyof Partial<Contrat>];
-        if (value !== undefined) {
-          formData.append(key, value.toString());
-        }
-      });
-      // Ajouter le fichier document
-      formData.append('document', documentFile);
-      
-      response = await axios.put(`${API_URL}/administration/contrats/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-    } else {
-      // Si pas de fichier, envoyer simplement les données JSON
-      response = await axios.put(`${API_URL}/administration/contrats/${id}`, contratData);
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error("Erreur de mise à jour d'un contrat:", error);
-    throw error;
+// Modifier un contrat
+export const updateContrat = async (id: string | number, contratData: UpdateContratData, documentFile?: File): Promise<ContratResponse> => {
+  
+  let response;
+  if (documentFile) {
+    const formData = new FormData();
+    Object.keys(contratData).forEach((key) => {
+      const value = contratData[key as keyof UpdateContratData];
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+    formData.append('document', documentFile);
+    response = await axios.put<ContratResponse>(`${API_URL}/administration/contrats/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  } else {
+    // Nettoyer les données avant envoi
+    const cleanData = Object.fromEntries(
+      Object.entries(contratData).filter(([, value]) => value !== undefined && value !== null)
+    );
+    response = await axios.put<ContratResponse>(`${API_URL}/administration/contrats/${id}`, cleanData);
   }
+  return response.data;
 };
 
+// Supprimer un contrat (supprime d'abord les documents associés)
 export const deleteContrat = async (id: string | number) => {
   try {
+    // Récupérer d'abord le contrat avec ses documents
+    const contratResponse = await axios.get(`${API_URL}/administration/contrats/${id}`);
+    const contrat = contratResponse.data;
+    
+    // Supprimer tous les documents associés
+    if (contrat.documents && Array.isArray(contrat.documents) && contrat.documents.length > 0) {
+      for (const doc of contrat.documents) {
+        await axios.delete(`${API_URL}/administration/contrats/docContrat/${doc.id_documents}`);
+      }
+    }
+    
+    // Supprimer le contrat
     const response = await axios.delete(`${API_URL}/administration/contrats/${id}`);
     return response.data;
   } catch (error) {
-    console.error("Erreur de suppression d'un contrat:", error);
+    console.error('Erreur lors de la suppression du contrat:', error);
     throw error;
   }
 };
+
+// Obtenir les contrats par type
+export const fetchContratsByType = async (type: string) => {
+  const response = await axios.get(`${API_URL}/administration/contrats/type/${type}`);
+  if (Array.isArray(response.data)) return response.data;
+  if (response.data && Array.isArray(response.data.data)) return response.data.data;
+  return [];
+};
+
+// Obtenir les contrats par partenaire
+export const fetchContratsByPartenaire = async (id_partenaire: string | number) => {
+  const response = await axios.get(`${API_URL}/administration/contrats/partenaire/${id_partenaire}`);
+  if (Array.isArray(response.data)) return response.data;
+  if (response.data && Array.isArray(response.data.data)) return response.data.data;
+  return [];
+};
+
+// Ajouter un document à un contrat
+export const addDocumentToContrat = async (
+  contratId: string | number,
+  documentData: Omit<ContratDocument, 'id_documents' | 'id_contrat'>,
+  file: File
+): Promise<ContratDocument> => {
+  const formData = new FormData();
+  
+  // Ajouter le fichier (comme dans les interventions)
+  formData.append('document', file);
+  
+  // Ajouter les autres champs de texte au FormData (comme dans les interventions)
+  Object.keys(documentData).forEach(key => {
+    const value = documentData[key as keyof typeof documentData];
+    if (value !== undefined && value !== null) {
+      formData.append(key, String(value));
+    }
+  });
+  
+  // Ajouter l'ID du contrat
+  formData.append('id_contrat', String(contratId));
+  
+  const response = await axios.post<ContratDocument>(`${API_URL}/administration/contrats/${contratId}/doc`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  
+  return response.data;
+};
+
+// Supprimer un document d'un contrat
+export const deleteDocumentFromContrat = async (docId: string | number) => {
+  console.log('Suppression document, id envoyé :', docId);
+  const response = await axios.delete(`${API_URL}/administration/contrats/docContrat/${docId}`);
+  return response.data;
+};
+
+
 
 // Service pour les natures de document
 export const fetchNaturesDocument = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/natures-document`);
-    return response.data;
-  } catch (error) {
-    console.error("Erreur de récupération des natures de document:", error);
-    throw error;
-  }
-};
-
-// Services pour les documents liés aux contrats
-export const addDocumentToContrat = async (contratId: string | number, documentData: Omit<Document, 'id_document'>, file: File) => {
-  try {
-    const formData = new FormData();
-    // Ajouter les données du document
-    Object.keys(documentData).forEach((key) => {
-      const value = documentData[key as keyof Omit<Document, 'id_document'>];
-      if (value !== undefined) {
-        formData.append(key, value ? value.toString() : "");
-      }
-    });
-    // Ajouter le fichier
-    formData.append('file', file);
-    
-    const response = await axios.post(`${API_URL}/administration/contrats/${contratId}/documents`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Erreur lors de l'ajout d'un document:", error);
-    throw error;
-  }
-};
-
-export const fetchDocumentsByContratId = async (contratId: string | number) => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/contrats/${contratId}/documents`);
-    return response.data;
-  } catch (error) {
-    console.error("Erreur de récupération des documents d'un contrat:", error);
-    throw error;
-  }
-};
-
-export const deleteDocument = async (contratId: string | number, documentId: string | number) => {
-  try {
-    const response = await axios.delete(`${API_URL}/administration/contrats/${contratId}/documents/${documentId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Erreur de suppression d'un document:", error);
-    throw error;
-  }
+  const response = await axios.get(`${API_URL}/administration/natures`);
+  return response.data;
 };

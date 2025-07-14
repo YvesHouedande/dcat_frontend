@@ -25,6 +25,8 @@ import {
 import { useApiCall } from '@/hooks/useAPiCall';
 import { omit } from "@/lib/utils";
 import axios from "axios";
+import { toast } from "sonner";
+import { useQueryClient } from '@tanstack/react-query';
 
 // Interface pour les interlocuteurs temporaires (sans id_partenaire)
 interface TempInterlocuteur extends Omit<Interlocuteur, 'id_partenaire' | 'id_interlocuteur'> {
@@ -33,6 +35,7 @@ interface TempInterlocuteur extends Omit<Interlocuteur, 'id_partenaire' | 'id_in
 
 const AddPartnerForm: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const {
     data: entites,
@@ -159,9 +162,10 @@ const AddPartnerForm: React.FC = () => {
       setFormData(prev => ({ ...prev, id_entite: newEntite.id_entite }));
       setNewEntiteNom("");
       setShowAddEntite(false);
+      toast.success("Entité ajoutée avec succès !");
     } catch (error) {
       console.error("Failed to add entite", error);
-      alert("Erreur lors de l'ajout de l'entité");
+      toast.error("Erreur lors de l'ajout de l'entité");
     }
   };
 
@@ -170,12 +174,12 @@ const AddPartnerForm: React.FC = () => {
   
     if (isNaN(numericId)) {
       console.error("ID invalide:", id);
-      alert("ID d'entité invalide");
+      toast.error("ID d'entité invalide");
       return;
     }
   
     if (formData.id_entite === numericId) {
-      alert("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
+      toast.error("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
       return;
     }
   
@@ -185,9 +189,10 @@ const AddPartnerForm: React.FC = () => {
         setLocalEntites(prevEntites => prevEntites?.filter(entite => entite.id_entite !== numericId) || []);
         setDeleteMode(false);
         fetchEntitesData();
+        toast.success("Entité supprimée avec succès !");
       } catch (error) {
         console.error("Échec de la suppression:", error);
-        alert(error instanceof Error ? error.message : "Erreur lors de la suppression de l'entité");
+        toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression de l'entité");
       }
     }
   };
@@ -347,22 +352,23 @@ const AddPartnerForm: React.FC = () => {
         } catch (error) {
           console.error("Erreur lors de l'ajout des interlocuteurs:", error);
           if (axios.isAxiosError(error)) {
-            alert(`Erreur lors de l'ajout des interlocuteurs: ${error.response?.data?.message || error.message}`);
+            toast.error(`Erreur lors de l'ajout des interlocuteurs: ${error.response?.data?.message || error.message}`);
           } else {
-            alert("Erreur lors de l'ajout des interlocuteurs");
+            toast.error("Erreur lors de l'ajout des interlocuteurs");
           }
           return;
         }
       }
 
-      alert("Partenaire ajouté avec succès !");
+      toast.success("Partenaire ajouté avec succès !");
+      queryClient.invalidateQueries(['partenaires']);
       navigate("/administration/partenaires");
     } catch (error) {
       console.error("Error details:", error);
       if (axios.isAxiosError(error)) {
-        alert(`Erreur lors de l'ajout du partenaire: ${error.response?.data?.message || error.message}`);
+        toast.error(`Erreur lors de l'ajout du partenaire: ${error.response?.data?.message || error.message}`);
       } else {
-        alert("Erreur lors de l'ajout du partenaire");
+        toast.error("Erreur lors de l'ajout du partenaire");
       }
     }
   };
