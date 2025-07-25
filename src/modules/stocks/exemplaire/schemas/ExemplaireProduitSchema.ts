@@ -6,17 +6,20 @@ export const ExemplaireProduitSchema = z.object({
   num_serie: z.string().min(1, "Le numéro de série est requis"),
   date_entree: z.string().min(1, "La date d'entrée est requise"),
   prix_exemplaire: z.string().optional(),
-  etat_exemplaire: z.string().default("Disponible"),
-  prix_vente: z.union([z.string(), z.number()]).optional(),
+  etat_exemplaire: z.string().default("Disponible").optional(),
+  prix_de_vente: z.union([z.string(), z.number()]).optional(),
+  frais_divers: z.union([z.string(), z.number()]).optional(),
   prix_achat: z.union([z.string(), z.number()]).optional(),
-  variante: z.union([z.string(), z.number()]).optional(),
+  coef_divers: z.coerce.number().optional(),
   marge_haute: z.union([z.string(), z.number()]).optional(),
   marge_basse: z.union([z.string(), z.number()]).optional(),
-  prix_revient: z.union([z.string(), z.number()]).optional(),
-  id_livraison: z.union([
-    z.string().min(1, "L'identifiant est requis"),
-    z.number().min(1, "L'identifiant est requis"),
-  ]),
+  prix_de_revient: z.union([z.string(), z.number()]).optional(),
+  id_livraison: z
+    .union([
+      z.string().min(1, "L'identifiant est requis"),
+      z.number().min(1, "L'identifiant est requis"),
+    ])
+    .optional(),
   id_produit: z.union([
     z.string().min(1, "L'identifiant est requis"),
     z.number().min(1, "L'identifiant est requis"),

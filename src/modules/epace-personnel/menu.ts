@@ -1,11 +1,11 @@
 import { MenuItem } from "@/types/Menu";
-import { PiggyBank } from "lucide-react";
+import { User } from "lucide-react";
 
 export const EspacePersonnelMenu: MenuItem[] = [
   {
     title: "Espace Personnel",
     url: "/espace-personnel",
-    icon: PiggyBank,
+    icon: User,
     isActive: false,
     items: [
       {

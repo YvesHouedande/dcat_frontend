@@ -13,7 +13,7 @@ export { useExemplaireProduits } from "./hooks/useExemplaireProduits";
 export { useProducts } from "../reference/hooks/useProducts";
 
 // Services
-export { useExemplaireProduitService } from "./services/ExemplaireProduitservice";
+export { useExemplaireProduitService } from "./services/ExemplaireProduit.service";
 
 // Types
 export type {

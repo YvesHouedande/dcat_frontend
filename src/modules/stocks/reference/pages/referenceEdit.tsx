@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,7 +28,11 @@ import { Badge } from "@/components/ui/badge";
 // Custom Components & Hooks
 import { ReferenceSelect } from "../components/ui/ReferenceSelect";
 import { ImageDropzone } from "../utils/ImageDropzone";
-import { useProducts } from "../hooks/useProducts";
+import {
+  useProduct,
+  useCreateProduct,
+  useUpadteProduct,
+} from "../hooks/useProducts";
 import {
   useProductCategories,
   useProductFamilies,
@@ -40,6 +44,10 @@ import { referenceSchema } from "../schemas/referenceSchema";
 import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { ImageProduit } from "../../types/reference";
+import {
+  useDeleteImageProduct,
+  useUpdateImageProdcut,
+} from "../hooks/useProducts";
 
 import {
   marqueTypes,
@@ -69,33 +77,33 @@ export default function ReferenceEditForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
+  // Actions hooks
+  const { deleteImage } = useDeleteImageProduct();
+  const { updateImage } = useUpdateImageProdcut();
 
   // Data hooks
+  const { product } = useProduct(id);
   const { productCategories: categories } = useProductCategories();
   const { productFamilies: familles } = useProductFamilies();
   const { productMarques: marques } = useProductMarques();
   const { productModels: modeles } = useProductModels();
-  const { create, update, product } = useProducts({}, id);
+  const { create } = useCreateProduct();
+  const { update } = useUpadteProduct();
 
   // State
   const [productImages, setProductImages] = useState<ImageProduit[]>([]);
   const [isFormDirty, setIsFormDirty] = useState(false);
 
-  // Form
   const form = useForm<FormValues>({
     resolver: zodResolver(referenceSchema),
-    defaultValues:
-      isEditMode && product.data
-        ? {
-            ...DEFAULT_VALUES,
-            ...product.data,
-            id_marque: product.data.id_marque ?? undefined,
-            id_modele: product.data.id_modele ?? undefined,
-            id_categorie: product.data.id_categorie ?? undefined,
-            id_famille: product.data.id_famille ?? undefined,
-            id_type_produit: product.data.id_type_produit ?? 1,
-          }
-        : DEFAULT_VALUES,
+    defaultValues: {
+      ...product.data,
+      id_marque: product.data?.id_marque ?? undefined,
+      id_modele: product.data?.id_modele ?? undefined,
+      id_categorie: product.data?.id_categorie ?? undefined,
+      id_famille: product.data?.id_famille ?? undefined,
+      id_type_produit: product.data?.id_type_produit ?? 1,
+    },
   });
 
   const watchedValues = form.watch([
@@ -130,6 +138,26 @@ export default function ReferenceEditForm() {
     },
     [form]
   );
+
+  useEffect(() => {
+    if (isEditMode && product.data) {
+      const formData = {
+        ...DEFAULT_VALUES,
+        ...product.data,
+        id_marque: product.data.id_marque || undefined,
+        id_modele: product.data.id_modele || undefined,
+        id_categorie: product.data.id_categorie || undefined,
+        id_famille: product.data.id_famille || undefined,
+        id_type_produit: product.data.id_type_produit || 1,
+      };
+
+      const images = product.data.images
+        ? cleanImageData(product.data.images)
+        : [];
+
+      resetForm(formData, images);
+    }
+  }, [product.data, isEditMode, resetForm]);
 
   // Auto-generate product code
   useMemo(() => {
@@ -197,13 +225,40 @@ export default function ReferenceEditForm() {
         let updated = [...prev];
         switch (action) {
           case "label":
-            updated[index] = {
-              ...updated[index],
-              libelle_image: String(value),
-            };
+            if (isEditMode) {
+              updateImage.mutate(
+                {
+                  images: [updated[index].file as File],
+                  libelles: [String(value)],
+                  numeros: [Number(updated[index].numero_image)],
+                },
+                {
+                  onSuccess: () => {
+                    updated[index] = {
+                      ...updated[index],
+                      libelle_image: String(value),
+                    };
+                  },
+                }
+              );
+            } else {
+              updated[index] = {
+                ...updated[index],
+                libelle_image: String(value),
+              };
+            }
             break;
           case "remove":
-            updated = updated.filter((_, i) => i !== index);
+            if (isEditMode) {
+              deleteImage.mutate(Number(updated[index].id_image), {
+                onSuccess: () => {
+                  updated = updated.filter((_, i) => i !== index);
+                },
+              });
+            } else {
+              updated = updated.filter((_, i) => i !== index);
+            }
+
             break;
           case "reorder": {
             const [movedImage] = updated.splice(index, 1);
@@ -215,7 +270,7 @@ export default function ReferenceEditForm() {
       });
       setIsFormDirty(true);
     },
-    []
+    [deleteImage, isEditMode, updateImage]
   );
 
   // Form handlers
@@ -232,6 +287,7 @@ export default function ReferenceEditForm() {
         id_famille: product.data.id_famille || undefined,
         id_type_produit: product.data.id_type_produit || 1,
       };
+      toast.warning("Les modifications seront perdues");
       const images = product.data.images
         ? cleanImageData(product.data.images)
         : [];
@@ -478,7 +534,7 @@ export default function ReferenceEditForm() {
                             className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50"
                           >
                             <Badge variant="secondary" className="shrink-0">
-                              #{image.numero_image}
+                              #{index + 1}
                             </Badge>
 
                             <div className="w-12 h-12 shrink-0">

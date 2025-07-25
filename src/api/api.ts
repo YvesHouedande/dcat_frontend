@@ -9,6 +9,7 @@ export function getAxiosErrorMessage(error: unknown): string {
     return (
       error.response?.data?.message ||
       error.response?.data?.error ||
+      error.response?.data?.details || 
       "Une erreur est survenue"
     );
   }

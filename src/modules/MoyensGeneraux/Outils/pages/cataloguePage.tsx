@@ -15,7 +15,6 @@ import { useProducts } from "../hooks/useProducts";
 import Parametres from "@/modules/stocks/reference/components/ui/Parametres";
 import ProductCatalogSkeleton from "@/components/skeleton/ProductCatalogSkeleton";
 import {
-  useProductCategories,
   useProductFamilies,
   useProductMarques,
   useProductModels,
@@ -45,7 +44,6 @@ export default function CataloguePage() {
     productTypeFilter,
   });
 
-  const { productCategories } = useProductCategories();
   const { productFamilies } = useProductFamilies();
   const { productMarques } = useProductMarques();
   const { productModels } = useProductModels();
@@ -156,29 +154,14 @@ export default function CataloguePage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+
+
+          <Select value={familyFilter} onValueChange={setFamilyFilter}>
             <SelectTrigger className="w-40 h-9">
               <SelectValue placeholder="Catégorie" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes catégories</SelectItem>
-              {productCategories.data.map((category) => (
-                <SelectItem
-                  key={category.id_categorie}
-                  value={String(category.id_categorie)}
-                >
-                  {category.libelle}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={familyFilter} onValueChange={setFamilyFilter}>
-            <SelectTrigger className="w-40 h-9">
-              <SelectValue placeholder="Famille" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes familles</SelectItem>
               {productFamilies.data.map((family) => (
                 <SelectItem
                   key={family.id_famille}

@@ -12,7 +12,7 @@ import {
 
 import { useParams } from "react-router-dom";
 import { useCommande, useDeleteCommande } from "../hooks/useCommandes";
-import { Commande } from "../types/commande";
+import { Commande, ProduitDetail } from "../types/commande";
 import { useNavigate } from "react-router-dom";
 import { useCommandeCancel } from "../hooks/useCommandes";
 import { useCommandeReserveAll } from "../hooks/useCommandes";
@@ -24,27 +24,38 @@ import {
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 import { StatusBadge } from "./CommandeTable";
 import { useUpdateCommandeStatus } from "../hooks/useCommandes";
-import { Loader2 } from "lucide-react";
+import { CheckCircle, Loader2, Printer } from "lucide-react";
+import { useFetchExemplaireProduitByEtat } from "@/modules/stocks/exemplaire/hooks/useExemplaireProduits";
+import { useSortieExemplaireCreate } from "@/modules/stocks/exemplaire/hooks/useSortieExemplaire";
+import { toast } from "sonner";
+import { getAxiosErrorMessage } from "@/api/api";
+import { useSortieExemplaireCommande } from "@/modules/stocks/exemplaire/hooks/useSortieExemplaire";
+import { useQueryClient } from "@tanstack/react-query";
+import { useDeleteSortieExemplaire } from "@/modules/stocks/exemplaire/hooks/useSortieExemplaire";
+import { etat_commande } from "../types/commande";
 
 const CommandeDetails = () => {
-  const [openCancel, setOpenCancel] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-  const [formError, setFormError] = useState("");
+  const [sortieLoading, setSortieLoading] = useState(false);
   const { id } = useParams();
   const { data: commande } = useCommande(Number(id)!);
   const commandeReserveAll = useCommandeReserveAll();
+  const commandeSortieExemplaire = useSortieExemplaireCommande(String(id));
+  const { mutate: mutateSortieExemplaire } = useSortieExemplaireCreate();
+  const { mutate: mutateDeleteSortieExemplaire } = useDeleteSortieExemplaire();
   const navigate = useNavigate();
   const commandeCancel = useCommandeCancel();
   const updateCommandeStatus = useUpdateCommandeStatus();
   const deleteCommande = useDeleteCommande();
-
+  const queryClient = useQueryClient();
   const [showError, setShowError] = useState(false);
 
   const statusOptions: Commande["etat_commande"][] = [
-    "en_attente",
-    "Retournée",
-    "Livrée",
+    etat_commande.annulee,
+    etat_commande.en_cours,
+    etat_commande.en_attente,
+    etat_commande.livree,
+    etat_commande.retournee,
   ];
 
   // Effet pour afficher l'erreur après 1 seconde
@@ -104,7 +115,7 @@ const CommandeDetails = () => {
    */
 
   const formatPrice = (price: number) => {
-    return `${price.toLocaleString()} FCFA`;
+    return `${price} FCFA`;
   };
 
   const onStatusChange = (id: number, status: Commande["etat_commande"]) => {
@@ -114,37 +125,18 @@ const CommandeDetails = () => {
   const getStatusColor = (status: Commande["etat_commande"]) => {
     const colors = {
       en_attente: "bg-yellow-100 text-yellow-800 border-yellow-300",
-      Retournée: "bg-orange-100 text-orange-800 border-orange-300",
-      Livrée: "bg-green-100 text-green-800 border-green-300",
-      annulée: "bg-red-100 text-red-800 border-red-300",
+      retournee: "bg-orange-100 text-orange-800 border-orange-300",
+      livree: "bg-green-100 text-green-800 border-green-300",
+      annulee: "bg-red-100 text-red-800 border-red-300",
+      en_cours: "bg-blue-100 text-blue-800 border-blue-300",
     };
 
     return colors[status] || colors["en_attente"];
   };
 
-  const validateForm = () => {
-    if (!cancelReason.trim()) {
-      setFormError("Le motif est obligatoire");
-      return false;
-    }
-    if (cancelReason.trim().length < 3) {
-      setFormError("Le motif doit contenir au moins 3 caractères");
-      return false;
-    }
-    setFormError("");
-    return true;
-  };
-
   const handleSubmit = () => {
-    if (validateForm()) {
-      // Ici tu peux faire l'appel API d'annulation
-      commandeCancel.mutate({ id: Number(id)!, motif: cancelReason });
-
-      alert("Commande annulée pour le motif : " + cancelReason);
-      setOpenCancel(false);
-      setCancelReason("");
-      setFormError("");
-    }
+    // Ici tu peux faire l'appel API d'annulation
+    commandeCancel.mutate({ id: Number(id)!, motif: "" });
   };
   const handleSupprimer = async () => {
     // Ici tu peux faire l'appel API d'annulation
@@ -153,15 +145,9 @@ const CommandeDetails = () => {
     setOpenDelete(false);
   };
 
-  const handleCancel = () => {
-    setOpenCancel(false);
-    setCancelReason("");
-    setFormError("");
-  };
-
   // Corrige : gestion du undefined et du typage
   const isvalidereserve = (): boolean => {
-    if (!commande?.produits) return false;
+    if (!commande?.produits || commande.produits.length === 0) return false;
     return commande.produits.every(
       (produit) =>
         produit.produit?.qte_produit !== undefined &&
@@ -178,7 +164,251 @@ const CommandeDetails = () => {
     commandeReserveAll.mutate({ commandeId: Number(id)! });
   };
 
+  const faireSortieDisabled = (item: ProduitDetail) => {
+    const istrue =
+      item.produit.qte_produit !== undefined
+        ? item.produit.qte_produit <= 0
+        : false;
+
+    return sortieLoading || istrue;
+  };
+
+  const isSortieExemplaire = (item: ProduitDetail) => {
+    const exemplaireExiste = commandeSortieExemplaire.data?.some(
+      (itemSortie) =>
+        String(itemSortie.exemplaire.id_produit) ===
+        String(item.produit.id_produit)
+    );
+    console.log("exemplaire existe: ", exemplaireExiste);
+    return exemplaireExiste;
+  };
+
+  const AnnulerSortieExemplaire = ({ item }: { item: ProduitDetail }) => {
+    const handleDeleteSortieExemplaire = () => {
+      mutateDeleteSortieExemplaire(String(item.produit.id_produit));
+    };
+    return (
+      <Button
+        size="sm"
+        className="w-full max-w-[120px] text-[11px] bg-orange-200 text-amber-800 hover:bg-amber-400 hover:text-amber-900"
+        onClick={handleDeleteSortieExemplaire}
+      >
+        Annuler la sortie
+      </Button>
+    );
+  };
+  const FaireSortieExemplaire = ({ item }: { item: ProduitDetail }) => {
+    setSortieLoading(true);
+    const { data, error } = useFetchExemplaireProduitByEtat(
+      item.produit.id_produit,
+      "Reserve",
+      item.quantite
+    );
+    if (error) {
+      toast.error(getAxiosErrorMessage(error));
+
+      return;
+    }
+
+    if (!data?.data || data.total < item.quantite) {
+      return (
+        <Button
+          size="sm"
+          className="w-full max-w-[120px] text-[11px] bg-amber-300 text-amber-800 hover:bg-amber-400 hover:text-amber-900"
+        >
+          réserve insuffisante
+        </Button>
+      );
+    }
+    const handleSortie = () => {
+      setSortieLoading(true);
+      for (let i = 0; i < item.quantite; i++) {
+        const id = data?.data[i].id_exemplaire;
+        mutateSortieExemplaire(
+          {
+            id_commande: id,
+            id_exemplaire: String(id),
+            type_sortie: "vente directe",
+          },
+          {
+            onError: (errorSortie) => {
+              toast.error(getAxiosErrorMessage(errorSortie));
+            },
+          }
+        );
+      }
+      setSortieLoading(false);
+      toast.success("Sortie réussie");
+      queryClient.invalidateQueries({
+        queryKey: ["commande", id],
+      });
+    };
+    setSortieLoading(false);
+
+    return (
+      <Button
+        variant="blue"
+        size="sm"
+        disabled={faireSortieDisabled(item)}
+        className="w-full max-w-[120px]"
+        onClick={handleSortie}
+      >
+        {sortieLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          "Faire sortir"
+        )}
+      </Button>
+    );
+  };
+
+  const ValideBoutton = ({ item }: { item: ProduitDetail }) => {
+    if (isSortieExemplaire(item)) {
+      return <AnnulerSortieExemplaire item={item} />;
+    }
+    return <FaireSortieExemplaire item={item} />;
+  };
+
   const BASE_URL = import.meta.env.VITE_BACKEND_URL;
+
+  const handlePrint = () => {
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Commande #${commande?.id_commande}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .company-info { margin-bottom: 20px; display: flex; align-items: center; gap: 20px; }
+            .company-logo { width: 80px; height: 80px; object-fit: contain; }
+            .company-details { flex: 1; }
+            .order-info { margin-bottom: 20px; }
+            .customer-info { margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .product-image { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; }
+            .product-cell { display: flex; align-items: center; gap: 10px; }
+            .total { text-align: right; font-weight: bold; margin-top: 20px; }
+            .status { display: inline-block; padding: 4px 8px; border-radius: 4px; }
+            .status.livree { background-color: #d4edda; color: #155724; }
+            .status.attente { background-color: #fff3cd; color: #856404; }
+            @media print {
+              .no-print { display: none; }
+              body { margin: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-info">
+              <img src="${BASE_URL}/public/dcat-logo.png" alt="DCAT Logo" class="company-logo" onerror="this.style.display='none'">
+              <div class="company-details">
+                <h1>DCAT</h1>
+                <p>Adresse de l'entreprise</p>
+                <p>Téléphone: +XXX XXX XXX</p>
+              </div>
+            </div>
+            <h2>COMMANDE #${commande?.id_commande}</h2>
+            <p>Date: ${commande?.date_de_commande}</p>
+            <span class="status ${
+              commande?.etat_commande === etat_commande.livree
+                ? "livree"
+                : "attente"
+            }">
+              ${commande?.etat_commande}
+            </span>
+          </div>
+  
+          <div class="customer-info">
+            <h3>${commande?.partenaire ? "Partenaire" : "Client"}</h3>
+            <p><strong>Nom:</strong> ${
+              commande?.partenaire?.nom_partenaire ?? commande?.client?.nom
+            }</p>
+            <p><strong>Email:</strong> ${
+              commande?.partenaire?.email_partenaire ?? commande?.client?.email
+            }</p>
+            <p><strong>Téléphone:</strong> ${
+              commande?.partenaire?.telephone_partenaire ??
+              commande?.client?.contact
+            }</p>
+            <p><strong>Lieu de livraison:</strong> ${
+              commande?.lieu_de_livraison
+            }</p>
+          </div>
+  
+          <table>
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Code</th>
+                <th>Prix unitaire</th>
+                <th>Quantité</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${commande?.produits
+                ?.map(
+                  (item) => `
+              <tr>
+                <td class="product-cell">
+                  ${
+                    item.images && item.images.length > 0
+                      ? `<img src="${BASE_URL}${item.images[0].lien_image}" alt="${item.produit.desi_produit}" class="product-image" onerror="this.style.display='none'">`
+                      : ""
+                  }
+                  <span>${item.produit.desi_produit}</span>
+                </td>
+                <td>${item.produit.code_produit}</td>
+                <td>${formatPrice(item.prix_unitaire)}</td>
+                <td>${item.quantite}</td>
+                <td>${formatPrice(item.prix_unitaire * item.quantite)}</td>
+              </tr>
+            `
+                )
+                .join("")}
+            </tbody>
+          </table>
+  
+          <div class="total">
+            <p><strong>Total:</strong> ${formatPrice(
+              Number(commande?.montant_total)
+            )}</p>
+            <p><strong>Mode de paiement:</strong> ${
+              commande?.mode_de_paiement
+            }</p>
+          </div>
+  
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() {
+                window.close();
+              };
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    // Créer un blob avec le contenu HTML et spécifier l'encodage UTF-8
+    const blob = new Blob([printContent], { type: "text/html; charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    // Ouvrir la fenêtre avec l'URL du blob
+    const printWindow = window.open(url, "_blank");
+
+    // Nettoyer l'URL après utilisation
+    if (printWindow) {
+      printWindow.onload = () => {
+        URL.revokeObjectURL(url);
+      };
+    }
+  };
 
   return (
     <div className=" mx-auto min-h-screen pt-4 p-4">
@@ -191,7 +421,7 @@ const CommandeDetails = () => {
               <DropdownMenuTrigger asChild>
                 <Button
                   className={`${
-                    commande?.etat_commande === "annulée"
+                    commande?.etat_commande.toLowerCase() === "annulée"
                       ? "pointer-events-none"
                       : ""
                   }`}
@@ -226,16 +456,25 @@ const CommandeDetails = () => {
           <p className="text-gray-500 mb-6">
             Passée le {commande?.date_de_commande}
           </p>
-          {isvalidereserve() &&
-            isEditable(commande?.etat_commande ?? "en_attente") && (
-              <Button
-                variant={"blue"}
-                className="mb-4"
-                onClick={() => validereserve()}
-              >
-                Tout reserver
-              </Button>
-            )}
+          {commande?.commande_produits_reserves ? (
+            <label className="text-green-800 mb-6 p-2 bg-green-100 rounded-md flex items-center gap-2 max-w-max">
+              <span>produits déja réservés</span>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </label>
+          ) : (
+            <>
+              {isvalidereserve() &&
+                isEditable(commande?.etat_commande ?? "en_attente") && (
+                  <Button
+                    variant={"blue"}
+                    className="mb-4"
+                    onClick={() => validereserve()}
+                  >
+                    Tout reserver
+                  </Button>
+                )}
+            </>
+          )}
 
           {/* En-têtes du tableau */}
           <div className="grid grid-cols-12 gap-4 py-3 text-sm font-medium text-gray-700 border-b max-md:hidden">
@@ -311,18 +550,7 @@ const CommandeDetails = () => {
                     item.produit.qte_produit >= item.quantite &&
                     isEditable(commande?.etat_commande ?? "en_attente") && (
                       <div className="flex justify-end pt-2">
-                        <Button
-                          variant="blue"
-                          size="sm"
-                          disabled={
-                            item.produit.qte_produit !== undefined
-                              ? item.produit.qte_produit <= 0
-                              : false
-                          }
-                          className="w-full max-w-[120px]"
-                        >
-                          Faire sortir
-                        </Button>
+                        <ValideBoutton item={item} />
                       </div>
                     )}
                 </div>
@@ -352,18 +580,7 @@ const CommandeDetails = () => {
                   {item.produit.qte_produit !== undefined &&
                     item.produit.qte_produit >= item.quantite &&
                     isEditable(commande?.etat_commande ?? "en_attente") && (
-                      <Button
-                        variant="blue"
-                        size="sm"
-                        disabled={
-                          item.produit.qte_produit !== undefined
-                            ? item.produit.qte_produit <= 0
-                            : false
-                        }
-                        className="w-full max-w-[100px]"
-                      >
-                        Faire sortir
-                      </Button>
+                      <ValideBoutton item={item} />
                     )}
                 </div>
               </div>
@@ -383,6 +600,15 @@ const CommandeDetails = () => {
               Modifier
             </Button>
           )}
+
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            className="w-full mb-4"
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Imprimer la commande
+          </Button>
 
           <Card>
             <CardHeader>
@@ -444,7 +670,7 @@ const CommandeDetails = () => {
                   </div>
                 </div>
               </div>
-              {commande?.etat_commande === "annulée" ? (
+              {commande?.etat_commande.toLowerCase() === "annulée" ? (
                 <div>
                   <div>
                     <h4 className="font-medium text-red-600 mb-2">
@@ -465,7 +691,7 @@ const CommandeDetails = () => {
                   <Button
                     className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white"
                     size="lg"
-                    onClick={() => setOpenCancel(true)}
+                    onClick={() => handleSubmit()}
                   >
                     Annuler la commande
                   </Button>
@@ -476,42 +702,6 @@ const CommandeDetails = () => {
         </div>
       </div>
 
-      {/* Dialog d'annulation */}
-      <Dialog open={openCancel} onOpenChange={setOpenCancel}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Annuler la commande</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Motif d'annulation <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ex : Client absent, erreur de stock..."
-              />
-              {formError && (
-                <p className="text-xs text-red-600 mt-1">{formError}</p>
-              )}
-            </div>
-            <div className="flex gap-2 justify-end pt-4">
-              <Button type="button" variant="outline" onClick={handleCancel}>
-                Annuler
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Confirmer l'annulation
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
       {/* Dialog de suppression */}
       <Dialog open={openDelete} onOpenChange={setOpenDelete}>
         <DialogContent className="max-w-md">

@@ -4,31 +4,36 @@ import { ReactKeycloakProvider } from "@react-keycloak/web";
 import NotFound from "./pages/NotFound";
 import PrivateRoute from "./helpers/PrivateRoute";
 import keycloak from "../KeycloakService";
-import DashboardRoutes from "./modules/dashboard/DashboardRoutes";
 import AdministrationRoutes from "./modules/administration-Finnance/administration/AdministrationRoutes";
 import StocksRoutes from "./modules/stocks/StocksRoutes";
 import ProjectsRoutes from "./modules/techniques/ProjectsRoutes";
 import { QueryClientProvider } from "@tanstack/react-query";
 import MoyenGenerauxgRoutes from "./modules/MoyensGeneraux/MoyensGenerauxRoutes";
-import DCATInterface from "./modules/dashboard/pages/AnotherDashboardPage";
+import DashboardRoutes from "./modules/dashboard/DashboardRoutes";
 import { queryClient } from "./lib/queryClient";
 import EspacePersonnel from "./modules/epace-personnel/EspacePersonnelRoutes";
+import { LivraisonRoutes } from "./modules/stocks/achat/LivraisonRoutes";
+import CommercialRoutes from "./modules/marketing-commercial/CommercialRoutes";
 
 const AppContent: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route
-          path="/"
-          element={<PrivateRoute element={<DCATInterface />} />}
-        />
-        <Route
-          path="/dashboard/*"
+          path="/*"
           element={<PrivateRoute element={<DashboardRoutes />} />}
         />
         <Route
-          path="/stocks/*"
+          path="/entrees-sorties/*"
           element={<PrivateRoute element={<StocksRoutes />} />}
+        />
+        <Route
+          path="/achat/*"
+          element={<PrivateRoute element={<LivraisonRoutes />} />}
+        />
+        <Route
+          path="/commercial/*"
+          element={<PrivateRoute element={<CommercialRoutes />} />}
         />
         <Route
           path="/administration/*"

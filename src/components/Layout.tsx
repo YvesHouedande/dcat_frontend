@@ -11,6 +11,7 @@ import DynamicBreadcrumb from "./DynamicBreadcrumb";
 import SearchBar from "./searchBar";
 import Notification from "./notification";
 import { Toaster } from "@/components/ui/sonner"
+import Homme from "./home";
 
 const Layout = ({
   children,
@@ -46,6 +47,7 @@ const Layout = ({
               <div className="flex w-full space-x-4 px-2 items-center">
                 <SearchBar />
                 <Notification />
+                <Homme />
               </div>
               <div className="flex flex-1 justify-between items-center">
                 <DynamicBreadcrumb />

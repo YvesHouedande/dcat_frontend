@@ -1,8 +1,14 @@
-import { ReferenceProduit, ImageProduit, categorieTypes, marqueTypes, familleTypes, modeleTypes, typeTypes } from "../../types/reference"; // Importez Image ici aussi
-
+import {
+  ReferenceProduit,
+  ImageProduit,
+  categorieTypes,
+  marqueTypes,
+  familleTypes,
+  modeleTypes,
+  typeTypes,
+} from "../../types/reference"; // Importez Image ici aussi
 
 // Définissez une interface pour la structure complète de la réponse API
-
 
 export interface ApiResponse {
   data: ApiDataItem[];
@@ -29,16 +35,14 @@ export interface SelectedReferences {
   id_type_produit: number;
 }
 
-
-
-interface ApiDataItem {
+export interface ApiDataItem {
   produit: ReferenceProduit;
   category: categorieTypes;
   modele: modeleTypes;
   famille: familleTypes;
   marque: marqueTypes;
   images: ImageProduit[]; // C'est ici que les images sont directement disponibles dans la réponse de l'API
-  type:typeTypes ; // Ajoutez le type_produit ici
+  type: typeTypes; // Ajoutez le type_produit ici
 }
 export interface ProductFilters {
   searchTerm?: string;
@@ -47,4 +51,9 @@ export interface ProductFilters {
   brandFilter?: string;
   familyFilter?: string;
   productTypeFilter?: string;
+  qteMax?: number;
+  qteMin?: number;
+  prixMax?: number;
+  prixMin?: number;
+  sortOrder?: "asc" | "desc";
 }

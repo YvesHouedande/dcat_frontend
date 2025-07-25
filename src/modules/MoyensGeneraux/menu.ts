@@ -1,11 +1,11 @@
 import { MenuItem } from "@/types/Menu";
-import { PiggyBank } from "lucide-react";
+import { Building} from "lucide-react";
 
 export const MoyensGenerauxMenu: MenuItem[] = [
   {
     title: "Moyens Géneraux",
     url: "/moyens-generaux",
-    icon: PiggyBank,
+    icon: Building,
     isActive: false,
     items: [
       {

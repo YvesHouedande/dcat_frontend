@@ -17,7 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import AlertDeleteDialog from "@/components/AlertDeleteDialog";
-import { useProducts } from "../hooks/useProducts";
+import {
+  useDeleteProduct,
+  useProduct,
+} from "../hooks/useProducts";
 import { ImageProduit } from "@/modules/stocks/types/reference";
 import { ExemplaireProduitDashboard } from "../../exemplaire";
 
@@ -185,13 +188,14 @@ export default function ReferencePage() {
   const { id } = useParams<{ id: string }>();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { product, delete: deleteProduct } = useProducts({}, id);
+  const { product } = useProduct(id);
+  const { delete: deleteProduct } = useDeleteProduct();
   const productData = product.data;
   const stockStatus = getStockStatus(productData?.qte_produit);
 
   const handleSupprimer = async (id: string | number) => {
     if (id === undefined || id === null || id === "") return;
-    await deleteProduct.mutateAsync(String(id), {
+    await deleteProduct.mutateAsync(Number(id), {
       onSuccess: () => {
         setShowDeleteDialog(false);
         navigate("/stocks/references");
@@ -213,7 +217,7 @@ export default function ReferencePage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/stocks/references")}
+              onClick={() => navigate(-1)}
               className="hover:bg-slate-100"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -239,7 +243,7 @@ export default function ReferencePage() {
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
-                onClick={() => navigate(`/stocks/references/${id}/edit`)}
+                onClick={() => navigate(`edit`)}
                 className="border-slate-200 hover:border-slate-300 hover:bg-slate-50"
               >
                 <Edit className="h-4 w-4 mr-2" />

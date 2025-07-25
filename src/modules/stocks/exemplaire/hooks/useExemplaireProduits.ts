@@ -2,6 +2,7 @@
 import {
   useMutation,
   useQueryClient,
+  useQuery,
   useInfiniteQuery,
 } from "@tanstack/react-query";
 import { PaginationParams } from "../types";
@@ -11,6 +12,7 @@ import { ExemplaireLimit } from "../types/const";
 
 // Clés de query pour React Query
 const PRODUCT_INSTANCES_KEY = "ExemplaireProduits";
+const PRODUCT_KEY = "productInstances";
 
 const wait = <T>(result: T): Promise<T> =>
   new Promise((resolve) => setTimeout(() => resolve(result), 200));
@@ -55,6 +57,7 @@ export const useExemplaireProduits = (
     // ExemplaireProduitService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PRODUCT_INSTANCES_KEY] });
+      queryClient.invalidateQueries({ queryKey: [PRODUCT_KEY] });
     },
     onError: (err: Error) => err || new Error("Erreur lors de la création"),
   });
@@ -71,6 +74,7 @@ export const useExemplaireProduits = (
     // ExemplaireProduitService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PRODUCT_INSTANCES_KEY] });
+      queryClient.invalidateQueries({ queryKey: [PRODUCT_KEY] });
     },
     onError: (err: Error) => err || new Error("Erreur lors de la mise à jour"),
   });
@@ -81,6 +85,7 @@ export const useExemplaireProduits = (
       await wait(ExemplaireProduitService.delete(id)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PRODUCT_INSTANCES_KEY] });
+      queryClient.invalidateQueries({ queryKey: [PRODUCT_KEY] });
     },
     onError: (err: Error) => err || new Error("Erreur lors de la suppression"),
   });
@@ -133,4 +138,23 @@ export const useExemplaireProduits = (
     ExemplaireProduitByEtat:
       getByEtat.data?.pages.flatMap((page) => page.data) ?? [],
   };
+};
+
+export const useFetchExemplaireProduitByEtat = (
+  id?: string | number,
+  etat_exemplaire?: string,
+  limit?: number
+) => {
+  const ExemplaireProduitService = useExemplaireProduitService();
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: [PRODUCT_INSTANCES_KEY, String(id), etat_exemplaire],
+
+    queryFn: () =>
+      ExemplaireProduitService.getByEtat(
+        String(etat_exemplaire),
+        { page: 1, limit: limit || ExemplaireLimit },
+        String(id)
+      ),
+  });
+  return { data, isLoading, error, refetch };
 };

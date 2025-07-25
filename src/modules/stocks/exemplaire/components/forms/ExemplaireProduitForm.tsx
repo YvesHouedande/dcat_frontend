@@ -9,7 +9,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { DeliveryCombobox } from "@/components/combobox/DeliveryCombobox";
 import { ProductCombobox } from "@/components/combobox/ProductCombobox";
 import {
   Select,
@@ -18,9 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useExemplaireProduitForm } from "../../hooks/useExemplaireProduitForm"
+import { useExemplaireProduitForm } from "../../hooks/useExemplaireProduitForm";
 import React from "react";
-import { FournisseurCombobox } from "@/components/combobox/FournisseurCombobox";
 import { UseFormReturn } from "react-hook-form";
 import { ExemplaireProduitFormValues } from "../../schemas/ExemplaireProduitSchema";
 
@@ -167,117 +165,7 @@ export const ExemplaireProduitForm = React.forwardRef<
             />
             {shouldShowEtatVente && EtatVenteField}
             {/* Composant pour le champ "Achat" */}
-            {!isTools ? (
-              <>
-                <FormField
-                  control={form.control}
-                  name="id_livraison"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Livraison</FormLabel>
-                      <FormControl>
-                        <DeliveryCombobox
-                          value={String(field.value)}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="prix_achat"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Prix d'achat</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Prix d'achat"
-                          value={field.value}
-                          onChange={field.onChange}
-                          type="number"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="variante"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Variante (cota des frais)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Variante"
-                          value={field.value}
-                          onChange={field.onChange}
-                          type="number"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="marge_haute"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marge haute</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Marge haute"
-                          value={field.value}
-                          onChange={field.onChange}
-                          type="number"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="marge_basse"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel> Marge basse </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Marge basse"
-                          value={field.value}
-                          onChange={field.onChange}
-                          type="number"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            ) : (
-              <>
-                <FormField
-                  control={form.control}
-                  name="id_livraison"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fournisseur</FormLabel>
-                      <FormControl>
-                        <FournisseurCombobox
-                          value={String(field.value)}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
+           
             {error && (
               <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded">
                 Erreur: {error.message}
