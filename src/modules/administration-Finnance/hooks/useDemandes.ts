@@ -285,7 +285,7 @@ export const useAddDocumentToDemande = () => {
       documentData: { file: File; libelle_document: string; classification_document: string; id_nature_document: number }; 
       token?: string 
     }) => addDocumentToDemande(demandeId, documentData, token),
-    onSuccess: (newDocument, { demandeId }) => {
+    onSuccess: (_newDocument, { demandeId }) => {
       // Invalider les documents de la demande
       queryClient.invalidateQueries({ queryKey: demandeKeys.documents(demandeId) });
       

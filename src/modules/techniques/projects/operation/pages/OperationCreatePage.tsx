@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Projet } from "../../types/types";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
-import { Operation } from "../types/operation";
+import { Operation } from "../../types/types";
 
 const OperationCreatePage: React.FC = () => {
   const navigate = useNavigate();
