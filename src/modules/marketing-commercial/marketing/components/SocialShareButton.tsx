@@ -28,7 +28,7 @@ const SocialShareButton: React.FC<ProductShareProps> = ({ product }) => {
   };
   return (
     <div className="flex flex-wrap gap-2 items-center justify-center">
-      <FacebookShareButton url={url} quote={description} hashtag="#Produit">
+      <FacebookShareButton url={url}  hashtag="#Produit">
         <FacebookIcon size={36} round />
       </FacebookShareButton>
       <TwitterShareButton url={url} title={name}>
