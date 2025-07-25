@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -28,584 +28,383 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  CalendarIcon,
-  FileUp,
-  Paperclip,
-  Save,
-  X,
-  XCircle,
-  CheckCircle,
-} from "lucide-react";
+import { Calendar as CalendarIcon, Save, X, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate, useParams } from "react-router-dom";
-import { Demande, DemandeDocument, Employe, NatureDocument } from "../../types/interfaces";
-import { fetchDemandeById, updateDemande, getAllEmployes, getAllNatureDocuments } from "../../../services/demandeService";
+import { useDemande, useEmployes, useUpdateDemande } from "../../../hooks/useDemandes";
+import { CreateDemandeData } from "../../../services/demandeService";
 
-// Helper pour encoder un fichier en base64
-// const toBase64 = (file: File): Promise<string> =>
-//   new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.readAsDataURL(file);
-//     reader.onload = () => resolve(reader.result as string);
-//     reader.onerror = (error) => reject(error);
-//   });
+interface DemandeFormData {
+  motif: string;
+  date_absence: Date | undefined;
+  heure_debut: string;
+  heure_fin: string;
+  date_retour: Date | undefined;
+  duree: string;
+  type_demande: string;
+  status: string;
+  id_employes: number | undefined;
+}
+
+type FormField = keyof DemandeFormData;
+type FormErrors = Partial<Record<FormField, string>>;
 
 const ModifierDemandePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
-  const [demande, setDemande] = useState<Partial<Demande>>({});
-  const [employes, setEmployes] = useState<Employe[]>([]);
-  const [naturesDocuments, setNaturesDocuments] = useState<NatureDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
+  const [formData, setFormData] = useState<DemandeFormData>({
+    motif: "",
+    date_absence: undefined,
+    heure_debut: "",
+    heure_fin: "",
+    date_retour: undefined,
+    duree: "",
+    type_demande: "",
+    status: "En attente",
+    id_employes: undefined,
+  });
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [documentName, setDocumentName] = useState("");
-  const [documentNature, setDocumentNature] = useState<number | undefined>(undefined);
-  const [showAddDocumentDialog, setShowAddDocumentDialog] = useState(false);
-  const [newlyAddedFiles, setNewlyAddedFiles] = useState<{file: File; name: string; classification: string}[]>([]);
-  
-  // Chargement des données au montage
+
+  const { data: demande, isLoading: loadingDemande, error } = useDemande(Number(id));
+  const { data: employes, isLoading: loadingEmployes } = useEmployes();
+  const updateDemande = useUpdateDemande();
+
+  // Pré-remplir le formulaire à la réception de la demande
   useEffect(() => {
-    const loadData = async () => {
-      if (!id) {
-        setError("ID de demande manquant.");
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const [demandeData, employesData, naturesData] = await Promise.all([
-          fetchDemandeById(Number(id)),
-          getAllEmployes(),
-          getAllNatureDocuments(),
-        ]);
-        setDemande(demandeData);
-        setEmployes(employesData);
-        setNaturesDocuments(naturesData);
-      } catch (err: unknown) {
-        setError((typeof err === 'object' && err !== null && 'message' in err) ? (err as { message?: string }).message || "Erreur lors du chargement des données" : "Erreur lors du chargement des données");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [id]);
+    if (demande) {
+      setFormData({
+        motif: demande.motif || "",
+        date_absence: demande.date_absence ? parseISO(demande.date_absence) : undefined,
+        heure_debut: demande.heure_debut || "",
+        heure_fin: demande.heure_fin || "",
+        date_retour: demande.date_retour ? parseISO(demande.date_retour) : undefined,
+        duree: demande.duree || "",
+        type_demande: demande.type_demande || "",
+        status: demande.status || "En attente",
+        id_employes: demande.id_employes,
+      });
+    }
+  }, [demande]);
 
-  // Handler générique pour les changements de champs
-  const handleChange = (field: keyof Demande, value: unknown) => {
-    setDemande(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleDateChange = (field: keyof Demande, date: Date | undefined) => {
-    if (date) {
-      handleChange(field, format(date, "yyyy-MM-dd"));
+  const handleChange = <K extends FormField>(field: K, value: DemandeFormData[K]) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (formErrors[field]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    if (!formData.type_demande) errors.type_demande = "Le type de demande est obligatoire.";
+    if (!formData.id_employes) errors.id_employes = "L'employé concerné est obligatoire.";
+    if (!formData.motif || formData.motif.trim() === "") errors.motif = "Le motif est obligatoire.";
+    if (!formData.date_absence) errors.date_absence = "La date d'absence est obligatoire.";
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!id) return;
-
+    if (!validateForm() || !id) return;
     try {
-      if (newlyAddedFiles.length > 0) {
-        // Cas 1: Nouveaux fichiers ajoutés -> FormData avec PUT
-        const formData = new FormData();
-        
-        const payload: Partial<Demande> = {
-          type_demande: demande.type_demande,
-          motif: demande.motif,
-          duree: demande.duree,
-          id_employes: demande.id_employes,
-          date_absence: demande.date_absence,
-          date_retour: demande.date_retour,
-          heure_debut: demande.heure_debut,
-          heure_fin: demande.heure_fin,
-          status: demande.status,
-        };
-
-        Object.entries(payload).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            formData.append(key, String(value));
-          }
-        });
-        
-        // Ajouter le nouveau fichier et ses métadonnées
-        const lastFile = newlyAddedFiles[newlyAddedFiles.length - 1];
-        formData.append('document', lastFile.file);
-        formData.append('libelle_document', lastFile.name);
-        formData.append('classification_document', lastFile.classification);
-        
-        await updateDemande(Number(id), formData);
-      } else {
-        // Cas 2: Pas de nouveaux fichiers -> JSON avec PUT
-        const payload: Partial<Demande> = {
-          type_demande: demande.type_demande,
-          motif: demande.motif,
-          duree: demande.duree,
-          id_employes: demande.id_employes,
-          date_absence: demande.date_absence,
-          date_retour: demande.date_retour,
-          heure_debut: demande.heure_debut,
-          heure_fin: demande.heure_fin,
-          status: demande.status,
-        };
-
-        Object.keys(payload).forEach(key => {
-          if (payload[key as keyof typeof payload] === undefined) {
-            delete payload[key as keyof typeof payload];
-          }
-        });
-
-        await updateDemande(Number(id), payload);
-      }
-
+      const demandeData: Partial<CreateDemandeData> = {
+        motif: formData.motif,
+        date_absence: formData.date_absence ? format(formData.date_absence, "yyyy-MM-dd") : "",
+        heure_debut: formData.heure_debut || "",
+        heure_fin: formData.heure_fin || "",
+        date_retour: formData.date_retour ? format(formData.date_retour, "yyyy-MM-dd") : "",
+        duree: formData.duree || "",
+        type_demande: formData.type_demande,
+        status: formData.status,
+        id_employes: formData.id_employes!,
+      };
+      console.log("formData au submit", formData);
+      await updateDemande.mutateAsync({ id: Number(id), data: demandeData });
       setShowSuccessDialog(true);
-      setTimeout(() => {
-        navigate("/administration/demandes");
-      }, 2000);
-
-    } catch (err: unknown) {
-      console.error("Erreur détaillée lors de la soumission:", err);
-      if (typeof err === 'object' && err !== null && 'response' in err) {
-        const errorObj = err as { response?: { data?: unknown } };
-        console.error("Réponse de l'erreur API:", errorObj.response?.data);
-      }
-      setError((typeof err === 'object' && err !== null && 'message' in err) ? (err as { message?: string }).message || "Erreur lors de la modification de la demande" : "Erreur lors de la modification de la demande");
+    } catch {
+      // Erreur déjà gérée par le hook
     }
   };
 
   const isFormComplete = (): boolean => {
-    return !!(demande.type_demande && demande.motif?.trim() && demande.id_employes);
-  };
-  
-  const formatDateForPicker = (dateString: string | undefined | null): Date | undefined => {
-    return dateString ? parseISO(dateString) : undefined;
+    return !!(
+      formData.type_demande &&
+      formData.motif &&
+      formData.motif.trim() !== "" &&
+      formData.id_employes &&
+      formData.date_absence
+    );
   };
 
-  const ajouterDocument = () => {
-    if (selectedFile && documentName.trim() !== "" && documentNature !== undefined) {
-      const classification = "Standard"; // Basé sur le code existant
-      const nouveauDocument: DemandeDocument = {
-        id_documents: Date.now(), 
-        libelle_document: documentName.trim(),
-        classification_document: classification, 
-        id_nature_document: documentNature,
-        lien_document: URL.createObjectURL(selectedFile), 
-        date_document: new Date().toISOString(),
-        etat_document: "Actif"
-      };
-
-      handleChange("documents", [...(demande.documents || []), nouveauDocument]);
-      // On sauvegarde le fichier et ses métadonnées pour la soumission
-      setNewlyAddedFiles(prev => [...prev, { file: selectedFile, name: documentName.trim(), classification: classification }]);
-      
-      setSelectedFile(null);
-      setDocumentName("");
-      setDocumentNature(undefined);
-      setShowAddDocumentDialog(false);
+  const handleCancel = () => {
+    if (isFormComplete()) {
+      setShowCancelDialog(true);
+    } else {
+      navigate("/administration/demandes");
     }
   };
 
-  const supprimerDocument = (id_document: number) => {
-    const nouveauxDocuments = demande.documents?.filter(doc => doc.id_documents !== id_document) || [];
-    handleChange("documents", nouveauxDocuments);
+  const confirmCancel = () => {
+    navigate("/administration/demandes");
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-screen">Chargement...</div>;
+  const isLoading = loadingDemande || loadingEmployes || updateDemande.isLoading;
+
+  if (loadingDemande) {
+    return <div className="flex justify-center items-center h-96">Chargement...</div>;
   }
   if (error) {
-    return <div className="flex justify-center items-center h-screen text-red-600">{error}</div>;
+    return <div className="text-red-500 text-center py-8">Erreur : {String(error)}</div>;
   }
 
   return (
     <div className="container mx-auto py-6">
-      <Card className="w-full max-w-4xl mx-auto">
+      <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Modifier la demande</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            Modifier la Demande RH
+          </CardTitle>
           <CardDescription>
-            Modifiez les informations de la demande existante
+            Modifiez la demande de ressources humaines
           </CardDescription>
         </CardHeader>
-
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
             {/* Type de demande */}
             <div className="space-y-2">
-              <Label htmlFor="type_demande" className="text-base">
-                Type de demande <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="type_demande">Type de demande *</Label>
               <Select
-                onValueChange={(value) =>
-                  handleChange("type_demande", value)
-                }
-                value={demande.type_demande}
+                value={formData.type_demande}
+                onValueChange={(value) => handleChange('type_demande', value)}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionnez un type de demande" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Congé">Congé</SelectItem>
+                  <SelectItem value="Absence">Absence</SelectItem>
                   <SelectItem value="Formation">Formation</SelectItem>
-                  <SelectItem value="Télétravail">Télétravail</SelectItem>
-                  <SelectItem value="Remboursement">Remboursement</SelectItem>
-                  <SelectItem value="Matériel">Matériel</SelectItem>
+                  <SelectItem value="Mission">Mission</SelectItem>
                   <SelectItem value="Autre">Autre</SelectItem>
                 </SelectContent>
               </Select>
-              {!demande.type_demande && (
-                <p className="text-sm text-red-500">Ce champ est obligatoire</p>
+              {formErrors.type_demande && (
+                <p className="text-sm text-red-500">{formErrors.type_demande}</p>
               )}
             </div>
-
-            <input type="hidden" value={demande.status} />
-
-            {/* Sélection de l'employé */}
+            {/* Employé */}
             <div className="space-y-2">
-              <Label htmlFor="id_employe" className="text-base">
-                Employé concerné <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="id_employes">Employé concerné *</Label>
               <Select
-                onValueChange={(value) =>
-                  handleChange("id_employes", parseInt(value))
-                }
-                value={demande.id_employes?.toString() || ""}
+                value={formData.id_employes?.toString() || ""}
+                onValueChange={(value) => {
+                  console.log("Sélection employé :", value, typeof value);
+                  handleChange('id_employes', Number(value));
+                }}
+                disabled={loadingEmployes}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionnez un employé" />
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingEmployes ? "Chargement..." : "Sélectionnez un employé"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {employes.map((employe) => (
-                    <SelectItem
-                      key={employe.id_employes}
-                      value={employe.id_employes.toString()}
-                    >
+                  {employes?.map((employe) => (
+                    <SelectItem key={employe.id_employes} value={String(employe.id_employes)}>
                       {employe.prenom_employes} {employe.nom_employes}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {!demande.id_employes && (
-                <p className="text-sm text-red-500">Ce champ est obligatoire</p>
+              {formErrors.id_employes && (
+                <p className="text-sm text-red-500">{formErrors.id_employes}</p>
               )}
             </div>
-
+            {/* Motif */}
+            <div className="space-y-2">
+              <Label htmlFor="motif">Motif *</Label>
+              <Textarea
+                id="motif"
+                value={formData.motif}
+                onChange={(e) => handleChange('motif', e.target.value)}
+                placeholder="Décrivez le motif de votre demande..."
+                rows={3}
+              />
+              {formErrors.motif && (
+                <p className="text-sm text-red-500">{formErrors.motif}</p>
+              )}
+            </div>
             {/* Date d'absence */}
             <div className="space-y-2">
-              <Label className="text-base">
-                Date d'absence <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="date_absence">Date d'absence *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={`w-full justify-start text-left font-normal ${
-                      !demande.date_absence && "text-gray-400"
-                    }`}
+                    className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {demande.date_absence ? format(parseISO(demande.date_absence), "dd MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
+                    {formData.date_absence ? (
+                      format(formData.date_absence, "PPP", { locale: fr })
+                    ) : (
+                      <span>Sélectionnez une date</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={formatDateForPicker(demande.date_absence)}
-                    onSelect={(date) => handleDateChange("date_absence", date)}
+                    selected={formData.date_absence}
+                    onSelect={(date) => handleChange('date_absence', date)}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
+              {formErrors.date_absence && (
+                <p className="text-sm text-red-500">{formErrors.date_absence}</p>
+              )}
             </div>
-
             {/* Date de retour */}
             <div className="space-y-2">
-              <Label className="text-base">
-                Date de retour
-              </Label>
+              <Label htmlFor="date_retour">Date de retour</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={`w-full justify-start text-left font-normal ${
-                      !demande.date_retour && "text-gray-400"
-                    }`}
-                    disabled={!demande.date_absence}
+                    className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {demande.date_retour ? format(parseISO(demande.date_retour), "dd MMMM yyyy", { locale: fr }) : "Sélectionner une date"}
+                    {formData.date_retour ? (
+                      format(formData.date_retour, "PPP", { locale: fr })
+                    ) : (
+                      <span>Sélectionnez une date</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={formatDateForPicker(demande.date_retour)}
-                    onSelect={(date) => handleDateChange("date_retour", date)}
-                    disabled={(date) =>
-                      !demande.date_absence || date < parseISO(demande.date_absence)
-                    }
+                    selected={formData.date_retour}
+                    onSelect={(date) => handleChange('date_retour', date)}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
             </div>
-
-            {/* Heures de début et fin */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Heures début/fin */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="heure_debut" className="text-base">
-                  Heure de début
-                </Label>
+                <Label htmlFor="heure_debut">Heure de début</Label>
                 <Input
                   id="heure_debut"
                   type="time"
-                  value={demande.heure_debut || ""}
-                  onChange={(e) => handleChange("heure_debut", e.target.value)}
+                  value={formData.heure_debut}
+                  onChange={(e) => handleChange('heure_debut', e.target.value)}
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="heure_fin" className="text-base">
-                  Heure de fin
-                </Label>
+                <Label htmlFor="heure_fin">Heure de fin</Label>
                 <Input
                   id="heure_fin"
                   type="time"
-                  value={demande.heure_fin || ""}
-                  onChange={(e) => handleChange("heure_fin", e.target.value)}
+                  value={formData.heure_fin}
+                  onChange={(e) => handleChange('heure_fin', e.target.value)}
                 />
               </div>
             </div>
-
-            {/* Motif de la demande */}
+            {/* Durée */}
             <div className="space-y-2">
-              <Label htmlFor="motif" className="text-base">
-                Motif <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="motif"
-                placeholder="Décrivez le motif de votre demande..."
-                className="min-h-32 resize-none"
-                value={demande.motif || ""}
-                onChange={(e) =>
-                  handleChange("motif", e.target.value)
-                }
-                maxLength={500}
+              <Label htmlFor="duree">Durée</Label>
+              <Input
+                id="duree"
+                value={formData.duree}
+                onChange={(e) => handleChange('duree', e.target.value)}
+                placeholder="ex: 2 jours, 1 semaine..."
               />
-              {!demande.motif && (
-                <p className="text-sm text-red-500">Ce champ est obligatoire</p>
-              )}
-              <p className="text-sm text-gray-500">
-                {demande.motif?.length}/500 caractères
-              </p>
             </div>
-
-            {/* Section pour les pièces jointes */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base">Pièces jointes</Label>
-                <div className="relative">
-                  <Input
-                    type="file"
-                    id="file-upload"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        const file = e.target.files[0];
-                        setSelectedFile(file);
-                        setDocumentName(file.name);
-                        setShowAddDocumentDialog(true);
-                      }
-                    }}
-                  />
-                  <Label
-                    htmlFor="file-upload"
-                    className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-md cursor-pointer hover:bg-blue-100 transition-colors"
-                  >
-                    <FileUp className="mr-2 h-4 w-4" />
-                    Ajouter un fichier
-                  </Label>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {(demande.documents || []).length > 0 ? (
-                  (demande.documents || []).map((document) => (
-                    <div
-                      key={document.id_documents}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Paperclip className="h-4 w-4 text-gray-500" />
-                        <div>
-                          <p className="font-medium">{document.libelle_document}</p>
-                          <p className="text-xs text-gray-500">
-                            {document.id_nature_document && (
-                              <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">
-                                {naturesDocuments.find(n => n.id_nature_document === document.id_nature_document)?.libelle || 'Non défini'}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => supprimerDocument(document.id_documents)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    Aucun document joint. Vous pouvez ajouter des documents à
-                    votre demande si nécessaire.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="text-sm text-gray-500">
-              <span className="text-red-500">*</span> Champs obligatoires
+            {/* Statut */}
+            <div className="space-y-2">
+              <Label htmlFor="status">Statut</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => handleChange('status', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="En attente">En attente</SelectItem>
+                  <SelectItem value="En cours">En cours</SelectItem>
+                  <SelectItem value="Approuvée">Approuvée</SelectItem>
+                  <SelectItem value="Refusée">Refusée</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
-
-          <CardFooter className="flex justify-end gap-4 border-t pt-6">
+          <CardFooter className="flex justify-between">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setShowCancelDialog(true)}
+              onClick={handleCancel}
+              disabled={isLoading}
             >
               <X className="mr-2 h-4 w-4" />
               Annuler
             </Button>
             <Button
               type="submit"
-              disabled={!isFormComplete()}
-              className="bg-green-600 hover:bg-green-700"
+              disabled={!isFormComplete() || isLoading}
             >
-              <Save className="mr-2 h-4 w-4" />
-              Enregistrer les modifications
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Modification...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Modifier la demande
+                </>
+              )}
             </Button>
           </CardFooter>
         </form>
       </Card>
-
       {/* Dialogue de succès */}
-      <AlertDialog open={showSuccessDialog}>
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mx-auto mb-4">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-            <AlertDialogTitle className="text-center">Modification réussie</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
-              La demande a été mise à jour avec succès. Vous allez être redirigé.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Dialogue d'annulation */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Annuler les modifications ?</AlertDialogTitle>
+            <AlertDialogTitle>Demande modifiée avec succès</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir annuler ? Toutes les modifications non enregistrées seront perdues.
+              Les modifications ont bien été enregistrées.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Continuer la modification</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              setDemande({});
-              setShowCancelDialog(false);
-              navigate("/administration/demandes");
-            }}>
-              Oui, annuler
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => navigate("/administration/demandes")}>Retour à la liste</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Dialogue d'ajout de document */}
-      <AlertDialog open={showAddDocumentDialog} onOpenChange={setShowAddDocumentDialog}>
+      {/* Dialogue de confirmation d'annulation */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ajouter un document</AlertDialogTitle>
+            <AlertDialogTitle>Annuler la modification</AlertDialogTitle>
             <AlertDialogDescription>
-              Veuillez saisir les informations du document
+              Êtes-vous sûr de vouloir annuler ? Toutes les modifications seront perdues.
             </AlertDialogDescription>
           </AlertDialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="documentName">Nom du document</Label>
-              <Input
-                id="documentName"
-                value={documentName}
-                onChange={(e) => setDocumentName(e.target.value)}
-                placeholder="Entrez un nom pour ce document"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="documentType">Type de document</Label>
-              <Select
-                onValueChange={(value) => setDocumentNature(Number(value))}
-                value={documentNature?.toString()}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un type de document" />
-                </SelectTrigger>
-                <SelectContent>
-                  {naturesDocuments.map((nature) => (
-                    <SelectItem
-                      key={nature.id_nature_document}
-                      value={nature.id_nature_document.toString()}
-                    >
-                      {nature.libelle}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedFile && (
-              <div className="text-sm text-gray-500">
-                Fichier sélectionné: {selectedFile.name}
-              </div>
-            )}
-          </div>
-
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setSelectedFile(null);
-              setDocumentName("");
-              setDocumentNature(undefined);
-              setShowAddDocumentDialog(false);
-            }}>
-              Annuler
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={ajouterDocument} disabled={!selectedFile || documentName.trim() === ""}>
-              Ajouter
-            </AlertDialogAction>
+            <AlertDialogCancel>Continuer l'édition</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancel}>Annuler et quitter</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

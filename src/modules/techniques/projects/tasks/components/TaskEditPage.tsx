@@ -2,18 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import TacheForm from '../components/TacheForm';
-// Importez TacheWithAssignedEmployes et CreateTachePayload du fichier de types partagé
-import { Projet, Employe, TacheWithAssignedEmployes, CreateTachePayload } from '../../types/types'; 
-import { 
-  getTacheById, 
-  updateTache, 
-  getEmployesAssignes,
-  assignEmployeToTache,
-  removeEmployeFromTache 
-} from '../api/taches';
-// Vérifiez si fetchAllProjets et getEmployes sont les bons noms pour vos API
-import { fetchAllProjets } from '../../projet/api/projets'; 
-import { getEmployes } from '../../projet/api/employes';
+// Importez TacheWithAssignedEmployes, CreateTachePayload, Employe, Operation
+import { Employe, TacheWithAssignedEmployes, CreateTachePayload, Operation } from '../../types/types'; 
+import {getTacheById, updateTache, getEmployesAssignes, assignEmployeToTache, removeEmployeFromTache} from '../api/taches';
+import { getAllOperations } from '../../operation/api/operation'; 
+import { getEmployes } from '../../projet/api/employes'; // Supposons que getEmployes est encore valide pour tous les employés
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 
@@ -21,11 +14,11 @@ const EditerTachePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // L'état 'tache' doit pouvoir stocker TacheWithAssignedEmployes pour la prop initialData du formulaire
   const [tache, setTache] = useState<TacheWithAssignedEmployes | null>(null); 
-  const [projets, setProjets] = useState<Projet[]>([]);
+  // Remplacer 'projets' par 'operations'
+  const [operations, setOperations] = useState<Operation[]>([]); 
   const [employes, setEmployes] = useState<Employe[]>([]);
-  const [employesAssignes, setEmployesAssignes] = useState<Employe[]>([]); // Garder pour la logique de diff.
+  const [employesAssignes, setEmployesAssignes] = useState<Employe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,32 +43,31 @@ const EditerTachePage = () => {
       }
 
       try {
-        const [tacheData, projetsResponse, employesData, employesAssignesData] = await Promise.all([
-          getTacheById(tacheId), // Retourne Tache (sans id_assigne_a)
-          fetchAllProjets(),
+        // Appeler getAllOperations au lieu de fetchAllProjets
+        const [tacheData, operationsResponse, employesData, employesAssignesData] = await Promise.all([
+          getTacheById(tacheId), 
+          getAllOperations(), // <-- Récupérer toutes les opérations
           getEmployes(),
-          getEmployesAssignes(tacheId) // Retourne Employe[]
+          getEmployesAssignes(tacheId) 
         ]);
 
         if (!tacheData) {
           setError("Tâche introuvable.");
           toast.error("Tâche introuvable.");
-          setLoading(false); // S'assurer que le loading est arrêté même en cas de 404
+          setLoading(false); 
           return;
         }
 
-        // Combinaison des données pour former le type TacheWithAssignedEmployes pour le formulaire
         setTache({ 
           ...tacheData,
           id_assigne_a: employesAssignesData 
         });
-        // Extraire les données de l'ApiResponse
-        const projetsData = projetsResponse.data || [];
-        setProjets(projetsData);
+        
+        // Extraire les données des opérations de l'ApiResponse et les stocker
+        setOperations(operationsResponse.data || []); 
         setEmployes(employesData);
-        setEmployesAssignes(employesAssignesData); // Stocker les assignations actuelles
+        setEmployesAssignes(employesAssignesData); 
       } catch (err) {
-        // L'intercepteur Axios loggue déjà l'erreur. Ici, on gère l'affichage pour l'utilisateur.
         const errorMessage = err instanceof Error ? err.message : "Une erreur inconnue est survenue lors du chargement.";
         setError(`Échec du chargement: ${errorMessage}`);
         toast.error(`Échec du chargement: ${errorMessage}`);
@@ -85,7 +77,7 @@ const EditerTachePage = () => {
     };
 
     loadData();
-  }, [id]); // Dépendance à 'id' pour recharger si l'ID de la tâche change
+  }, [id]); 
 
   const handleSaveTache = async (formData: CreateTachePayload, selectedEmployeesIds: number[]) => {
     if (!id) {
@@ -96,16 +88,12 @@ const EditerTachePage = () => {
     const tacheId = Number(id);
     
     try {
-      // 1. Mettre à jour les données de la tâche (sans les assignations)
-      // formData est déjà de type CreateTachePayload (Omit<Tache, 'id_tache'>), ce qui est correct pour updateTache
       await updateTache(tacheId, formData);
 
-      // 2. Gérer les assignations : déterminer ce qui doit être ajouté/supprimé
       const currentEmployeesIds = employesAssignes.map(emp => emp.id_employes);
       const employeesToAdd = selectedEmployeesIds.filter(id => !currentEmployeesIds.includes(id));
       const employeesToRemove = currentEmployeesIds.filter(id => !selectedEmployeesIds.includes(id));
 
-      // 3. Exécuter les opérations d'ajout et de suppression en parallèle avec Promise.all
       const assignPromises = employeesToAdd.map(employeId => 
         assignEmployeToTache(tacheId, employeId)
       );
@@ -118,10 +106,9 @@ const EditerTachePage = () => {
       toast.success("Tâche mise à jour avec succès !");
       navigate('/technique/projets/taches'); // Rediriger après succès
     } catch (err) {
-      // L'intercepteur Axios loggue déjà l'erreur. Ici, on gère l'affichage pour l'utilisateur.
       const errorMessage = err instanceof Error ? err.message : "Une erreur inconnue est survenue lors de la mise à jour.";
       toast.error(`Échec de la mise à jour: ${errorMessage}`);
-      throw err; // Re-throw l'erreur pour que TacheForm puisse gérer son état de soumission (isSubmitting)
+      throw err; 
     }
   };
 
@@ -133,19 +120,24 @@ const EditerTachePage = () => {
     return <div className="text-center p-8 text-red-500">{error}</div>;
   }
 
-  // Vérifier explicitement que tache est non-null avant de le passer à TacheForm
   if (!tache) { 
     return <div className="text-center p-8">Tâche non trouvée ou erreur de chargement.</div>;
   }
 
+  // Trouver l'opération associée à la tâche pour limiter les dates
+  const operationAssociee = operations.find(op => op.id_operation === tache?.id_operation);
+  const operationDates = operationAssociee ? { date_debut: operationAssociee.date_debut, date_fin: operationAssociee.date_fin } : undefined;
+
   return (
     <Layout>
       <TacheForm
-        initialData={tache} // tache est maintenant de type TacheWithAssignedEmployes
+        initialData={tache}
         onSave={handleSaveTache}
-        onCancel={() => navigate('/taches')}
-        projetsDisponibles={projets}
+        onCancel={() => navigate('/technique/projets/taches')}
+        operationsDisponibles={operations} 
         employesDisponibles={employes}
+        operationDates={operationDates}
+        // 'projetsDisponibles' est retiré
       />
     </Layout>
   );

@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Trash2 } from "lucide-react";
+import { Edit, Eye, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 // Importez Livrable et Projet
 import { Livrable, Projet } from "../../types/types";
@@ -52,29 +52,110 @@ export const LivrableTable: React.FC<LivrableTableProps> = ({
     }
   };
 
+  const [sortBy, setSortBy] = React.useState<string>("libelle_livrable");
+  const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortBy === col) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(col);
+      setSortOrder("asc");
+    }
+  };
+
+  const sortedLivrables = React.useMemo(() => {
+    const ls = [...livrables];
+    ls.sort((a, b) => {
+      let aVal: string | number | undefined;
+      let bVal: string | number | undefined;
+      switch (sortBy) {
+        case "libelle_livrable":
+          aVal = a.libelle_livrable;
+          bVal = b.libelle_livrable;
+          break;
+        case "id_projet":
+          aVal = getProjectName(a.id_projet);
+          bVal = getProjectName(b.id_projet);
+          break;
+        case "date":
+          aVal = a.date;
+          bVal = b.date;
+          break;
+        case "approbation":
+          aVal = a.approbation;
+          bVal = b.approbation;
+          break;
+        case "realisations":
+          aVal = a.realisations;
+          bVal = b.realisations;
+          break;
+        case "reserves":
+          aVal = a.reserves;
+          bVal = b.reserves;
+          break;
+        default:
+          aVal = a.libelle_livrable;
+          bVal = b.libelle_livrable;
+      }
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+    return ls;
+  }, [livrables, sortBy, sortOrder]);
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Libellé du Livrable</TableHead>
-            <TableHead>Projet Parent</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Approbation</TableHead>
-            <TableHead className="max-w-[200px] truncate">Réalisations</TableHead>
-            <TableHead className="max-w-[200px] truncate">Réserves</TableHead>
+            <TableHead onClick={() => handleSort("libelle_livrable")}
+              className="cursor-pointer select-none">
+              Libellé du Livrable
+              {sortBy === "libelle_livrable" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            <TableHead onClick={() => handleSort("id_projet")}
+              className="cursor-pointer select-none">
+              Projet Parent
+              {sortBy === "id_projet" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            <TableHead onClick={() => handleSort("date")}
+              className="cursor-pointer select-none">
+              Date
+              {sortBy === "date" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            <TableHead onClick={() => handleSort("approbation")}
+              className="cursor-pointer select-none">
+              Approbation
+              {sortBy === "approbation" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            <TableHead onClick={() => handleSort("realisations")}
+              className="cursor-pointer select-none max-w-[200px] truncate">
+              Réalisations
+              {sortBy === "realisations" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            <TableHead onClick={() => handleSort("reserves")}
+              className="cursor-pointer select-none max-w-[200px] truncate">
+              Réserves
+              {sortBy === "reserves" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {livrables.length === 0 ? (
+          {sortedLivrables.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-4 text-gray-500">
                 Aucun livrable trouvé.
               </TableCell>
             </TableRow>
           ) : (
-            livrables.map((livrable) => (
+            sortedLivrables.map((livrable) => (
               <TableRow key={livrable.id_livrable}>
                 <TableCell className="font-medium">{livrable.libelle_livrable}</TableCell>
                 <TableCell>{getProjectName(livrable.id_projet)}</TableCell>

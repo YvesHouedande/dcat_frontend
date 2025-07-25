@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Camera, Save, UserPlus, Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Employe, Fonction } from "../../types/interfaces";
 import { fetchFonctions, createFonction } from "@/modules/administration-Finnance/services/fonctionService";
+import { fetchEmployeById, updateEmploye } from "@/modules/administration-Finnance/services/employeService";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import {
 
 const EditEmployeForm: React.FC = () => {
   const router = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [fonctions, setFonctions] = useState<Fonction[]>([]);
   const [newFonction, setNewFonction] = useState("");
   const [isAddingFonction, setIsAddingFonction] = useState(false);
@@ -50,7 +52,17 @@ const EditEmployeForm: React.FC = () => {
 
   useEffect(() => {
     loadFonctions();
-  }, []);
+    if (id) {
+      fetchEmployeById(Number(id))
+        .then((employe) => {
+          setFormData(employe);
+          console.log("Employé chargé pour édition :", employe);
+        })
+        .catch((error) => {
+          console.error("Erreur lors du chargement de l'employé :", error);
+        });
+    }
+  }, [id]);
 
   const loadFonctions = async () => {
     try {
@@ -139,22 +151,39 @@ const EditEmployeForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (!validateForm()) {
       return;
     }
-
+  
     setIsSubmitting(true);
-
-    setTimeout(() => {
-      console.log("Données soumises:", formData);
+  
+    try {
+      // Préparer uniquement les champs attendus par l'API
+      const employeToSend = {
+        nom_employes: formData.nom_employes,
+        prenom_employes: formData.prenom_employes,
+        email_employes: formData.email_employes,
+        contact_employes: formData.contact_employes || "",
+        adresse_employes: formData.adresse_employes || "",
+        status_employes: formData.status_employes,
+        date_embauche_employes: formData.date_embauche_employes,
+        date_de_naissance: formData.date_de_naissance || "",
+        contrat: formData.contrat || "",
+        id_fonction: formData.id_fonction
+      };
+      console.log("Données envoyées (nettoyées) :", employeToSend);
+      await updateEmploye(formData.id_employes, employeToSend);
       alert("Employé modifié avec succès !");
       router("/administration/employers");
-
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour :", error);
+      alert("Erreur lors de la modification de l'employé. Veuillez réessayer.");
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (

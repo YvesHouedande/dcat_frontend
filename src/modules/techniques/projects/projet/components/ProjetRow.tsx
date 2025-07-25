@@ -24,6 +24,8 @@ export const ProjetRow = ({ projet, onDelete, onView, onEdit }: ProjetRowProps) 
         return <Badge className="bg-green-100 text-green-800">Terminé</Badge>;
       case "annulé":
         return <Badge variant="destructive">Annulé</Badge>;
+      case "bloqué":
+        return <Badge className="bg-neutral-100 text-neutral-700">Bloqué</Badge>;
     }
   };
 

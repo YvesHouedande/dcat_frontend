@@ -40,15 +40,6 @@ export interface Partenaires {
   interlocuteurs?: Interlocuteur[]; // Ajout de la propriété interlocuteurs
 }
 
-export interface DemandeDocument {
-  id_documents: number;
-  libelle_document: string;
-  classification_document: string;
-  lien_document: string; // Chemin ou URL du document
-  etat_document?: string; // Optionnel
-  date_document: string; // ISO date string
-  id_nature_document: number; // Clé étrangère vers NatureDocument (maintenue car les documents ont une nature)
-}
 
 export interface Entite {// Table Entité
   id_entite: number;              // Renommé de Id_Entité pour cohérence
@@ -59,25 +50,29 @@ export interface NatureDocument {//Table nature_document
   id_nature_document: number;
   libelle: string; // Utilisé pour compatibilité avec l'API et le frontend
 }
+export interface DemandeDocument {
+  id_documents: number;
+  libelle_document: string;
+  classification_document: string;
+  lien_document: string; // Chemin ou URL du document
+  etat_document?: string; // Optionnel
+  date_document: string; // ISO date string
+  id_nature_document: number; // Clé étrangère vers NatureDocument (maintenue car les documents ont une nature)
+}
 
 //les demandes 
 export interface Demande {
   id_demandes: number;
-  type_demande: string;
+  date_absence: string;
   status: string;
+  date_retour: string;
   motif: string;
-  duree: string | null;
+  type_demande: string;
+  duree: string;
+  heure_debut: string;
+  heure_fin: string ;
   id_employes: number;
   documents: DemandeDocument[];
-  date_absence: string | null;
-  date_retour: string | null;
-  heure_debut: string | null;
-  heure_fin: string | null;
-  commentaire_approbation?: string; // Commentaire lors de l'approbation
-  motif_refus?: string; // Motif lors du refus
-  // Champs de métadonnées optionnels
-  created_at?: string;
-  updated_at?: string;
 }
 
 //les contrats

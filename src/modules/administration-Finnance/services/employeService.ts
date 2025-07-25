@@ -165,6 +165,7 @@ export const updateEmploye = async (id: number, employeData: Partial<Employe>): 
     return response.data;
   } catch (error) {
     if (error instanceof AxiosError) {
+      console.error("Réponse erreur API (updateEmploye) :", JSON.stringify(error.response?.data, null, 2));
       switch (error.response?.status) {
         case 404:
           throw new Error("Employé non trouvé");

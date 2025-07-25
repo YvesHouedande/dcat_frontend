@@ -52,6 +52,7 @@ export const ProjetFilters = ({
           <SelectItem value="planifié">Planifié</SelectItem>
           <SelectItem value="terminé">Terminé</SelectItem>
           <SelectItem value="annulé">Annulé</SelectItem>
+          <SelectItem value="bloqué">Bloqué</SelectItem>
         </SelectContent>
       </Select>
 

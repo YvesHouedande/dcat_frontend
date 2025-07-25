@@ -1,6 +1,6 @@
 // src/pages/ProjetDetailsPage.tsx
 
-import React, { useState, useEffect, FC } from "react";
+import React, { useState, useEffect, FC, useCallback } from "react";
 import {
   useParams,
   useNavigate,
@@ -19,6 +19,8 @@ import {
   TacheWithAssignedEmployes,
   Employe,
   CreateTachePayload,
+  Tache,
+  Operation,
 } from "../../types/types"; // Import Document, Livrable, ApiResponse
 import {
   getProjetById,
@@ -47,7 +49,6 @@ import {
   FileText, // For document icon
   Download, // For download icon
   Trash2, // For delete icon
-  PackageOpen,
   Home,
   ArrowLeft,
   Edit,
@@ -77,7 +78,6 @@ import { toast } from "sonner"; // Import toast for messages
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TacheTable } from "../../tasks/components/TacheTable";
 import {
-  getTachesByProjet,
   getEmployesAssignes,
   createTache,
   updateTache,
@@ -86,6 +86,8 @@ import {
   deleteTacheSafely,
   getTacheById,
 } from "../../tasks/api/taches";
+import { getOperationsByProjet, deleteOperation, updateOperation, createOperation } from "../../operation/api/operation";
+import { getTachesByOperation } from "../../tasks/api/taches";
 import { getEmployes } from "../api/employes";
 import TacheForm from "../../tasks/components/TacheForm";
 import TaskDetail from "../../tasks/components/TaskDetail";
@@ -132,6 +134,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import OperationTable from "../../operation/components/OperationTable";
+import OperationForm from "../../operation/components/OperationForm";
+import OperationDetailsPage from "../../operation/pages/OperationDetailsPage";
 
 // Get API_URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
@@ -151,7 +156,6 @@ interface ProjectTaskDetailWrapperProps {
 
 const ProjectTaskDetailWrapper: FC<ProjectTaskDetailWrapperProps> = ({
   taches,
-  projet,
   onEdit,
 }) => {
   const { tacheId, id } = useParams<{ tacheId: string; id: string }>();
@@ -170,7 +174,6 @@ const ProjectTaskDetailWrapper: FC<ProjectTaskDetailWrapperProps> = ({
       </Button>
       <TaskDetail
         tache={tache}
-        projets={[projet]}
         isEmbedded={true}
         onEdit={onEdit}
       />
@@ -413,7 +416,11 @@ const ProjectLivrableDetailsWrapper: FC = () => {
 };
 
 // Wrapper pour l'édition des tâches dans le contexte de la page de détail du projet
-const ProjectTacheEditWrapper: FC = () => {
+interface ProjectTacheEditWrapperProps {
+  operations: Operation[];
+}
+
+const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({ operations }) => {
   const { tacheId, id } = useParams<{ tacheId: string; id: string }>();
   const navigate = useNavigate();
   const [tache, setTache] = useState<TacheWithAssignedEmployes | null>(null);
@@ -512,31 +519,18 @@ const ProjectTacheEditWrapper: FC = () => {
       </Button>
       <TacheForm
         initialData={tache}
-        onSave={async (formData, employesIds) => {
+        onSave={async (formData: CreateTachePayload, employesIds: number[]) => {
           try {
             // Mise à jour de la tâche
             await updateTache(tache.id_tache, formData);
-
             // Gestion des assignations
-            const currentEmployeesIds = tache.id_assigne_a.map(
-              (emp) => emp.id_employes
-            );
-            const employeesToAdd = employesIds.filter(
-              (id) => !currentEmployeesIds.includes(id)
-            );
-            const employeesToRemove = currentEmployeesIds.filter(
-              (id) => !employesIds.includes(id)
-            );
-
+            const currentEmployeesIds = tache.id_assigne_a.map((emp) => emp.id_employes);
+            const employeesToAdd = employesIds.filter((id) => !currentEmployeesIds.includes(id));
+            const employeesToRemove = currentEmployeesIds.filter((id) => !employesIds.includes(id));
             await Promise.all([
-              ...employeesToAdd.map((empId) =>
-                assignEmployeToTache(tache.id_tache, empId)
-              ),
-              ...employeesToRemove.map((empId) =>
-                removeEmployeFromTache(tache.id_tache, empId)
-              ),
+              ...employeesToAdd.map((empId) => assignEmployeToTache(tache.id_tache, empId)),
+              ...employeesToRemove.map((empId) => removeEmployeFromTache(tache.id_tache, empId)),
             ]);
-
             toast.success("Tâche modifiée avec succès !");
             navigate(`/technique/projets/${id}/details/taches`);
           } catch (err) {
@@ -546,8 +540,8 @@ const ProjectTacheEditWrapper: FC = () => {
           }
         }}
         onCancel={() => navigate(`/technique/projets/${id}/details/taches`)}
-        projetsDisponibles={[projet]}
         employesDisponibles={employes}
+        operationsDisponibles={operations}
       />
     </div>
   );
@@ -585,7 +579,9 @@ const ProjetDetailsPage: React.FC = () => {
     file: null,
   });
 
-  const loadProjetData = async () => {
+  const [showOperationSheet, setShowOperationSheet] = useState(false);
+
+  const loadProjetData = useCallback(async () => {
     setLoading(true);
     setError(null);
     if (!id) {
@@ -674,17 +670,15 @@ const ProjetDetailsPage: React.FC = () => {
         livrablesToSet = fetchedLivrablesResponse; // Assuming fetchedLivrablesResponse could be direct array
       }
       setLivrables(livrablesToSet);
-    } catch (err: unknown) {
-      console.error("Erreur lors du chargement des détails du projet :", err);
+    } catch {
       setError(
-        (err as Error).message ||
-          "Impossible de charger les détails du projet. Veuillez réessayer."
+        "Impossible de charger les détails du projet. Veuillez réessayer."
       );
       setProjet(undefined);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   // Chargement des tâches et employés pour l'onglet Tâches
   useEffect(() => {
@@ -692,13 +686,19 @@ const ProjetDetailsPage: React.FC = () => {
     setLoadingTaches(true);
     const loadTaches = async () => {
       try {
-        const tachesResponse = await getTachesByProjet(projet.id_projet);
-        const tachesArray = Array.isArray(tachesResponse.data)
-          ? tachesResponse.data
-          : [];
+        // Nouvelle logique : charger toutes les opérations du projet, puis toutes les tâches de chaque opération
+        const operationsResponse = await getOperationsByProjet(projet.id_projet);
+        const operations = operationsResponse.data || [];
+        const allBaseTaches = [];
+        for (const operation of operations) {
+          const tachesResponse = await getTachesByOperation(operation.id_operation);
+          if (tachesResponse.data && Array.isArray(tachesResponse.data)) {
+            allBaseTaches.push(...tachesResponse.data);
+          }
+        }
         // Charger les assignés pour chaque tâche
         const tachesWithAssignes = await Promise.all(
-          tachesArray.map(async (tache) => {
+          allBaseTaches.map(async (tache) => {
             const assignes = await getEmployesAssignes(tache.id_tache);
             return { ...tache, id_assigne_a: assignes };
           })
@@ -706,8 +706,7 @@ const ProjetDetailsPage: React.FC = () => {
         setTaches(tachesWithAssignes);
         const employesData = await getEmployes();
         setEmployes(employesData);
-      } catch (err) {
-        console.error("Erreur lors du chargement des tâches:", err);
+      } catch {
         setTaches([]);
         setEmployes([]);
       } finally {
@@ -729,11 +728,7 @@ const ProjetDetailsPage: React.FC = () => {
           naturesToSet = natureResponse;
         }
         setNatureDocuments(naturesToSet);
-      } catch (err) {
-        console.error(
-          "Erreur lors du chargement des natures de documents:",
-          err
-        );
+      } catch {
         setNatureDocuments([]);
       }
     };
@@ -742,7 +737,7 @@ const ProjetDetailsPage: React.FC = () => {
 
   useEffect(() => {
     loadProjetData();
-  }, [id]);
+  }, [loadProjetData]);
 
   // Function to format amount in CFA Franc
   const formatCFA = (amount: number | string | undefined): string => {
@@ -792,6 +787,8 @@ const ProjetDetailsPage: React.FC = () => {
         return 100;
       case "annulé":
         return 0;
+      case "bloqué":
+        return 50;
       default:
         return 0;
     }
@@ -818,7 +815,7 @@ const ProjetDetailsPage: React.FC = () => {
     }
 
     if (endDate && isAfter(today, endDate)) {
-      return { status: "overdue", message: "Projet en retard", color: "red" };
+      return { status: "overdue", message: "Projet bloqué", color: "red" };
     }
 
     if (startDate && isBefore(today, startDate)) {
@@ -908,12 +905,12 @@ const ProjetDetailsPage: React.FC = () => {
       // Après succès, rafraîchir la liste
       if (projet?.id_projet) {
         setLoadingTaches(true);
-        const tachesResponse = await getTachesByProjet(projet.id_projet);
+        const tachesResponse = await getTachesByOperation(projet.id_projet);
         const tachesArray = Array.isArray(tachesResponse.data)
           ? tachesResponse.data
           : [];
         const tachesWithAssignes = await Promise.all(
-          tachesArray.map(async (tache) => {
+          tachesArray.map(async (tache: Tache) => {
             const assignes = await getEmployesAssignes(tache.id_tache);
             return { ...tache, id_assigne_a: assignes };
           })
@@ -937,12 +934,12 @@ const ProjetDetailsPage: React.FC = () => {
       // Rafraîchir la liste
       if (projet?.id_projet) {
         setLoadingTaches(true);
-        const tachesResponse = await getTachesByProjet(projet.id_projet);
+        const tachesResponse = await getTachesByOperation(projet.id_projet);
         const tachesArray = Array.isArray(tachesResponse.data)
           ? tachesResponse.data
           : [];
         const tachesWithAssignes = await Promise.all(
-          tachesArray.map(async (tache) => {
+          tachesArray.map(async (tache: Tache) => {
             const assignes = await getEmployesAssignes(tache.id_tache);
             return { ...tache, id_assigne_a: assignes };
           })
@@ -1020,9 +1017,8 @@ const ProjetDetailsPage: React.FC = () => {
       toast.success("Livrable supprimé avec succès !");
       // Rafraîchir la liste des livrables
       await loadProjetData();
-    } catch (err) {
-      console.error("Erreur lors de la suppression du livrable:", err);
-      toast.error("Échec de la suppression du livrable.");
+    } catch {
+      toast.error("Erreur lors de la suppression du livrable.");
     }
   };
 
@@ -1139,6 +1135,73 @@ const ProjetDetailsPage: React.FC = () => {
     }
   };
 
+  // === AJOUTER EN HAUT DU COMPONENT ProjetDetailsPage ===
+  const [operations, setOperations] = useState<Operation[]>([]);
+  const [loadingOperations, setLoadingOperations] = useState(true);
+  const [operationFormLoading, setOperationFormLoading] = useState(false);
+  const [operationFormError, setOperationFormError] = useState<string | null>(null);
+
+
+  const handleOpenEditOperation = (operationId: number) => {
+    navigate(`/technique/projets/operations/${operationId}/editer`, { state: { fromProject: true, projectId: id } });
+  };
+  const handleViewOperation = (operationId: number) => {
+    navigate(`/technique/projets/${id}/details/operations/${operationId}/details`);
+  };
+  const handleDeleteOperation = async (operationId: number) => {
+    if (!window.confirm("Supprimer cette opération ?")) return;
+    if (!projet || !projet.id_projet) return;
+    try {
+      await deleteOperation(operationId);
+      const res = await getOperationsByProjet(projet.id_projet);
+      setOperations(res.data || []);
+      toast.success("Opération supprimée avec succès !");
+    } catch {
+      toast.error("Erreur lors de la suppression de l'opération.");
+    }
+  };
+  const handleSaveOperation = async (
+    payload: Omit<Operation, "id_operation">,
+    operationId?: number
+  ) => {
+    setOperationFormLoading(true);
+    setOperationFormError(null);
+    try {
+      if (!projet) return;
+      if (operationId) {
+        await updateOperation(operationId, payload);
+        toast.success("Opération modifiée avec succès !");
+      } else {
+        await createOperation({ ...payload, id_projet: projet.id_projet });
+        toast.success("Opération créée avec succès !");
+      }
+      const res = await getOperationsByProjet(projet.id_projet);
+      setOperations(res.data || []);
+      navigate(`/technique/projets/${id}/details/operations`);
+    } catch {
+      setOperationFormError("Erreur lors de l'enregistrement de l'opération.");
+      toast.error("Erreur lors de l'enregistrement de l'opération.");
+    } finally {
+      setOperationFormLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!projet?.id_projet) return;
+    setLoadingOperations(true);
+    const loadOperations = async () => {
+      try {
+        const operationsResponse = await getOperationsByProjet(projet.id_projet);
+        setOperations(operationsResponse.data || []);
+      } catch {
+        setOperations([]);
+      } finally {
+        setLoadingOperations(false);
+      }
+    };
+    loadOperations();
+  }, [projet?.id_projet]);
+
   if (loading) {
     return (
       <Layout>
@@ -1210,6 +1273,21 @@ const ProjetDetailsPage: React.FC = () => {
   const projectStatus = getProjectStatus();
   const daysRemaining = getDaysRemaining();
 
+  // Wrapper pour OperationDetailsPage dans le contexte de la page de détail du projet
+  const ProjectOperationDetailsWrapper: FC = () => {
+    const { operationId, id } = useParams<{ operationId: string; id: string }>();
+    // const navigate = useNavigate();
+    if (!operationId || !id) {
+      return <div className="text-center py-8 text-red-500">ID d'opération ou de projet manquant.</div>;
+    }
+    return (
+      <div>
+        {/* Bouton de retour supprimé pour éviter le doublon */}
+        <OperationDetailsPage embedded={true} />
+      </div>
+    );
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -1220,6 +1298,11 @@ const ProjetDetailsPage: React.FC = () => {
               <TabsTrigger asChild value="details">
                 <NavLink to={`/technique/projets/${id}/details`} end>
                   Détails
+                </NavLink>
+              </TabsTrigger>
+              <TabsTrigger asChild value="operations">
+                <NavLink to={`/technique/projets/${id}/details/operations`}>
+                  Opérations
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="taches">
@@ -1293,9 +1376,16 @@ const ProjetDetailsPage: React.FC = () => {
                       <Edit className="mr-2 h-4 w-4" />
                       Modifier
                     </Button>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() =>
+                        navigate(
+                          `/technique/projets/${id}/details/operations`
+                        )
+                      }
+                    >
                       <Eye className="mr-2 h-4 w-4" />
-                      Voir les tâches
+                      Voir les opérations
                     </Button>
                   </div>
                 </div>
@@ -1412,7 +1502,7 @@ const ProjetDetailsPage: React.FC = () => {
                           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                             <LayoutGrid className="h-5 w-5 text-indigo-600" />
                             <div>
-                              <div className="font-medium">Famille</div>
+                              <div className="font-medium">Catégorie</div>
                               <div className="text-gray-600">
                                 {getFamilleName(projet.id_famille)}
                               </div>
@@ -1522,49 +1612,19 @@ const ProjetDetailsPage: React.FC = () => {
                             {projet.etat === "terminé" ? "✓" : "○"}
                           </Badge>
                         </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Bloqué</span>
+                          <Badge
+                            variant={
+                              projet.etat === "bloqué"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {projet.etat === "bloqué" ? "✓" : "○"}
+                          </Badge>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Actions rapides */}
-                  <Card className="shadow-lg border-0">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">Actions rapides</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() =>
-                          navigate(
-                            `/technique/projets/${projet.id_projet}/editer`
-                          )
-                        }
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Modifier le projet
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Ajouter un document
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                      >
-                        <PackageOpen className="mr-2 h-4 w-4" />
-                        Créer un livrable
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start"
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        Gérer les partenaires
-                      </Button>
                     </CardContent>
                   </Card>
 
@@ -1594,6 +1654,68 @@ const ProjetDetailsPage: React.FC = () => {
                   </Card>
                 </div>
               </div>
+            </TabsContent>
+            <TabsContent value="operations">
+              <Routes>
+                <Route
+                  path="operations"
+                  element={
+                    <Card className="shadow-lg border-0">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b flex flex-row items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          Gestion des opérations du projet #{projet.id_projet}
+                          <Badge variant="secondary" className="ml-2">
+                            {operations.length}
+                          </Badge>
+                        </CardTitle>
+                        <Sheet open={showOperationSheet} onOpenChange={setShowOperationSheet}>
+                          <SheetTrigger asChild>
+                            <Button className="bg-blue-600 text-white">
+                              + Nouvelle opération
+                            </Button>
+                          </SheetTrigger>
+                          <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                            <SheetHeader>
+                              <SheetTitle>Ajouter une opération</SheetTitle>
+                              <SheetDescription>
+                                Remplissez le formulaire pour ajouter une nouvelle opération à ce projet.
+                              </SheetDescription>
+                            </SheetHeader>
+                            <OperationForm
+                              idProjet={projet.id_projet}
+                              onCreate={async (payload) => {
+                                await handleSaveOperation(payload);
+                                setShowOperationSheet(false);
+                              }}
+                              loading={operationFormLoading}
+                              error={operationFormError}
+                            />
+                            <SheetFooter />
+                          </SheetContent>
+                        </Sheet>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        {loadingOperations ? (
+                          <div className="text-center py-8 text-gray-500">
+                            Chargement des opérations...
+                          </div>
+                        ) : (
+                          <OperationTable
+                            operations={operations}
+                            onView={handleViewOperation}
+                            onEdit={handleOpenEditOperation}
+                            onDelete={handleDeleteOperation}
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                  }
+                />
+                <Route
+                  path="operations/:operationId/details"
+                  element={<ProjectOperationDetailsWrapper />}
+                />
+              </Routes>
             </TabsContent>
             <TabsContent value="taches">
               <Routes>
@@ -1632,14 +1754,14 @@ const ProjetDetailsPage: React.FC = () => {
                               taches={taches}
                               onDelete={handleDeleteTache}
                               onView={handleViewTache}
-                              onEdit={(id) => {
+                              onEdit={(id: number) => {
                                 const tache = taches.find(
-                                  (t) => t.id_tache === id
+                                  (t: TacheWithAssignedEmployes) => t.id_tache === id
                                 );
                                 if (tache) handleOpenEditTache(tache);
                               }}
-                              projets={[projet]}
                               employes={employes}
+                              operations={operations}
                             />
                           )}
                         </CardContent>
@@ -1651,9 +1773,9 @@ const ProjetDetailsPage: React.FC = () => {
                   path="tache/nouvelle"
                   element={
                     <TacheForm
+                      operationsDisponibles={operations}
                       onSave={handleSaveTache}
                       onCancel={() => navigate(-1)}
-                      projetsDisponibles={[projet]}
                       employesDisponibles={employes}
                       isSubmitting={isSubmittingTache}
                     />
@@ -1661,7 +1783,7 @@ const ProjetDetailsPage: React.FC = () => {
                 />
                 <Route
                   path="tache/:tacheId/editer"
-                  element={<ProjectTacheEditWrapper />}
+                  element={<ProjectTacheEditWrapper operations={operations} />}
                 />
                 <Route
                   path="tache/:tacheId/detailsTache"
@@ -2002,6 +2124,7 @@ function getActiveTab(pathname: string) {
   if (pathname.includes("/documents")) return "documents";
   if (pathname.includes("/livrables") || pathname.includes("/livrable/"))
     return "livrables";
+  if (pathname.includes("/operations")) return "operations";
   return "details";
 }
 

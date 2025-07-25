@@ -1,32 +1,28 @@
-// src/pages/DetailsTachePage.tsx
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
-// IMPORTS MIS À JOUR POUR LES TYPES : Utilise TacheWithAssignedEmployes
-import { Projet, TacheWithAssignedEmployes } from '../../types/types'; 
-// IMPORTS MIS À JOUR POUR LES API : Ajout de getEmployesAssignes
+import { TacheWithAssignedEmployes, Operation } from '../../types/types'; 
 import { getTacheById, getEmployesAssignes } from '../api/taches'; 
-import { fetchAllProjets } from '../../projet/api/projets'; 
+import { getAllOperations } from '../../operation/api/operation'; // Import de la fonction pour récupérer les opérations
 import { Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Clock,      // For Dates
-  User,       // For Assignee
-  ArrowLeft,  // For back navigation
-  Edit,       // For edit button
-  Info        // For description icon
+  Clock,        // For Dates
+  User,         // For Assignee
+  ArrowLeft,    // For back navigation
+  Edit,         // For edit button
+  Info          // For description icon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner'; // Pour les notifications
 
 interface TaskDetailProps {
-  // Props optionnelles pour utiliser le composant de manière flexible
-  tacheId?: number; // Si fourni, charge la tâche directement
-  tache?: TacheWithAssignedEmployes; // Si fourni, utilise directement cette tâche
-  projets?: Projet[]; // Si fourni, utilise directement cette liste
+
+  tacheId?: number; 
+  tache?: TacheWithAssignedEmployes;
+  operations?: Operation[]; // Si fourni, utilise directement cette liste
   isEmbedded?: boolean; // Si true, n'affiche pas le Layout et les boutons de navigation
   onClose?: () => void; // Callback pour fermer si utilisé en mode embedded
   onEdit?: (tacheId: number) => void; // Callback pour l'édition si utilisé en mode embedded
@@ -35,16 +31,15 @@ interface TaskDetailProps {
 const TaskDetail: React.FC<TaskDetailProps> = ({
   tacheId,
   tache: initialTache,
-  projets: initialProjets,
+  operations: initialOperations,
   isEmbedded = false,
   onEdit
 }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // MODIFICATION ICI : L'état 'tache' doit être de type TacheWithAssignedEmployes
   const [tache, setTache] = useState<TacheWithAssignedEmployes | undefined>(initialTache); 
-  const [projets, setProjets] = useState<Projet[]>(initialProjets || []);
+  const [operations, setOperations] = useState<Operation[]>(initialOperations || []); // État pour les opérations
   const [loading, setLoading] = useState(!initialTache);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,23 +60,23 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
 
       if (!targetTacheId) {
         setError("ID de tâche manquant pour l'affichage des détails.");
-        toast.error("ID de tâche manquant."); // Ajout d'une toast pour le cas manquant
+        toast.error("ID de tâche manquant.");
         setLoading(false);
         return;
       }
 
       if (isNaN(targetTacheId)) {
         setError("ID de tâche invalide.");
-        toast.error("ID de tâche invalide."); // Ajout d'une toast pour le cas invalide
+        toast.error("ID de tâche invalide.");
         setLoading(false);
         return;
       }
 
       try {
-        // MODIFICATION ICI : Récupérer la tâche, les projets ET les employés assignés en parallèle
-        const [fetchedTache, fetchedProjetsResponse, fetchedAssignedEmployes] = await Promise.all([
+        // MODIFICATION ICI : Récupérer la tâche, les opérations ET les employés assignés en parallèle
+        const [fetchedTache, fetchedOperationsResponse, fetchedAssignedEmployes] = await Promise.all([
           getTacheById(targetTacheId), // Retourne une Tache (sans id_assigne_a)
-          initialProjets ? Promise.resolve({ data: initialProjets }) : fetchAllProjets(),
+          initialOperations ? Promise.resolve({ data: initialOperations }) : getAllOperations(), // Récupère les opérations
           getEmployesAssignes(targetTacheId) // Retourne un tableau d'Employe
         ]);
         
@@ -92,14 +87,15 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
           return;
         }
 
-        // MODIFICATION ICI : Combiner la tâche et les employés assignés pour l'état du composant
+        // Combiner la tâche et les employés assignés pour l'état du composant
         setTache({
           ...fetchedTache,
           id_assigne_a: fetchedAssignedEmployes // Maintenant, id_assigne_a est un tableau d'Employe[]
         });
-        // Extraire les données de l'ApiResponse
-        const projetsData = fetchedProjetsResponse.data || [];
-        setProjets(projetsData);
+        
+        // Extraire les données des opérations de l'ApiResponse
+        const operationsData = fetchedOperationsResponse.data || [];
+        setOperations(operationsData);
 
       } catch (err) {
         console.error("Erreur lors du chargement des données de la tâche :", err);
@@ -111,44 +107,13 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
       }
     };
     loadData();
-  }, [targetTacheId, initialTache, initialProjets]); // Dépendances mises à jour
+  }, [targetTacheId, initialTache, initialOperations]); // Dépendances mises à jour
 
-  // Helper pour obtenir le nom du projet par ID (inchangé, fonctionne toujours)
-  const getProjectName = (projectId: number): string => {
-    if (!projets || projets.length === 0) return `Chargement... (ID: ${projectId})`;
-    return projets.find(p => p.id_projet === projectId)?.nom_projet || `Inconnu (ID: ${projectId})`;
-  };
-
-
-  // Helpers pour les badges de statut et de priorité
-  // MODIFICATION CLÉ ICI : Ajouter une vérification de nullité/undefined pour 'statut' et 'priorite'
-  const getStatutBadgeClass = (statut: string | undefined): string => {
-    if (!statut) { // Si statut est undefined, null ou une chaîne vide
-      console.warn("Statut de tâche est undefined ou nul. Utilisation de la classe par défaut.");
-      return 'bg-gray-100 text-gray-800'; // Classe par défaut
-    }
-    switch (statut.toLowerCase()) {
-      case 'à faire': return 'bg-gray-100 text-gray-800';
-      case 'en cours': return 'bg-blue-100 text-blue-800';
-      case 'en revue': return 'bg-purple-100 text-purple-800';
-      case 'terminé': return 'bg-green-100 text-green-800';
-      case 'bloqué': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityBadgeClass = (priorite: string | undefined): string => {
-    if (!priorite) { // Si priorite est undefined, null ou une chaîne vide
-      console.warn("Priorité de tâche est undefined ou nulle. Utilisation de la classe par défaut.");
-      return 'bg-gray-100 text-gray-800'; // Classe par défaut
-    }
-    switch (priorite.toLowerCase()) {
-      case 'basse': return 'bg-green-100 text-green-800';
-      case 'moyenne': return 'bg-yellow-100 text-yellow-800';
-      case 'haute': return 'bg-orange-100 text-orange-800';
-      case 'urgent': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  // Helper pour obtenir le nom de l'opération par ID
+  const getOperationName = (operationId: number): string => {
+    if (!operations || operations.length === 0) return `Chargement... (Opération ID: ${operationId})`;
+    const operation = operations.find(op => op.id_operation === operationId);
+    return operation ? operation.nom_operation : `Opération inconnue (ID: ${operationId})`;
   };
 
   // Handlers pour les actions
@@ -159,8 +124,6 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
       navigate(`/technique/projets/taches/${tache.id_tache}/editer`);
     }
   };
-
-
 
   if (loading) {
     return (
@@ -198,8 +161,9 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
               <ArrowLeft className="h-4 w-4 mr-1" /> Retour
             </Button>
             <span className="hidden sm:inline">/</span>
-            <span className="font-medium text-gray-700">Projet :</span>
-            <span className="font-semibold text-blue-700">{getProjectName(tache.id_projet)}</span>
+            {/* MODIFICATION ICI : Affiche le nom de l'opération au lieu du projet */}
+            <span className="font-medium text-gray-700">Opération :</span> 
+            <span className="font-semibold text-blue-700">{getOperationName(tache.id_operation)}</span>
             <span>/</span>
             <span className="font-medium text-gray-700">Tâche :</span>
             <span className="font-semibold text-indigo-700">{tache.nom_tache}</span>
@@ -216,8 +180,6 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3 flex-wrap">
-                <Badge className={`text-base px-3 py-1 rounded-full ${getStatutBadgeClass(tache.statut)}`}>{tache.statut}</Badge>
-                <Badge className={`text-base px-3 py-1 rounded-full ${getPriorityBadgeClass(tache.priorite)}`}>{tache.priorite}</Badge>
                 <span className="flex items-center gap-1 text-gray-600"><Clock className="h-4 w-4" /> {tache.date_debut ? format(new Date(tache.date_debut), 'dd MMM yyyy', { locale: fr }) : 'N/A'} → {tache.date_fin ? format(new Date(tache.date_fin), 'dd MMM yyyy', { locale: fr }) : 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -247,9 +209,13 @@ const TaskDetail: React.FC<TaskDetailProps> = ({
               <Info className="h-5 w-5" /> Description de la tâche
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="text-gray-800 text-base">
-              {tache.desc_tache || <span className="italic text-gray-400">Aucune description fournie.</span>}
+          <CardContent>
+            <div className="space-y-2">
+              {tache.desc_tache ? (
+                <div>{tache.desc_tache}</div>
+              ) : (
+                <div className="italic text-gray-400">Aucune description renseignée pour cette tâche.</div>
+              )}
             </div>
           </CardContent>
         </Card>

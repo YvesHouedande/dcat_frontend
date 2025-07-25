@@ -53,7 +53,7 @@ const AdministrationRoutes: React.FC = () => {
         <Route index element={<DemandesAnnuaire />} />
         <Route path=":id/details" element={<DemandeDetailPage />} />
         <Route path="nouvelle" element={<NouvelleDemandePage />} />
-        <Route path=":id/editer" element={<ModifierDemandePage />} />
+        <Route path=":id/modifier" element={<ModifierDemandePage />} />
       </Route>
       {/* Routes /documents */}
       <Route path="/documents" element={<AdministrationLayout />}>

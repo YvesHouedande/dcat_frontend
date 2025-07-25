@@ -8,6 +8,7 @@ import TachesPage from "../tasks/TasksPage";
 import LivrablesPage from "../livrables/LivrablesPage";
 import ProjetsPage from "../projet/ProjectsPage";
 import Layout from "@/components/Layout";
+import OperationPage from "../operation/pages/OperationPage";
 
 // --- La Page principale de Gestion des Projets avec les Onglets
 export default function GestionProjetsPage() {
@@ -23,6 +24,10 @@ export default function GestionProjetsPage() {
     // Vérifiez si le chemin contient '/livrables'
     if (pathname.includes("/technique/projets/livrables")) {
       return "livrables";
+    }
+
+    if (pathname.includes("/technique/projets/operations")) {
+      return "operations";
     }
     // Si aucun sous-chemin spécifique n'est trouvé, l'onglet par défaut est 'projets-overview'
     return "projets-overview";
@@ -45,6 +50,8 @@ export default function GestionProjetsPage() {
       newPath = "/technique/projets/taches";
     } else if (value === "livrables") {
       newPath = "/technique/projets/livrables";
+    } else if (value === "operations") {
+      newPath = "/technique/projets/operations";
     }
     // Si 'value' est 'projets-overview', newPath reste "/technique/projets"
 
@@ -62,9 +69,11 @@ export default function GestionProjetsPage() {
         {/* Le 'onValueChange' appelle notre fonction 'handleTabChange' */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           {/* Liste des onglets (boutons cliquables) */}
-          <TabsList className="grid w-full grid-cols-3 lg:w-[600px] mx-auto">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[800px] mx-auto">
             {/* Onglet pour la vue d'ensemble des projets */}
             <TabsTrigger value="projets-overview">Vue d'ensemble des Projets</TabsTrigger>
+            {/* Onglet pour la gestion des opérations */}
+            <TabsTrigger value="operations">Gestion des Opérations</TabsTrigger>
             {/* Onglet pour la gestion des tâches */}
             <TabsTrigger value="taches">Gestion des Tâches</TabsTrigger>
             {/* Onglet pour la gestion des livrables */}
@@ -74,10 +83,14 @@ export default function GestionProjetsPage() {
           {/* Contenu de chaque onglet */}
           {/* Le contenu de tous les onglets est toujours rendu, mais seul celui qui correspond à 'activeTab' est visible */}
           <TabsContent value="projets-overview">
-              
               <CardContent>
                 <ProjetsPage />
               </CardContent>
+          </TabsContent>
+
+          {/* Contenu de l'onglet "Gestion des Opérations" */}
+          <TabsContent value="operations">
+            <OperationPage />
           </TabsContent>
 
           {/* Contenu de l'onglet "Gestion des Tâches" */}

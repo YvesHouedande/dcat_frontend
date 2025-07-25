@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,234 +42,136 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Demande, Employe } from "../../types/interfaces";
+import { toast } from 'sonner';
 import {
-  fetchDemandes,
-  fetchDemandesByType,
-  updateDemande,
-  deleteDemande,
-} from "../../../services/demandeService";
-import { fetchEmployes as fetchEmployesService } from "../../../services/employeService";
+  useFilteredDemandes,
+  useEmployes,
+  useApprouverDemande,
+  useRefuserDemande,
+  useDeleteDemande,
+} from "../../../hooks";
 
 const DemandesAnnuaire: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  const [demandes, setDemandes] = useState<Demande[]>([]);
-  // Using a Map for efficient employee lookup
-  const [employeMap, setEmployeMap] = useState<Map<number, Employe>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-
-  // États pour les dialogues d'approbation/refus
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedDemandeId, setSelectedDemandeId] = useState<number | null>(null);
   const [approvalComment, setApprovalComment] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // Load employees once on component mount
-  useEffect(() => {
-    const loadEmployes = async () => {
-      try {
-        const employesData = await fetchEmployesService();
-        const map = new Map<number, Employe>();
-        employesData.forEach((employe) =>
-          map.set(employe.id_employes, employe)
-        );
-        setEmployeMap(map);
-      } catch (err: unknown) {
-        console.error("Erreur lors du chargement des employés:", err);
-        // We could set a specific error for employees if needed
-      }
-    };
-    loadEmployes();
-  }, []);
-
-  // Load demands based on filters, re-fetching when typeFilter changes
-  useEffect(() => {
-    const loadDemandes = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const demandesData = typeFilter
-          ? await fetchDemandesByType(typeFilter)
-          : await fetchDemandes();
-        setDemandes(demandesData);
-      } catch (err: unknown) {
-        console.error("Erreur lors du chargement des demandes:", err);
-        setError((typeof err === 'object' && err !== null && 'message' in err) ? (err as { message?: string }).message || "Erreur lors du chargement des demandes" : "Erreur lors du chargement des demandes");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDemandes();
-  }, [typeFilter]);
-
-  // Filtering logic combined
-  const filteredDemandes = demandes.filter((demande) => {
-    const employee = employeMap.get(demande.id_employes);
-
-    const matchesSearchQuery = searchQuery
-      ? (employee?.nom_employes.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         employee?.prenom_employes.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         demande.type_demande.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         demande.motif.toLowerCase().includes(searchQuery.toLowerCase()) || // Added motif to search
-         demande.status.toLowerCase().includes(searchQuery.toLowerCase()))
-      : true; // If no search query, it always matches
-
-    const matchesStatusFilter = statusFilter
-      ? demande.status === statusFilter
-      : true; // If no status filter, it always matches
-
-    const matchesTypeFilter = typeFilter
-      ? demande.type_demande === typeFilter
-      : true; // If no type filter, it always matches
-
-    return matchesSearchQuery && matchesStatusFilter && matchesTypeFilter;
+  // Chargement des demandes filtrées et des employés via TanStack Query
+  const {
+    demandes: filteredDemandes,
+    isLoading: demandesLoading,
+    error: demandesError,
+  } = useFilteredDemandes({
+    search: searchQuery,
+    status: statusFilter || undefined,
+    type: typeFilter || undefined,
   });
+  const { data: employes, isLoading: employesLoading } = useEmployes();
 
-  // Calculs pour les cartes de résumé
-  const totalDemandes = demandes.length;
-  const enAttenteCount = demandes.filter(
-    (d) => d.status === "En attente"
-  ).length;
-  const approuveesCount = demandes.filter(
-    (d) => d.status === "Approuvé" || d.status === "Approuvée"
-  ).length;
-  const refuseesCount = demandes.filter(
-    (d) => d.status === "Refusé" || d.status === "Refusée"
-  ).length;
+  // Mutations
+  const approuverDemande = useApprouverDemande();
+  const refuserDemande = useRefuserDemande();
+  const deleteDemande = useDeleteDemande();
 
+  // Map employé pour accès rapide
+  const employeMap = React.useMemo(() => {
+    const map = new Map<number, { nom_employes: string; prenom_employes: string }>();
+    employes?.forEach((employe) =>
+      map.set(employe.id_employes, {
+        nom_employes: employe.nom_employes,
+        prenom_employes: employe.prenom_employes,
+      })
+    );
+    return map;
+  }, [employes]);
+
+  // Statistiques
+  const totalDemandes = filteredDemandes.length;
+  const enAttenteCount = filteredDemandes.filter((d) => d.status === "En attente").length;
+  const approuveesCount = filteredDemandes.filter((d) => d.status === "Approuvé" || d.status === "Approuvée").length;
+  const refuseesCount = filteredDemandes.filter((d) => d.status === "Refusé" || d.status === "Refusée").length;
+
+  // Navigation
   const handleAddDemande = () => {
     navigate("/administration/demandes/nouvelle");
   };
-
   const handleViewDemande = (id: number) => {
     navigate(`/administration/demandes/${id}/details`);
   };
+  const handleEditDemande = (id: number) => {
+    navigate(`/administration/demandes/${id}/modifier`);
+  };
 
-  // Fonction pour ouvrir le dialogue d'approbation
+  // Dialogues d'action
   const handleApproveClick = (id: number) => {
     setSelectedDemandeId(id);
     setShowApproveDialog(true);
   };
-
-  // Fonction pour ouvrir le dialogue de refus
   const handleRejectClick = (id: number) => {
     setSelectedDemandeId(id);
     setShowRejectDialog(true);
   };
-
-  // Fonction pour ouvrir le dialogue de suppression
   const handleDeleteClick = (id: number) => {
     setSelectedDemandeId(id);
     setShowDeleteDialog(true);
   };
 
-  // Fonction pour approuver une demande
+  // Actions mutation
   const handleApprove = async () => {
     if (!selectedDemandeId) return;
-
-    try {
-      setActionLoading(true);
-      const updatedData: {
-        status: string;
-        commentaire_approbation?: string;
-      } = {
-        status: "Approuvé",
-      };
-      if (approvalComment) {
-        updatedData.commentaire_approbation = approvalComment;
+    approuverDemande.mutate(
+      { id: selectedDemandeId, commentaire: approvalComment },
+      {
+        onSuccess: () => {
+          setShowApproveDialog(false);
+          setApprovalComment("");
+          setSelectedDemandeId(null);
+        },
       }
-
-      await updateDemande(selectedDemandeId, updatedData);
-
-      // Recharger les demandes pour avoir les nouveaux statuts
-      const demandesData = typeFilter
-        ? await fetchDemandesByType(typeFilter)
-        : await fetchDemandes();
-      setDemandes(demandesData);
-
-      setShowApproveDialog(false);
-      setApprovalComment("");
-      setSelectedDemandeId(null);
-
-      console.log("Demande approuvée avec succès");
-    } catch (err: unknown) {
-      console.error("Erreur lors de l'approbation:", err);
-      setError((typeof err === 'object' && err !== null && 'message' in err) ? (err as { message?: string }).message || "Erreur lors de l'approbation de la demande" : "Erreur lors de l'approbation de la demande");
-    } finally {
-      setActionLoading(false);
-    }
+    );
   };
-
-  // Fonction pour refuser une demande
   const handleReject = async () => {
     if (!selectedDemandeId) return;
-
-    try {
-      setActionLoading(true);
-      const updatedData: {
-        status: string;
-        motif_refus?: string;
-      } = {
-        status: "Refusé",
-      };
-      if (rejectionReason) {
-        updatedData.motif_refus = rejectionReason;
+    refuserDemande.mutate(
+      { id: selectedDemandeId, motif: rejectionReason },
+      {
+        onSuccess: () => {
+          setShowRejectDialog(false);
+          setRejectionReason("");
+          setSelectedDemandeId(null);
+        },
       }
-
-      await updateDemande(selectedDemandeId, updatedData);
-
-      // Recharger les demandes pour avoir les nouveaux statuts
-      const demandesData = typeFilter
-        ? await fetchDemandesByType(typeFilter)
-        : await fetchDemandes();
-      setDemandes(demandesData);
-
-      setShowRejectDialog(false);
-      setRejectionReason("");
-      setSelectedDemandeId(null);
-
-      console.log("Demande refusée avec succès");
-    } catch (err: unknown) {
-      console.error("Erreur lors du refus:", err);
-      setError((typeof err === 'object' && err !== null && 'message' in err) ? (err as { message?: string }).message || "Erreur lors du refus de la demande" : "Erreur lors du refus de la demande");
-    } finally {
-      setActionLoading(false);
-    }
+    );
   };
-
-  // Fonction pour supprimer une demande
   const handleDelete = async () => {
     if (!selectedDemandeId) return;
-
-    try {
-      setActionLoading(true);
-      await deleteDemande(selectedDemandeId);
-
-      // Recharger les demandes pour refléter la suppression
-      const demandesData = typeFilter
-        ? await fetchDemandesByType(typeFilter)
-        : await fetchDemandes();
-      setDemandes(demandesData);
-
-      setShowDeleteDialog(false);
-      setSelectedDemandeId(null);
-
-      console.log("Demande supprimée avec succès");
-    } catch (err: unknown) {
-      console.error("Erreur lors de la suppression:", err);
-      setError((typeof err === 'object' && err !== null && 'message' in err) ? (err as { message?: string }).message || "Erreur lors de la suppression de la demande" : "Erreur lors de la suppression de la demande");
-    } finally {
-      setActionLoading(false);
-    }
+    deleteDemande.mutate(
+      { id: selectedDemandeId },
+      {
+        onSuccess: () => {
+          setShowDeleteDialog(false);
+          setSelectedDemandeId(null);
+          toast.success('Demande supprimée avec succès');
+        },
+        onError: (err: unknown) => {
+          if (err instanceof Error) {
+            toast.error(err.message);
+          } else if (typeof err === 'object' && err !== null && 'message' in err) {
+            toast.error(String((err as { message?: string }).message));
+          } else {
+            toast.error('Erreur lors de la suppression de la demande');
+          }
+        }
+      }
+    );
   };
 
   const formatShortDate = (date: Date | string | null | undefined) => {
@@ -392,14 +294,13 @@ const DemandesAnnuaire: React.FC = () => {
     return colors[colorIndex];
   };
 
-  const uniqueTypes = Array.from(new Set(demandes.map((d) => d.type_demande)));
-  const uniqueStatuses = Array.from(new Set(demandes.map((d) => d.status)));
+  const uniqueTypes = Array.from(new Set(filteredDemandes.map((d) => d.type_demande)));
+  const uniqueStatuses = Array.from(new Set(filteredDemandes.map((d) => d.status)));
 
-  if (loading) {
+  if (demandesLoading || employesLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
         <div className="mb-4 text-gray-700">Chargement des demandes...</div>
-        {/* Optional: Add a spinner */}
         <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -407,11 +308,10 @@ const DemandesAnnuaire: React.FC = () => {
       </div>
     );
   }
-
-  if (error) {
+  if (demandesError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-red-600 bg-gray-50">
-        <div className="mb-4 text-lg font-medium">{error}</div>
+        <div className="mb-4 text-lg font-medium">{demandesError instanceof Error ? demandesError.message : String(demandesError)}</div>
         <Button
           onClick={() => window.location.reload()}
           variant="outline"
@@ -708,6 +608,16 @@ const DemandesAnnuaire: React.FC = () => {
                               <Eye size={14} className="mr-2" />
                               Voir les détails
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditDemande(demande.id_demandes);
+                              }}
+                              className="cursor-pointer text-xs py-1 text-blue-600"
+                            >
+                              <svg className="mr-2" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
+                              Modifier
+                            </DropdownMenuItem>
                             {demande.status === "En attente" && (
                               <>
                                 <DropdownMenuItem 
@@ -734,10 +644,14 @@ const DemandesAnnuaire: React.FC = () => {
                             )}
                             <DropdownMenuItem
                               className="text-red-600 focus:text-red-700 focus:bg-red-50"
-                              onClick={() => handleDeleteClick(demande.id_demandes)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(demande.id_demandes);
+                              }}
+                              disabled={deleteDemande.isLoading}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Supprimer
+                              {deleteDemande.isLoading ? 'Suppression...' : 'Supprimer'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -906,6 +820,16 @@ const DemandesAnnuaire: React.FC = () => {
                                   <Eye size={14} className="mr-2" />
                                   Voir les détails
                                 </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditDemande(demande.id_demandes);
+                                  }}
+                                  className="cursor-pointer text-xs py-1 text-blue-600"
+                                >
+                                  <svg className="mr-2" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
+                                  Modifier
+                                </DropdownMenuItem>
                                 {demande.status === "En attente" && (
                                   <>
                                     <DropdownMenuItem 
@@ -932,10 +856,14 @@ const DemandesAnnuaire: React.FC = () => {
                                 )}
                                 <DropdownMenuItem
                                   className="text-red-600 focus:text-red-700 focus:bg-red-50"
-                                  onClick={() => handleDeleteClick(demande.id_demandes)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteClick(demande.id_demandes);
+                                  }}
+                                  disabled={deleteDemande.isLoading}
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
-                                  Supprimer
+                                  {deleteDemande.isLoading ? 'Suppression...' : 'Supprimer'}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -957,7 +885,7 @@ const DemandesAnnuaire: React.FC = () => {
               Aucune demande trouvée
             </h3>
             <p className="text-gray-500 text-center max-w-md mb-4">
-              {demandes.length > 0
+              {filteredDemandes.length > 0
                 ? "Aucune demande ne correspond à vos critères de recherche. Essayez de modifier vos filtres ou d'effectuer une nouvelle recherche."
                 : "Il n'y a actuellement aucune demande enregistrée."}
             </p>
@@ -982,7 +910,7 @@ const DemandesAnnuaire: React.FC = () => {
               Affichage de{" "}
               <span className="font-medium">{filteredDemandes.length}</span>{" "}
               demande{filteredDemandes.length > 1 ? "s" : ""} sur{" "}
-              <span className="font-medium">{demandes.length}</span> au total
+              <span className="font-medium">{filteredDemandes.length}</span> au total
             </div>
             {/* Pagination buttons (still static in this corrected version, needs full implementation) */}
             <div className="flex gap-1">
@@ -1058,13 +986,13 @@ const DemandesAnnuaire: React.FC = () => {
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={approuverDemande.isLoading}>Annuler</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleApprove}
-              disabled={actionLoading}
+              disabled={approuverDemande.isLoading}
               className="bg-green-600 hover:bg-green-700"
             >
-              {actionLoading ? (
+              {approuverDemande.isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Approbation...
@@ -1101,13 +1029,13 @@ const DemandesAnnuaire: React.FC = () => {
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={refuserDemande.isLoading}>Annuler</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleReject}
-              disabled={actionLoading}
+              disabled={refuserDemande.isLoading}
               className="bg-red-600 hover:bg-red-700"
             >
-              {actionLoading ? (
+              {refuserDemande.isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Refus...
@@ -1134,15 +1062,15 @@ const DemandesAnnuaire: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>
+            <AlertDialogCancel disabled={deleteDemande.isLoading}>
               Annuler
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={actionLoading}
+              disabled={deleteDemande.isLoading}
               className="bg-red-600 hover:bg-red-700"
             >
-              {actionLoading ? (
+              {deleteDemande.isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Suppression...

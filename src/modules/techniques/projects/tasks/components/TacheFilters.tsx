@@ -10,15 +10,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tache } from "../../types/types";
 
 interface TacheFiltersProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  filterStatut: Tache["statut"] | "tous";
-  onFilterStatutChange: (statut: Tache["statut"] | "tous") => void;
-  filterPriorite: Tache["priorite"] | "toutes";
-  onFilterPrioriteChange: (priorite: Tache["priorite"] | "toutes") => void;
   filterProjet: number;
   onFilterProjetChange: (projetId: number) => void;
   filterAssignee: number;
@@ -31,10 +26,6 @@ interface TacheFiltersProps {
 export const TacheFilters: React.FC<TacheFiltersProps> = ({
   searchTerm,
   onSearchChange,
-  filterStatut,
-  onFilterStatutChange,
-  filterPriorite,
-  onFilterPrioriteChange,
   filterProjet,
   onFilterProjetChange,
   filterAssignee,
@@ -52,51 +43,10 @@ export const TacheFilters: React.FC<TacheFiltersProps> = ({
           <Label htmlFor="search">Rechercher</Label>
           <Input
             id="search"
-            placeholder="Rechercher par nom ou description..."
+            placeholder="Rechercher par nom..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
-        </div>
-
-        {/* Statut Filter */}
-        <div className="space-y-2">
-          <Label htmlFor="filter-statut">Statut</Label>
-          <Select
-            value={filterStatut}
-            onValueChange={(value) => onFilterStatutChange(value as Tache["statut"] | "tous")}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="tous">Tous les statuts</SelectItem>
-              <SelectItem value="à faire">À faire</SelectItem>
-              <SelectItem value="en cours">En cours</SelectItem>
-              <SelectItem value="en revue">En revue</SelectItem>
-              <SelectItem value="terminé">Terminé</SelectItem>
-              <SelectItem value="bloqué">Bloqué</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Priorité Filter - CORRECTION ICI */}
-        <div className="space-y-2">
-          <Label htmlFor="filter-priorite">Priorité</Label>
-          <Select
-            value={filterPriorite || "toutes"}
-            onValueChange={(value) => onFilterPrioriteChange(value as Tache["priorite"] | "toutes")}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrer par priorité" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="toutes">Toutes les priorités</SelectItem>
-              <SelectItem value="basse">Basse</SelectItem>
-              <SelectItem value="moyenne">Moyenne</SelectItem>
-              <SelectItem value="élevée">Élevée</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Projet Filter */}
@@ -119,7 +69,7 @@ export const TacheFilters: React.FC<TacheFiltersProps> = ({
           </Select>
         </div>
 
-        {/* Assignee Filter - CORRECTION ICI */}
+        {/* Assignee Filter */}
         <div className="space-y-2">
           <Label htmlFor="filter-assignee">Assigné à</Label>
           <Select
@@ -131,11 +81,9 @@ export const TacheFilters: React.FC<TacheFiltersProps> = ({
             </SelectTrigger>
             <SelectContent>
               {employesOptions.map((option) => {
-                // Filtrer les options avec des noms vides ou invalides
                 if (!option.name || option.name.trim() === '') {
                   return null;
                 }
-                
                 return (
                   <SelectItem key={option.id} value={String(option.id)}>
                     {option.name}
@@ -146,7 +94,6 @@ export const TacheFilters: React.FC<TacheFiltersProps> = ({
           </Select>
         </div>
       </div>
-      
       <div className="text-sm text-gray-600">
         <Badge variant="outline" className="mr-2">
           {resultCount} tâche(s) trouvée(s)

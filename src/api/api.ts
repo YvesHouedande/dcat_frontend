@@ -12,10 +12,11 @@ export function getAxiosErrorMessage(error: unknown): string {
       "Une erreur est survenue"
     );
   }
-  return "Une erreur inattendue s’est produite";
+  return "Une erreur inattendue s'est produite";
 }
+
 export const useApi = () => {
-  const { keycloak } = useKeycloak();
+  const { keycloak, initialized } = useKeycloak();
 
   const api = useMemo(() => {
     const instance = axios.create({
@@ -23,16 +24,47 @@ export const useApi = () => {
     });
 
     instance.interceptors.request.use(
-      (config) => {
-        const token = keycloak?.token;
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+      async (config) => {
+        // Vérifier que Keycloak est initialisé
+        if (!initialized) {
+          console.warn("Keycloak not initialized yet");
+          return config;
         }
+
+        // Vérifier si l'utilisateur est authentifié
+        if (!keycloak?.authenticated) {
+          console.warn("User not authenticated");
+          return config;
+        }
+
+        // Vérifier si le token existe et n'est pas expiré
+        if (keycloak.token) {
+          // Actualiser le token s'il expire bientôt (dans les 30 secondes)
+          try {
+            
+            const refreshed = await keycloak.updateToken(30);
+            if (refreshed) {
+              console.log("Token refreshed");
+            }
+          } catch (error) {
+            console.error("Failed to refresh token:", error);
+            // Optionnel : rediriger vers la page de connexion
+            // keycloak.login();
+          }
+
+          // Ajouter le token aux headers
+          config.headers.Authorization = `Bearer ${keycloak.token}`;
+          console.log("Token added to request headers");
+        } else {
+          console.warn("No token available");
+        }
+
         return config;
       },
       (error) => {
+        console.error("Request interceptor error:", error);
         toast.error(
-          "Erreur lors de l'envoi de la requête." + getAxiosErrorMessage(error)
+          "Erreur lors de l'envoi de la requête: " + getAxiosErrorMessage(error)
         );
         return Promise.reject(error);
       }
@@ -45,28 +77,38 @@ export const useApi = () => {
         }
         return response;
       },
-      (error) => {
+      async (error) => {
         if (error.response) {
           const status = error.response.status;
 
-          if (status === 401 || status === 403) {
-            toast.error("Accès non autorisé. Veuillez vous reconnecter.");
+          if (status === 401) {
+            toast.error("Session expirée. Reconnexion en cours...");
+            // Essayer de rafraîchir le token
+            try {
+              if (keycloak?.authenticated) {
+                await keycloak.updateToken(-1); // Force refresh
+                // Retry the original request
+                return instance.request(error.config);
+              } else {
+                keycloak?.login();
+              }
+            } catch (refreshError) {
+              console.error("Token refresh failed:", refreshError);
+              keycloak?.login();
+            }
+          } else if (status === 403) {
+            toast.error("Accès non autorisé.");
           } else if (status === 500) {
             toast.error(
-              "Erreur interne du serveur." + getAxiosErrorMessage(error)
+              "Erreur interne du serveur: " + getAxiosErrorMessage(error)
             );
           } else {
-            toast.error(`Erreur ${status} : ${getAxiosErrorMessage(error)}`);
+            toast.error(`Erreur ${status}: ${getAxiosErrorMessage(error)}`);
           }
         } else if (error.request) {
-          toast.error(
-            "Le serveur ne répond pas. Vérifiez votre connexion." +
-              getAxiosErrorMessage(error)
-          );
+          toast.error("Le serveur ne répond pas. Vérifiez votre connexion. ", {description: getAxiosErrorMessage(error)});
         } else {
-          toast.error(
-            "Erreur : " + error.message + " " + getAxiosErrorMessage(error)
-          );
+          toast.error("Erreur: " + error.message);
         }
 
         return Promise.reject(error);
@@ -74,7 +116,7 @@ export const useApi = () => {
     );
 
     return instance;
-  }, [keycloak?.token]);
+  }, [initialized, keycloak]);
 
   return api;
 };

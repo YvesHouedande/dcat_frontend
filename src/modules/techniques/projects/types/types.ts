@@ -21,7 +21,7 @@ export interface Projet {
   date_fin: string | Date | null; 
   duree_prevu_projet: string;
   description_projet: string;
-  etat: "planifié" | "en_cours" | "terminé" | "annulé";
+  etat: "planifié" | "en_cours" | "terminé" | "annulé" | "bloqué";
   lieu: string;
   responsable: string;
   site: string;
@@ -38,16 +38,23 @@ export interface Tache {
   id_tache: number;
   nom_tache: string;
   desc_tache: string;
-  statut: "à faire" | "en cours" | "en revue" | "terminé" | "bloqué";
+  statut: string;
+  priorite: string;
   date_debut: string;
   date_fin: string;
-  priorite: string;
-  id_projet: number;
-  // id_assigne_a a été retiré de cette interface car il est géré séparément par l'API
+  id_operation: number;
 }
 
 // Type pour les données envoyées lors de la création d'une tâche
-export type CreateTachePayload = Omit<Tache, 'id_tache'>; // id_tache est le seul champ omis désormais
+export type CreateTachePayload = {
+  nom_tache: string;
+  date_debut: string;
+  date_fin: string;
+  id_operation: number;
+  desc_tache?: string;
+  statut?: "planifié" | "en cours" | "terminé" | "annulé" | "bloqué";
+  priorite?: string;
+};
 
 // Type pour les données envoyées lors de la mise à jour d'une tâche
 export type UpdateTachePayload = Partial<Omit<Tache, 'id_tache'>>;
@@ -65,13 +72,6 @@ export interface ApiResponse<T> {
   livrables?: Livrable[]; // Utilisé pour la liste de livrables par projet (GET /livrables/projet/{projetId})
   pagination?: Pagination; // Optionnel, pour les réponses paginées
 }
-// Les types pour les payloads de création et de mise à jour restent valides,
-// car ils étaient déjà basés sur Omit de id_tache et id_assigne_a.
-// Cependant, si Tache n'a plus id_assigne_a, alors Omit<Tache, 'id_assigne_a'> devient redondant.
-// Nous pouvons les simplifier.
-
-
-
 
 // Interface pour les livrables
 export interface Livrable {
@@ -110,7 +110,6 @@ export type CreateLivrablePayload = Omit<Livrable, 'id_livrable' | 'documents'>;
 
 // Payload pour la mise à jour d'un Livrable (méthode PUT)
 // Le backend s'attend à l'objet complet même si seule une partie est modifiée,
-// mais le type est défini comme Partial pour la flexibilité côté frontend, comme pour les tâches.
 export type UpdateLivrablePayload = Partial<Omit<Livrable, 'id_livrable' | 'documents'>>;
 
 // Payload pour les champs texte lors de l'ajout d'un Document (via multipart/form-data)
@@ -135,3 +134,15 @@ export interface Pagination {
 
 // Interface générique pour les réponses de l'API
 // Elle est flexible car les clés de retour varient selon l'endpoint (ex: 'data', 'livrable', 'document', 'documents', 'livrables', 'message')
+
+// Interface pour les opérations
+export interface Operation {
+  id_operation: number;
+  nom_operation: string;
+  desc_operation: string;
+  statut: string;
+  date_debut: string;
+  date_fin: string;
+  priorite: string;
+  id_projet: number;
+}

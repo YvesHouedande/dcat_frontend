@@ -1,8 +1,7 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
 // MODIFICATION ICI : Import de TacheWithAssignedEmployes
-import { Tache, Projet, TacheWithAssignedEmployes } from "../../types/types"; 
+import { Projet, TacheWithAssignedEmployes, Operation } from "../../types/types"; 
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -17,6 +16,7 @@ type TacheRowProps = {
   onView: (id: number) => void;
   onEdit: (id: number) => void;
   projets: Projet[];
+  operations: Operation[];
   // SUPPRESSION : La prop 'employes' n'est plus nécessaire ici
   // employes: Employe[];
 };
@@ -27,6 +27,7 @@ export const TacheRow = ({
   onView,
   onEdit,
   projets,
+  operations,
   // SUPPRESSION : Plus besoin de destructuring 'employes'
   // employes,
 }: TacheRowProps) => {
@@ -51,10 +52,12 @@ export const TacheRow = ({
   //   loadEmployesAssignes();
   // }, [tache.id_tache]);
 
-  // Fonction pour obtenir le nom du projet à partir de son ID (inchangée)
-  const getProjectName = (projectId: number): string => {
-    const projet = projets.find((p) => p.id_projet === projectId);
-    return projet ? projet.nom_projet : "Projet Inconnu";
+  // Nouvelle fonction pour retrouver le nom du projet via l'opération
+  const getProjectName = (operationId: number): string => {
+    const operation = operations.find((op) => op.id_operation === operationId);
+    if (!operation) return "Opération inconnue";
+    const projet = projets.find((p) => p.id_projet === operation.id_projet);
+    return projet ? projet.nom_projet : "Projet inconnu";
   };
 
   // Fonction pour afficher les employés assignés (adaptée, utilise tache.id_assigne_a directement)
@@ -112,56 +115,23 @@ export const TacheRow = ({
     ).join('\n');
   };
 
-  // Fonction pour obtenir le badge de statut stylisé (inchangée)
-  const getStatutBadge = (statut: Tache["statut"]) => {
-    switch (statut) {
-      case "à faire": return <Badge variant="secondary">À faire</Badge>;
-      case "en cours": return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">En cours</Badge>;
-      case "en revue": return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">En revue</Badge>;
-      case "terminé": return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Terminé</Badge>;
-      case "bloqué": return <Badge variant="destructive">Bloqué</Badge>;
-      default: return <Badge variant="outline">{statut}</Badge>;
-    }
-  };
+
 
   // Fonction pour obtenir le badge de priorité stylisé (correction du cas 'urgent')
-  const getPriorityBadge = (priorite: Tache["priorite"]) => {
-    // Ajout d'une vérification pour priorite.toLowerCase() pour plus de robustesse
-    if (!priorite || typeof priorite !== 'string') {
-        return <Badge variant="outline">Non définie</Badge>;
-    }
 
-    switch (priorite.toLowerCase()) {
-      case "basse": return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Basse</Badge>;
-      case "moyenne": return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Moyenne</Badge>;
-      case "haute":
-      case "élevée": // Ajouté pour être compatible avec les deux écritures potentielles
-        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Haute</Badge>;
-      case "urgent": // Cas 'urgent' ajouté
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Urgent</Badge>;
-      default: return <Badge variant="outline">{priorite}</Badge>;
-    }
-  };
 
   return (
     <TableRow>
       <TableCell className="font-medium">{tache.nom_tache}</TableCell>
-      <TableCell>{getProjectName(tache.id_projet)}</TableCell>
+      <TableCell>{getProjectName(tache.id_operation)}</TableCell>
       <TableCell className="max-w-[200px]">
         <div className="truncate" title={getEmployesAssignesTitle()}>
           {getEmployesAssignesDisplay()}
         </div>
       </TableCell>
-      <TableCell>{getStatutBadge(tache.statut)}</TableCell>
-      <TableCell>{getPriorityBadge(tache.priorite)}</TableCell>
       <TableCell>
-        {tache.date_debut ? format(new Date(tache.date_debut), 'dd/MM/yyyy', { locale: fr }) : 'N/A'} -{" "}
-        {tache.date_fin ? format(new Date(tache.date_fin), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+        {tache.date_debut ? format(new Date(tache.date_debut), 'dd/MM/yyyy', { locale: fr }) : 'N/A'} - {tache.date_fin ? format(new Date(tache.date_fin), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
       </TableCell>
-      {/* SUPPRESSION : Retrait de la cellule de description pour correspondre à TacheTable */}
-      {/* <TableCell className="max-w-[300px] truncate">
-        {tache.desc_tache || "N/A"}
-      </TableCell> */}
       <TableCell className="text-right">
         <div className="flex justify-end space-x-2">
           <Button variant="ghost" size="icon" onClick={() => onView(tache.id_tache)} title="Voir détails">

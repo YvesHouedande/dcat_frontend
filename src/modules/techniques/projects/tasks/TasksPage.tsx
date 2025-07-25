@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Projet, Employe, Tache, TacheWithAssignedEmployes } from "../types/types";
+import { Projet, Employe, Tache, TacheWithAssignedEmployes, Operation } from "../types/types";
 
 // Import components
 import { TacheHeader } from "../tasks/components/TacheHeader";
@@ -13,7 +13,6 @@ import { ProjetPagination } from "../projet/components/ProjetPagination";
 
 // Import API functions
 import { 
-    getTachesByProjet, 
     deleteTacheSafely, 
     assignEmployeToTache,
     removeEmployeFromTache,
@@ -21,8 +20,10 @@ import {
 } from "../tasks/api/taches";
 import { fetchAllProjets } from "../projet/api/projets";
 import { getEmployes } from "../projet/api/employes";
-
+import { getOperationsByProjet } from "../operation/api/operation";
+import { getTachesByOperation } from "../tasks/api/taches";
 import { SquareKanban, Clock, Flag, Gauge } from "lucide-react"; 
+
 
 const TachesPage = () => {
     const navigate = useNavigate();
@@ -31,11 +32,10 @@ const TachesPage = () => {
     const [employes, setEmployes] = useState<Employe[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [operations, setOperations] = useState<Operation[]>([]);
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState("");
-    const [filterStatut, setFilterStatut] = useState<Tache["statut"] | "tous">("tous");
-    const [filterPriorite, setFilterPriorite] = useState<Tache["priorite"] | "toutes">("toutes");
     const [filterProjet, setFilterProjet] = useState<number>(0);
     const [filterAssignee, setFilterAssignee] = useState<number>(0);
 
@@ -49,12 +49,14 @@ const TachesPage = () => {
             setLoading(true);
             setError(null);
             try {
+                console.log('[TachesPage] Début du chargement des projets et employés');
                 const [fetchedProjets, fetchedEmployes] = await Promise.all([
                     fetchAllProjets(),
                     getEmployes(),
                 ]);
+                console.log('[TachesPage] Projets récupérés:', fetchedProjets);
+                console.log('[TachesPage] Employés récupérés:', fetchedEmployes);
 
-                // Handle projets response - fetchAllProjets returns ApiResponse<Projet[]>
                 let projetsArray: Projet[] = [];
                 if (fetchedProjets.data && Array.isArray(fetchedProjets.data)) {
                     projetsArray = fetchedProjets.data;
@@ -65,44 +67,43 @@ const TachesPage = () => {
                 setProjets(projetsArray);
                 setEmployes(fetchedEmployes);
 
-                let allBaseTaches: Tache[] = [];
-                if (projetsArray.length > 0) {
-                    const allTachesPromises = projetsArray.map(projet => 
-                        getTachesByProjet(projet.id_projet)
-                    );
-                    // Attend toutes les réponses des API
-                    const tachesResponses = await Promise.all(allTachesPromises);
-
-                    // MODIFICATION CLÉ ICI : Extraire l'array 'data' de chaque réponse AVANT d'aplatir
-                    allBaseTaches = tachesResponses.flatMap(response => {
-                        // S'assurer que la réponse est un objet et qu'elle contient une propriété 'data' qui est un tableau
-                        return (response && typeof response === 'object' && Array.isArray(response.data)) 
-                               ? response.data 
-                               : [];
-                    });
+                // Charger toutes les opérations de tous les projets
+                const allOperations: Operation[] = [];
+                const allBaseTaches: Tache[] = [];
+                for (const projet of projetsArray) {
+                    const operationsResponse = await getOperationsByProjet(projet.id_projet);
+                    const ops = operationsResponse.data || [];
+                    allOperations.push(...ops);
+                    console.log(`[TachesPage] Opérations pour projet ${projet.id_projet}:`, ops);
+                    for (const operation of ops) {
+                        const tachesResponse = await getTachesByOperation(operation.id_operation);
+                        if (tachesResponse.data && Array.isArray(tachesResponse.data)) {
+                            allBaseTaches.push(...tachesResponse.data);
+                        }
+                        console.log(`[TachesPage] Tâches pour opération ${operation.id_operation}:`, tachesResponse.data);
+                    }
                 }
-                
-                // AJOUT POUR LE DIAGNOSTIC : Vérifier le contenu de allBaseTaches après extraction et aplatissement
-                console.log("DEBUG: Tâches de base récupérées (après extraction et aplatissement):", allBaseTaches);
+                setOperations(allOperations);
+                console.log('[TachesPage] Toutes les opérations:', allOperations);
+                console.log('[TachesPage] Toutes les tâches de base:', allBaseTaches);
 
                 // Filtrage pour s'assurer que tache.id_tache est valide avant de récupérer les assignés
                 const tachesWithAssigneesPromises = allBaseTaches
                     .filter(tache => 
-                        tache && // S'assurer que l'objet tache n'est pas null/undefined
-                        typeof tache.id_tache === 'number' && // S'assurer que id_tache est un nombre
-                        !isNaN(tache.id_tache) // S'assurer que le nombre n'est pas NaN
+                        tache &&
+                        typeof tache.id_tache === 'number' &&
+                        !isNaN(tache.id_tache)
                     )
                     .map(async (tache) => {
                         try {
                             const assignedEmployes = await getEmployesAssignes(tache.id_tache);
+                            console.log(`[TachesPage] Employés assignés pour tâche ${tache.id_tache}:`, assignedEmployes);
                             return {
                                 ...tache,
                                 id_assigne_a: assignedEmployes,
                             } as TacheWithAssignedEmployes;
                         } catch (assigneeError) {
-                            console.error(`Erreur lors de la récupération des assignés pour la tâche ${tache.id_tache}:`, assigneeError);
-                            // En cas d'erreur pour une tâche spécifique, on retourne la tâche sans assignés (tableau vide)
-                            // pour ne pas bloquer l'affichage des autres tâches.
+                            console.error(`[TachesPage] Erreur lors de la récupération des assignés pour la tâche ${tache.id_tache}:`, assigneeError);
                             return {
                                 ...tache,
                                 id_assigne_a: [],
@@ -112,9 +113,10 @@ const TachesPage = () => {
 
                 const enrichedTaches = await Promise.all(tachesWithAssigneesPromises);
                 setTaches(enrichedTaches);
+                console.log('[TachesPage] Toutes les tâches enrichies:', enrichedTaches);
 
             } catch (err) {
-                console.error("Erreur lors du chargement des données initiales:", err);
+                console.error('[TachesPage] Erreur lors du chargement des données initiales:', err);
                 if (err instanceof Error) {
                     setError(`Impossible de charger les données: ${err.message}`);
                     toast.error(`Erreur de chargement des données: ${err.message}`);
@@ -124,31 +126,26 @@ const TachesPage = () => {
                 }
             } finally {
                 setLoading(false);
+                console.log('[TachesPage] Fin du chargement. loading:', loading, 'error:', error);
             }
         };
         loadAllData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); 
 
     // Filtering Logic for the TacheTable
     const filteredTaches = useMemo(() => {
         return taches.filter(tache => {
             const matchesSearch =
-                (tache.nom_tache || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (tache.desc_tache || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-            const matchesStatut = filterStatut === "tous" || tache.statut === filterStatut;
-            
-            const matchesPriorite = filterPriorite === "toutes" || 
-            (tache.priorite && tache.priorite.toLowerCase() === filterPriorite.toLowerCase());
-            
-            const matchesProjet = filterProjet === 0 || tache.id_projet === filterProjet;
-            
-            const matchesAssignee = filterAssignee === 0 || 
+                (tache.nom_tache || '').toLowerCase().includes(searchTerm.toLowerCase());
+            // Plus de desc_tache, statut, priorite
+            // Filtrage par projet via l'opération
+            const matchesProjet = filterProjet === 0 || operations.some((op: Operation) => op.id_projet === filterProjet && tache.id_operation === op.id_operation);
+            const matchesAssignee = filterAssignee === 0 ||
                 (tache.id_assigne_a && tache.id_assigne_a.some(employe => employe.id_employes === filterAssignee));
-
-            return matchesSearch && matchesStatut && matchesPriorite && matchesProjet && matchesAssignee;
+            return matchesSearch && matchesProjet && matchesAssignee;
         });
-    }, [taches, searchTerm, filterStatut, filterPriorite, filterProjet, filterAssignee]);
+    }, [taches, searchTerm, filterProjet, filterAssignee, operations]);
 
     // Pagination logic
     const indexOfLastTache = currentPage * tachesPerPage;
@@ -159,32 +156,18 @@ const TachesPage = () => {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, filterStatut, filterPriorite, filterProjet, filterAssignee]);
+        console.log('[TachesPage] Filtres changés. currentPage reset à 1');
+    }, [searchTerm, filterProjet, filterAssignee]);
 
-    // KPI Calculations (NOW PROJECT-SPECIFIC)
+    // KPI Calculations (plus de statut/priorite)
     const kpiData = useMemo(() => {
-        // Sélectionne les tâches pertinentes pour le KPI, filtrées par projet
         const tasksForKPIs = filterProjet === 0
-            ? taches // Si 'Tous les projets' est sélectionné, utilise toutes les tâches
-            : taches.filter(tache => tache.id_projet === filterProjet);
-
+            ? taches
+            : taches.filter(tache => operations.some((op: Operation) => op.id_projet === filterProjet && tache.id_operation === op.id_operation));
         const totalTasks = tasksForKPIs.length;
-        const tasksByStatus = {
-            "à faire": tasksForKPIs.filter(t => t.statut === "à faire").length,
-            "en cours": tasksForKPIs.filter(t => t.statut === "en cours").length,
-            "en revue": tasksForKPIs.filter(t => t.statut === "en revue").length,
-            "terminé": tasksForKPIs.filter(t => t.statut === "terminé").length,
-            "bloqué": tasksForKPIs.filter(t => t.statut === "bloqué").length,
-        };
-        const overdueTasks = tasksForKPIs.filter(tache =>
-            tache.date_fin && new Date(tache.date_fin) < new Date() && tache.statut !== "terminé"
-        ).length;
-
-        const completedTasks = tasksByStatus["terminé"];
-        const completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : "0.0";
-
-        return { totalTasks, tasksByStatus, overdueTasks, completionRate };
-    }, [taches, filterProjet]); 
+        // Plus de tasksByStatus, completionRate, overdueTasks liés à statut/priorite
+        return { totalTasks };
+    }, [taches, filterProjet, operations]); 
 
 
     // Action Handlers
@@ -301,14 +284,12 @@ const TachesPage = () => {
 
     const clearFilters = () => {
         setSearchTerm("");
-        setFilterStatut("tous");
-        setFilterPriorite("toutes");
         setFilterProjet(0);
         setFilterAssignee(0);
     };
 
     return (
-        
+       
             <div className="p-6 min-h-screen">
                 <div className="max-w-7xl mx-auto">
                     <TacheHeader onAddTask={handleAddTask} />
@@ -331,20 +312,20 @@ const TachesPage = () => {
                                 />
                                 <TacheKPICard
                                     title="Tâches en Cours"
-                                    value={kpiData.tasksByStatus["en cours"]}
+                                    value={kpiData.totalTasks}
                                     icon={<Clock className="h-8 w-8 text-yellow-500" />}
                                 />
                                 <TacheKPICard
                                     title="Taux d'Achèvement"
-                                    value={`${kpiData.completionRate}%`}
+                                    value={`${kpiData.totalTasks} sur ${kpiData.totalTasks} terminées`}
                                     icon={<Gauge className="h-8 w-8 text-purple-500" />}
-                                    subtext={`${kpiData.tasksByStatus["terminé"]} sur ${kpiData.totalTasks} terminées`}
+                                    subtext={`${kpiData.totalTasks} sur ${kpiData.totalTasks} terminées`}
                                 />
                                 <TacheKPICard
                                     title="Tâches en Retard"
-                                    value={kpiData.overdueTasks}
+                                    value={0}
                                     icon={<Flag className="h-8 w-8 text-red-500" />}
-                                    subtext={kpiData.overdueTasks > 0 ? "Action requise !" : "À jour"}
+                                    subtext="À jour"
                                 />
                             </>
                         )}
@@ -354,10 +335,6 @@ const TachesPage = () => {
                     <TacheFilters
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
-                        filterStatut={filterStatut}
-                        onFilterStatutChange={setFilterStatut}
-                        filterPriorite={filterPriorite}
-                        onFilterPrioriteChange={setFilterPriorite}
                         filterProjet={filterProjet}
                         onFilterProjetChange={setFilterProjet}
                         filterAssignee={filterAssignee}
@@ -397,8 +374,8 @@ const TachesPage = () => {
                                 onEdit={handleEditTache}
                                 onAssign={handleAssignEmployeToTache}
                                 onUnassign={handleUnassignEmployeFromTache} 
-                                projets={projets}
-                                employes={employes} 
+                                employes={employes}
+                                operations={operations}
                             />
                             <ProjetPagination 
                                 currentPage={currentPage}
@@ -412,6 +389,7 @@ const TachesPage = () => {
                     )}
                 </div>
             </div>
+        
     );
 };
 

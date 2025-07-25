@@ -16,7 +16,8 @@ import { format, subDays, parseISO, isWithinInterval } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getInterventions } from "../../interventions/api/intervention";
 import { fetchAllProjets } from "../projet/api/projets";
-import { getTachesByProjet } from "../tasks/api/taches";
+import { getOperationsByProjet } from "../operation/api/operation";
+import { getTachesByOperation } from "../tasks/api/taches";
 import { Intervention } from "../../interventions/interface/interface";
 import { Projet, Tache } from "../types/types";
 import { Progress } from "@/components/ui/progress";
@@ -45,8 +46,14 @@ const VueGlobalPage: React.FC = () => {
         // Fetch tasks for all projects
         const allTasks: Tache[] = [];
         for (const project of projectsArray) {
-          const tasksResponse = await getTachesByProjet(project.id_projet);
-          allTasks.push(...(tasksResponse.data || []));
+          const operationsResponse = await getOperationsByProjet(project.id_projet);
+          const operations = operationsResponse.data || [];
+          for (const operation of operations) {
+            const tachesResponse = await getTachesByOperation(operation.id_operation);
+            if (tachesResponse.data && Array.isArray(tachesResponse.data)) {
+              allTasks.push(...tachesResponse.data);
+            }
+          }
         }
         setTasks(allTasks);
       } catch (error) {

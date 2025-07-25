@@ -8,10 +8,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Trash2, UserMinus, UserPlus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Edit, Eye, Trash2, UserMinus, UserPlus, ArrowUp, ArrowDown } from "lucide-react";
 // Importez TacheWithAssignedEmployes qui contient le tableau complet d'Employe
-import { Tache, Projet, Employe, TacheWithAssignedEmployes } from "../../types/types"; 
+import {Employe, TacheWithAssignedEmployes, Operation } from "../../types/types"; 
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -30,8 +29,8 @@ interface TacheTableProps {
   onEdit: (id: number) => void;
   onAssign?: (tacheId: number, employeId: number) => void;
   onUnassign?: (tacheId: number, employeId: number) => void;
-  projets: Projet[];
   employes: Employe[]; // Liste de TOUS les employés disponibles
+  operations: Operation[]; // Ajouté pour compatibilité avec TasksPage
 }
 
 export const TacheTable: React.FC<TacheTableProps> = ({
@@ -41,18 +40,65 @@ export const TacheTable: React.FC<TacheTableProps> = ({
   onEdit,
   onAssign,
   onUnassign,
-  projets,
   employes, // Tous les employés
 }) => {
-  const projectNameMap = new Map(projets.map((p) => [p.id_projet, p.nom_projet]));
+  const [sortBy, setSortBy] = React.useState<string>("nom_tache");
+  const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
 
-  const getProjectName = (projectId: number): string => {
-    return projectNameMap.get(projectId) || "Projet Inconnu";
+  const handleSort = (col: string) => {
+    if (sortBy === col) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(col);
+      setSortOrder("asc");
+    }
   };
+
+  const sortedTaches = React.useMemo(() => {
+    const ts = [...taches];
+    ts.sort((a, b) => {
+      let aVal: string | number | undefined;
+      let bVal: string | number | undefined;
+      switch (sortBy) {
+        case "nom_tache":
+          aVal = a.nom_tache;
+          bVal = b.nom_tache;
+          break;
+        case "statut":
+          aVal = a.statut;
+          bVal = b.statut;
+          break;
+        case "priorite":
+          aVal = a.priorite;
+          bVal = b.priorite;
+          break;
+        case "date_debut":
+          aVal = a.date_debut;
+          bVal = b.date_debut;
+          break;
+        case "id_assigne_a":
+          aVal = a.id_assigne_a ? a.id_assigne_a.length : 0;
+          bVal = b.id_assigne_a ? b.id_assigne_a.length : 0;
+          break;
+        default:
+          aVal = a.nom_tache;
+          bVal = b.nom_tache;
+      }
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+    return ts;
+  }, [taches, sortBy, sortOrder]);
+
+  // SUPPRESSION : plus besoin de projectNameMap ni de getProjectName
 
   // Fonction pour gérer l'affichage des employés assignés (déjà correcte pour Employe[])
   const getEmployesAssignesDisplay = (tache: TacheWithAssignedEmployes): string => {
-    // tache.id_assigne_a est déjà de type Employe[]
     const employesAssignes = tache.id_assigne_a || []; 
     
     if (employesAssignes.length === 0) {
@@ -112,56 +158,69 @@ export const TacheTable: React.FC<TacheTableProps> = ({
     return employes.filter(emp => !assignedIds.includes(emp.id_employes));
   };
 
-  // Fonctions pour les badges de statut et priorité (déjà correctes)
-  const getStatutBadge = (statut: Tache["statut"]) => {
+  // Ajoute les helpers pour les couleurs de badge
+  function getStatutBadgeColor(statut: string) {
     switch (statut) {
-      case "à faire": return <Badge variant="secondary">À faire</Badge>;
-      case "en cours": return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">En cours</Badge>;
-      case "en revue": return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">En revue</Badge>;
-      case "terminé": return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Terminé</Badge>;
-      case "bloqué": return <Badge variant="destructive">Bloqué</Badge>;
-      default: return <Badge variant="outline">{statut}</Badge>;
+      case 'en cours': return 'bg-yellow-100 text-yellow-800';
+      case 'terminé': return 'bg-green-100 text-green-800';
+      case 'planifié': return 'bg-gray-100 text-gray-800';
+      case 'bloqué': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-50 text-gray-500';
     }
-  };
+  }
+  function getPrioriteBadgeColor(priorite: string) {
+    switch (priorite) {
+      case 'haute': return 'bg-red-100 text-red-800';
+      case 'moyenne': return 'bg-yellow-100 text-yellow-800';
+      case 'basse': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-50 text-gray-500';
+    }
+  }
 
-  const getPriorityBadge = (priorite: Tache["priorite"]) => {
-    if (!priorite || typeof priorite !== 'string') {
-      return <Badge variant="outline">Non définie</Badge>;
-    }
-
-    switch (priorite.toLowerCase()) {
-      case "basse": return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Basse</Badge>;
-      case "moyenne": return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Moyenne</Badge>;
-      case "élevée":
-      case "haute": return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Élevée</Badge>;
-      case "urgent": return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Urgent</Badge>;
-      default: return <Badge variant="outline">{priorite}</Badge>;
-    }
-  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nom de la tâche</TableHead>
-            <TableHead>Projet</TableHead>
-            <TableHead>Assigné à</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Priorité</TableHead>
-            <TableHead>Dates</TableHead>
+            <TableHead onClick={() => handleSort("nom_tache")}
+              className="cursor-pointer select-none">
+              Nom de la tâche
+              {sortBy === "nom_tache" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            {/* SUPPRIMÉ : <TableHead>Projet</TableHead> */}
+            <TableHead onClick={() => handleSort("id_assigne_a")}
+              className="cursor-pointer select-none">
+              Assigné à
+              {sortBy === "id_assigne_a" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            <TableHead onClick={() => handleSort("statut")}
+              className="cursor-pointer select-none">
+              Statut
+              {sortBy === "statut" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            <TableHead onClick={() => handleSort("priorite")}
+              className="cursor-pointer select-none">
+              Priorité
+              {sortBy === "priorite" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
+            <TableHead onClick={() => handleSort("date_debut")}
+              className="cursor-pointer select-none">
+              Dates
+              {sortBy === "date_debut" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+            </TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {taches.length === 0 ? (
+          {sortedTaches.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-4 text-gray-500">
                 Aucune tâche trouvée.
               </TableCell>
             </TableRow>
           ) : (
-            taches.map((tache) => {
+            sortedTaches.map((tache) => {
               // tache est maintenant de type TacheWithAssignedEmployes
               const unassignedEmployees = getUnassignedEmployees(tache);
               const assignedEmployees = tache.id_assigne_a || []; // Assuré d'être Employe[]
@@ -169,7 +228,7 @@ export const TacheTable: React.FC<TacheTableProps> = ({
               return (
                 <TableRow key={tache.id_tache}>
                   <TableCell className="font-medium">{tache.nom_tache}</TableCell>
-                  <TableCell>{getProjectName(tache.id_projet)}</TableCell>
+                  {/* SUPPRIMÉ : <TableCell>{getProjectName(tache.id_projet)}</TableCell> */}
                   <TableCell className="max-w-[200px]">
                     <div 
                       className="truncate cursor-help" 
@@ -178,8 +237,12 @@ export const TacheTable: React.FC<TacheTableProps> = ({
                       {getEmployesAssignesDisplay(tache)}
                     </div>
                   </TableCell>
-                  <TableCell>{getStatutBadge(tache.statut)}</TableCell>
-                  <TableCell>{getPriorityBadge(tache.priorite)}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${getStatutBadgeColor(tache.statut)}`}>{tache.statut}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${getPrioriteBadgeColor(tache.priorite)}`}>{tache.priorite}</span>
+                  </TableCell>
                   <TableCell>
                     {tache.date_debut ? format(new Date(tache.date_debut), 'dd/MM/yyyy', { locale: fr }) : 'N/A'} -{" "}
                     {tache.date_fin ? format(new Date(tache.date_fin), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}

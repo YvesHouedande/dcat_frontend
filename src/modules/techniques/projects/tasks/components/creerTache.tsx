@@ -2,31 +2,33 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TacheForm from './TacheForm';
-import { Projet, Employe, CreateTachePayload } from '../../types/types';
+import { Employe, CreateTachePayload, Operation } from '../../types/types'; // Projet retiré de l'import
 import { createTache, assignEmployeToTache } from '../api/taches';
-import { fetchAllProjets } from '../../projet/api/projets';
+// import { fetchAllProjets } from '../../projet/api/projets'; // Import de fetchAllProjets retiré
 import { getEmployes } from '../../projet/api/employes';
+import { getAllOperations } from '../../operation/api/operation'; // NOUVEAU : Import de la fonction pour récupérer les opérations
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 
 const NouvelleTachePage = () => {
     const navigate = useNavigate();
 
-    const [projets, setProjets] = useState<Projet[]>([]);
+    // const [projets, setProjets] = useState<Projet[]>([]); // État projets retiré
     const [employes, setEmployes] = useState<Employe[]>([]);
+    const [operations, setOperations] = useState<Operation[]>([]); // NOUVEAU : État pour les opérations
     const [loading, setLoading] = useState(true);
+    const [selectedOperationId, setSelectedOperationId] = useState<number | null>(null);
 
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
             try {
+                // Chargement des employés
                 const employesData = await getEmployes();
                 setEmployes(employesData);
-
-                const projetsResponse = await fetchAllProjets();
-                // Extraire les données de l'ApiResponse
-                const projetsData = projetsResponse.data || [];
-                setProjets(projetsData);
+                const operationsResponse = await getAllOperations(); 
+                const operationsData = operationsResponse.data || []; // Extraction des données de l'ApiResponse
+                setOperations(operationsData); // Mise à jour de l'état des opérations
 
             } catch (error) {
                 console.error("Erreur lors du chargement des données:", error);
@@ -40,36 +42,39 @@ const NouvelleTachePage = () => {
             }
         };
         loadData();
-    }, []);
+    }, []); // Le tableau de dépendances vide assure que cela ne s'exécute qu'une fois au montage
 
     const handleSaveTache = async (formData: CreateTachePayload, employesIds: number[]) => {
         try {
+            // Création de la tâche
             const nouvelleTache = await createTache(formData); 
             
-            // MODIFICATION CLÉ ICI : Filtrer les IDs non numériques ou NaN
+            // Filtrer les IDs non numériques ou NaN avant d'assigner les employés
             const validEmployeIds = employesIds.filter(id => typeof id === 'number' && !isNaN(id));
             
             // Assigner les employés à la tâche nouvellement créée en utilisant les IDs valides
             await Promise.all(
-                validEmployeIds.map(employeId => // Utilise validEmployeIds
+                validEmployeIds.map(employeId =>
                     assignEmployeToTache(nouvelleTache.id_tache, employeId)
                 )
             );
 
             toast.success(`Tâche "${formData.nom_tache}" créée avec succès !`, {
-                description: `Statut: ${formData.statut}`,
+                // CORRECTION : Retire la référence à formData.statut car il n'est pas dans CreateTachePayload
+                description: `Tâche associée à l'opération ID: ${formData.id_operation}`, 
                 action: {
-                    label: 'Voir',
+                    label: 'Voir la tâche',
                     onClick: () => navigate(`/technique/projets/taches/${nouvelleTache.id_tache}`)
                 }
             });
 
+            // Redirection après succès
             navigate('/technique/projets/taches');
 
         } catch (error) {
             console.error("Erreur création tâche:", error);
-            toast.error("Échec de la création", {
-                description: error instanceof Error ? error.message : undefined
+            toast.error("Échec de la création de la tâche", {
+                description: error instanceof Error ? error.message : "Une erreur inconnue est survenue."
             });
             throw error; 
         }
@@ -86,6 +91,11 @@ const NouvelleTachePage = () => {
         navigate('/technique/projets/taches');
     };
 
+    // Trouver l'opération sélectionnée pour limiter les dates
+    const operationAssociee = operations.find(op => op.id_operation === selectedOperationId);
+    const operationDates = operationAssociee ? { date_debut: operationAssociee.date_debut, date_fin: operationAssociee.date_fin } : undefined;
+
+    // Affichage conditionnel pendant le chargement
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -94,26 +104,37 @@ const NouvelleTachePage = () => {
         );
     }
 
-    if (projets.length === 0) {
-        toast.error('Configuration requise manquante');
+    // NOUVEAU : Vérification si aucune opération n'est disponible
+    if (operations.length === 0) {
+        toast.error('Configuration requise manquante', {
+            description: 'Aucune opération disponible pour créer une tâche.'
+        });
         return (
             <div className="flex flex-col justify-center items-center h-screen gap-4">
-                <h2 className="text-xl font-bold text-red-600">Aucun projet disponible</h2>
+                <h2 className="text-xl font-bold text-red-600">Aucune opération disponible</h2>
+                <p className="text-gray-700">Veuillez créer des opérations avant de créer une tâche.</p>
+                {/* Assurez-vous que le chemin vers la page de gestion des opérations est correct */}
                 <button
-                    onClick={() => navigate('/technique/projets')}
+                    onClick={() => navigate('/technique/operations')} 
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
-                    Créer un projet
+                    Gérer les opérations
                 </button>
             </div>
         );
     }
 
+    // La vérification pour `projets.length === 0` est retirée.
+
+    // Vérification si aucun employé n'est disponible
     if (employes.length === 0) {
-        toast.error('Configuration requise manquante');
+        toast.error('Configuration requise manquante', {
+            description: 'Aucun employé disponible pour assigner à une tâche.'
+        });
         return (
             <div className="flex flex-col justify-center items-center h-screen gap-4">
                 <h2 className="text-xl font-bold text-red-600">Aucun employé disponible</h2>
+                <p className="text-gray-700">Veuillez ajouter des employés avant de créer une tâche.</p>
                 <button
                     onClick={() => navigate('/administration/employes')}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -128,10 +149,14 @@ const NouvelleTachePage = () => {
         <Layout>
             <div className="container mx-auto p-6">
                 <TacheForm
+                    operationsDisponibles={operations} // CORRECTION : Passage des opérations chargées
                     onSave={handleSaveTache}
                     onCancel={handleCancel}
-                    projetsDisponibles={projets}
                     employesDisponibles={employes}
+                    idOperation={selectedOperationId ?? undefined}
+                    operationDates={operationDates}
+                    // Ajout d'un callback pour suivre le changement d'opération
+                    onOperationChange={setSelectedOperationId}
                 />
             </div>
         </Layout>

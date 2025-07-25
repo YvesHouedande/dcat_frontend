@@ -200,9 +200,9 @@ export const removeEmployeFromTache = async (
   await apiClient.delete(`/technique/taches/${tacheId}/employes/${employeId}`);
 };
 
-export const getTachesByProjet = async (
-  projetId: number
+export const getTachesByOperation = async (
+  operationId: number
 ): Promise<ApiResponse<Tache[]>> => {
-  const response = await apiClient.get(`/technique/taches/projet/${projetId}`);
+  const response = await apiClient.get(`/technique/taches/operation/${operationId}`);
   return response.data;
 };

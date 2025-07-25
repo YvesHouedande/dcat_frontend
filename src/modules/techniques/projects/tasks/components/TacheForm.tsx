@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,7 +21,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 // Assurez-vous que l'importation inclut le nouveau type TacheWithAssignedEmployes
-import { Employe, Projet, TacheWithAssignedEmployes, CreateTachePayload } from "../../types/types";
+import { Employe,TacheWithAssignedEmployes, CreateTachePayload, Operation } from "../../types/types";
 import { toast } from 'sonner';
 
 
@@ -32,20 +31,27 @@ interface TacheFormProps {
   // onSave reçoit le payload de création/mise à jour et les IDs des employés séparément
   onSave: (tachePayload: CreateTachePayload, employesIds: number[]) => Promise<void>;
   onCancel: () => void;
-  projetsDisponibles: Projet[];
   employesDisponibles: Employe[];
+  operationsDisponibles: Operation[];
   isSubmitting?: boolean;
+  idOperation?: number; // <-- nouvelle prop optionnelle
+  operationDates?: { date_debut: string; date_fin: string };
+  onOperationChange?: (id: number) => void;
 }
 
 const TacheForm: React.FC<TacheFormProps> = ({
   initialData,
   onSave,
   onCancel,
-  projetsDisponibles,
   employesDisponibles,
+  operationsDisponibles,
   isSubmitting = false,
+  idOperation,
+  operationDates,
+  onOperationChange,
 }) => {
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   const dateToString = (date: string | Date | null): string => {
     if (!date) return "";
@@ -53,61 +59,74 @@ const TacheForm: React.FC<TacheFormProps> = ({
     return format(date, "yyyy-MM-dd");
   };
 
+  // Liste des statuts autorisés pour CreateTachePayload
+  const STATUTS = ["planifié", "en cours", "terminé", "annulé", "bloqué"] as const;
+  type StatutType = typeof STATUTS[number];
+  function toValidStatut(val: unknown): StatutType {
+    return STATUTS.includes(val as StatutType) ? (val as StatutType) : "planifié";
+  }
+
   // Initialisation de formData avec le type CreateTachePayload
   const [formData, setFormData] = useState<CreateTachePayload>(initialData ? {
     nom_tache: initialData.nom_tache,
-    desc_tache: initialData.desc_tache,
-    statut: initialData.statut,
     date_debut: dateToString(initialData.date_debut),
     date_fin: dateToString(initialData.date_fin),
-    priorite: initialData.priorite,
-    id_projet: initialData.id_projet,
+    id_operation: idOperation ?? initialData.id_operation,
+    desc_tache: initialData.desc_tache || "",
+    statut: toValidStatut(initialData.statut),
+    priorite: initialData.priorite || "moyenne",
   } : {
     nom_tache: "",
-    desc_tache: "",
-    statut: "à faire",
     date_debut: "",
     date_fin: "",
-    priorite: "",
-    id_projet: 0, // Ou une valeur par défaut appropriée
+    id_operation: idOperation ?? 0,
+    desc_tache: "",
+    statut: "planifié",
+    priorite: "moyenne",
   });
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         nom_tache: initialData.nom_tache,
-        desc_tache: initialData.desc_tache,
-        statut: initialData.statut,
         date_debut: dateToString(initialData.date_debut),
         date_fin: dateToString(initialData.date_fin),
-        priorite: initialData.priorite,
-        id_projet: initialData.id_projet,
+        id_operation: idOperation ?? initialData.id_operation,
+        desc_tache: initialData.desc_tache || "",
+        statut: toValidStatut(initialData.statut),
+        priorite: initialData.priorite || "moyenne",
       });
-
-      // Maintenant, initialData.id_assigne_a est garanti d'exister si TacheWithAssignedEmployes est utilisé
       setSelectedEmployees(initialData.id_assigne_a?.map(emp => emp.id_employes) || []);
+    } else if (idOperation) {
+      setFormData((prev) => ({ ...prev, id_operation: idOperation }));
     }
-  }, [initialData]);
+  }, [initialData, idOperation]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value,
+      [name]: value as string,
     });
+    // Validation immédiate des dates si operationDates est fourni
+    if (operationDates && (name === 'date_debut' || name === 'date_fin')) {
+      const opStart = new Date(operationDates.date_debut);
+      const opEnd = new Date(operationDates.date_fin);
+      const tacheStart = name === 'date_debut' ? new Date(value) : new Date(formData.date_debut);
+      const tacheEnd = name === 'date_fin' ? new Date(value) : new Date(formData.date_fin);
+      if (tacheStart < opStart || tacheEnd > opEnd) {
+        setDateError(`Les dates de la tâche doivent être comprises entre ${operationDates.date_debut} et ${operationDates.date_fin}.`);
+      } else {
+        setDateError(null);
+      }
+    }
   };
 
-  const handleSelectChange = (name: keyof CreateTachePayload, value: string) => {
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
 
   const handleNumberSelectChange = (name: keyof CreateTachePayload, value: string) => {
     setFormData({
       ...formData,
-      [name]: value === "none" ? 0 : Number(value), // Assurez-vous que 0 est une valeur valide pour "aucun projet" si c'est l'intention
+      [name]: name === "id_operation" ? (value === "none" ? 0 : Number(value)) : value,
     });
   };
 
@@ -164,13 +183,27 @@ const TacheForm: React.FC<TacheFormProps> = ({
       toast.error("Date de fin requise.");
       return;
     }
-    if (formData.id_projet === 0) {
-      toast.error("Projet requis. Veuillez sélectionner un projet associé.");
+    if (formData.id_operation === 0) {
+      toast.error("Opération requise. Veuillez sélectionner une opération associée.");
       return;
     }
     if (selectedEmployees.length === 0) {
       toast.error("Assignation requise. Veuillez sélectionner au moins un employé.");
       return;
+    }
+
+    if (operationDates) {
+      const opStart = new Date(operationDates.date_debut);
+      const opEnd = new Date(operationDates.date_fin);
+      const tacheStart = new Date(formData.date_debut);
+      const tacheEnd = new Date(formData.date_fin);
+      if (tacheStart < opStart || tacheEnd > opEnd) {
+        setDateError(`Les dates de la tâche doivent être comprises entre ${operationDates.date_debut} et ${operationDates.date_fin}.`);
+        toast.error("Les dates de la tâche doivent être comprises dans la plage de l'opération.");
+        return;
+      } else {
+        setDateError(null);
+      }
     }
 
     try {
@@ -198,6 +231,10 @@ const TacheForm: React.FC<TacheFormProps> = ({
   const parsedDateDebut = getDateForDisplay(formData.date_debut);
   const parsedDateFin = getDateForDisplay(formData.date_fin);
 
+  // Helpers pour min/max date
+  const minDate = operationDates?.date_debut ? new Date(operationDates.date_debut) : undefined;
+  const maxDate = operationDates?.date_fin ? new Date(operationDates.date_fin) : undefined;
+
   const handleCancel = () => {
     toast.info("Opération annulée", {
       description: "Aucune modification n'a été enregistrée",
@@ -210,6 +247,15 @@ const TacheForm: React.FC<TacheFormProps> = ({
         onClick: () => {}
       }
     });
+  };
+
+  // Lors du changement d'opération dans le select, notifier le parent
+  const handleOperationChange = (value: string) => {
+    const id = Number(value);
+    setFormData(prev => ({ ...prev, id_operation: id }));
+    if (onOperationChange) {
+      onOperationChange(id);
+    }
   };
 
   return (
@@ -245,55 +291,16 @@ const TacheForm: React.FC<TacheFormProps> = ({
                         onChange={handleInputChange}
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="desc_tache">Description</Label>
-                    <Textarea
-                      id="desc_tache"
-                      name="desc_tache"
-                      placeholder="Description de la tâche..."
-                      rows={4}
-                      value={formData.desc_tache}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="statut">Statut</Label>
-                      <Select
-                        onValueChange={(value) => handleSelectChange("statut", value)}
-                        value={formData.statut}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez un statut" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="à faire">À faire</SelectItem>
-                          <SelectItem value="en cours">En cours</SelectItem>
-                          <SelectItem value="en revue">En revue</SelectItem>
-                          <SelectItem value="terminé">Terminé</SelectItem>
-                          <SelectItem value="bloqué">Bloqué</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="priorite">Priorité</Label>
-                      <Select
-                        onValueChange={(value) => handleSelectChange("priorite", value)}
-                        value={formData.priorite}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez une priorité" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Basse">Basse</SelectItem>
-                          <SelectItem value="Moyenne">Moyenne</SelectItem>
-                          <SelectItem value="Haute">Haute</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="desc_tache">Description</Label>
+                      <textarea
+                        id="desc_tache"
+                        name="desc_tache"
+                        placeholder="Entrez la description de la tâche"
+                        value={formData.desc_tache}
+                        onChange={handleInputChange}
+                        className="w-full border rounded p-2 min-h-[60px]"
+                      />
                     </div>
                   </div>
 
@@ -322,6 +329,8 @@ const TacheForm: React.FC<TacheFormProps> = ({
                             selected={parsedDateDebut}
                             onSelect={(date) => handleDateChange("date_debut", date)}
                             initialFocus
+                            fromDate={minDate}
+                            toDate={maxDate}
                           />
                         </PopoverContent>
                       </Popover>
@@ -351,32 +360,74 @@ const TacheForm: React.FC<TacheFormProps> = ({
                             selected={parsedDateFin}
                             onSelect={(date) => handleDateChange("date_fin", date)}
                             initialFocus
+                            fromDate={minDate}
+                            toDate={maxDate}
                           />
                         </PopoverContent>
                       </Popover>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="id_projet">
-                      Projet associé <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      onValueChange={(value) => handleNumberSelectChange("id_projet", value)}
-                      value={formData.id_projet === 0 ? "none" : String(formData.id_projet)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez un projet" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sélectionnez un projet</SelectItem>
-                        {(projetsDisponibles || []).map((projet) => (
-                          <SelectItem key={projet.id_projet} value={String(projet.id_projet)}>
-                            {projet.nom_projet}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {/* Sélecteur d'opération ou champ masqué si imposé */}
+                  {idOperation ? (
+                    <input type="hidden" name="id_operation" value={idOperation} />
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="id_operation">
+                        Opération associée <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        onValueChange={handleOperationChange}
+                        value={String(formData.id_operation)}
+                        disabled={!!idOperation} // masquer si idOperation fourni (cas opération pré-remplie)
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionner une opération" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {operationsDisponibles.map((op) => (
+                            <SelectItem key={op.id_operation} value={String(op.id_operation)}>
+                              {op.nom_operation}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="statut">Statut</Label>
+                      <Select
+                        onValueChange={(value) => handleNumberSelectChange("statut", value)}
+                        value={formData.statut || "planifié"}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez un statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUTS.map((statut) => (
+                            <SelectItem key={statut} value={statut}>{statut.charAt(0).toUpperCase() + statut.slice(1)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="priorite">Priorité</Label>
+                      <Select
+                        onValueChange={(value) => handleNumberSelectChange("priorite", value)}
+                        value={formData.priorite || "moyenne"}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez une priorité" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="basse">Basse</SelectItem>
+                          <SelectItem value="moyenne">Moyenne</SelectItem>
+                          <SelectItem value="haute">Haute</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -459,6 +510,9 @@ const TacheForm: React.FC<TacheFormProps> = ({
             </Button>
           </div>
         </form>
+        {dateError && (
+          <div className="text-xs text-red-500 mt-1">{dateError}</div>
+        )}
       </div>
     </div>
   );

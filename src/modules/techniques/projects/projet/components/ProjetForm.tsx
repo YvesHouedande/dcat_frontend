@@ -684,6 +684,7 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
                           <SelectItem value="en_cours">En cours</SelectItem>
                           <SelectItem value="terminé">Terminé</SelectItem>
                           <SelectItem value="annulé">Annulé</SelectItem>
+                          <SelectItem value="bloqué">Bloqué</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -765,14 +766,14 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
 
                     <div className="space-y-2">
                       <Label htmlFor="id_famille">
-                        Famille
+                        Catégorie
                       </Label>
                       <Select
                         onValueChange={handleFamilleSelectChange}
                         value={formData.id_famille ? String(formData.id_famille) : ""}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez une famille" />
+                          <SelectValue placeholder="Sélectionnez une catégorie" />
                         </SelectTrigger>
                         <SelectContent>
                           {famillesDisponibles.map((famille) => (

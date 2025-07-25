@@ -5,10 +5,8 @@ import {
   Document,
   CreateDocumentTextPayload,
   Livrable,
-  Tache,
   Partenaire,
 } from "../../types/types"; // Assurez-vous que le chemin est correct et que Document et CreateDocumentTextPayload sont importés
-import { deleteTacheSafely, getTachesByProjet } from "../../tasks/api/taches"; // Chemin relatif vers src/api/taches.ts
 import {
   deleteLivrable,
   getLivrablesByProjetId,
@@ -381,77 +379,7 @@ export const deleteProjet = async (
   projectId: number
 ): Promise<{ success: boolean; message: string; deletedId: number }> => {
   try {
-    console.log(`[API] Début de la suppression du projet ${projectId}...`); // Étape 1: Récupérer et supprimer/désassocier les tâches du projet
-    console.log(
-      `[API] Récupération des tâches associées au projet ${projectId}...`
-    );
-    let associatedTaches: Tache[] = [];
-    try {
-      const tachesResponse = await getTachesByProjet(projectId); // Vérifier si la réponse a une propriété 'data' qui est un tableau, ou si la réponse est directement un tableau
-      if (tachesResponse.data && Array.isArray(tachesResponse.data)) {
-        associatedTaches = tachesResponse.data;
-        console.log(
-          `[API] Tâches associées trouvées:`,
-          associatedTaches.length
-        );
-      } else if (Array.isArray(tachesResponse)) {
-        // Fallback si la réponse API est un tableau direct
-        associatedTaches = tachesResponse as Tache[];
-        console.log(
-          `[API] Tâches associées trouvées (directement en tableau):`,
-          associatedTaches.length
-        );
-      } else {
-        console.warn(
-          `[API] Structure de réponse inattendue pour les tâches du projet ${projectId}:`,
-          tachesResponse
-        );
-      }
-    } catch (error) {
-      console.warn(
-        `[API] Impossible de récupérer les tâches associées pour le projet ${projectId}:`,
-        error
-      ); // On continue même en cas d'erreur de récupération des tâches
-    }
-
-    if (associatedTaches.length > 0) {
-      console.log(
-        `[API] Suppression de ${associatedTaches.length} tâche(s)...`
-      );
-      const tacheDeletionPromises = associatedTaches.map(async (tache) => {
-        try {
-          console.log(
-            `[API] Suppression de la tâche ${tache.id_tache} (libellé: ${tache.nom_tache})...`
-          );
-          await deleteTacheSafely(tache.id_tache); // Utilise la fonction de suppression sécurisée des tâches
-          console.log(`[API] ✓ Tâche ${tache.id_tache} supprimée avec succès`);
-          return { success: true, id: tache.id_tache };
-        } catch (error) {
-          console.error(
-            `[API] ✗ Échec de suppression de la tâche ${tache.id_tache}:`,
-            error
-          );
-          return { success: false, id: tache.id_tache, error };
-        }
-      });
-      const tacheDeletionResults = await Promise.allSettled(
-        tacheDeletionPromises
-      );
-      const failedTacheDeletions = tacheDeletionResults.filter(
-        (result) => result.status === "rejected"
-      );
-      if (failedTacheDeletions.length > 0) {
-        console.error(
-          `[API] ${failedTacheDeletions.length} suppression(s) de tâche(s) ont échoué.`
-        ); // Décision: Continuer avec la suppression du projet même si des tâches n'ont pas pu être supprimées. // Le log d'erreur détaillé ci-dessus fournit suffisamment d'informations.
-      } else {
-        console.log(
-          `[API] ✓ Toutes les tâches associées ont été supprimées avec succès`
-        );
-      }
-    } else {
-      console.log(`[API] Aucun tâche associée au projet ${projectId}`);
-    } // Étape 2: Récupérer et supprimer les livrables du projet
+    console.log(`[API] Début de la suppression du projet ${projectId}...`); // Étape 1: Récupérer et supprimer les livrables du projet
 
     console.log(
       `[API] Récupération des livrables associés au projet ${projectId}...`
