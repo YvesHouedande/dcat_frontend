@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo} from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,7 +27,11 @@ import {
 // Custom Components & Hooks
 import { ReferenceSelect } from "@/modules/stocks/reference/components/ui/ReferenceSelect";
 import { ImageDropzone } from "@/modules/stocks/reference/utils/ImageDropzone";
-import { useProducts } from "@/modules/stocks/reference/hooks/useProducts";
+import {
+  useCreateProduct,
+  useProduct,
+  useUpadteProduct,
+} from "@/modules/stocks/reference/hooks/useProducts";
 import {
   useProductCategories,
   useProductFamilies,
@@ -73,7 +77,9 @@ export default function ReferenceEditForm() {
   const { productFamilies: familles } = useProductFamilies();
   const { productMarques: marques } = useProductMarques();
   const { productModels: modeles } = useProductModels();
-  const { create, update, product } = useProducts({}, id);
+  const { create } = useCreateProduct();
+  const { update } = useUpadteProduct();
+  const { product } = useProduct(id);
 
   // State
   const [productImages, setProductImages] = useState<ImageProduit[]>([]);
@@ -128,8 +134,6 @@ export default function ReferenceEditForm() {
     },
     [form]
   );
-
-
 
   // Auto-generate product code
   useMemo(() => {
@@ -351,7 +355,10 @@ export default function ReferenceEditForm() {
         </CardHeader>
 
         <CardContent>
-          <Form  key={isEditMode ? `edit-${product.data?.code_produit}` : "create"} {...form}>
+          <Form
+            key={isEditMode ? `edit-${product.data?.code_produit}` : "create"}
+            {...form}
+          >
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Classification Section */}
               <div className="px-4 pb-4 rounded-md">
@@ -474,8 +481,6 @@ export default function ReferenceEditForm() {
                             key={index}
                             className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50"
                           >
-                            
-
                             <div className="w-12 h-12 shrink-0">
                               {image.dataUrl ||
                               image.url ||

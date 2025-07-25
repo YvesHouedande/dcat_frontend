@@ -1,6 +1,8 @@
 // src/index.ts
 // Point d'entrée principal qui exporte tous les composants et fonctionnalités
 
+
+
 // Composants
 export { ProductInstanceDashboard } from './components/dashboard/ProductInstanceDashboard';
 export { ProductInstanceForm } from './components/forms/ProductInstanceForm';
@@ -13,7 +15,8 @@ export { useProductInstances } from './hooks/useProductInstances';
 export { useProducts } from '../reference/hooks/useProducts';
 
 // Services
-export { productInstanceService } from './services/productInstance.service';
+export { ProductInstanceService } from './services/productInstance.service';
+
 
 // Types
 export type { 
