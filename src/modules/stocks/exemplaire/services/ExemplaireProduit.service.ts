@@ -4,6 +4,7 @@ import {
   ExemplaireProduit,
   ExemplaireProduitFormValues,
 } from "../schemas/ExemplaireProduitSchema";
+import { omit } from "@/lib/utils";
 
 export const useExemplaireProduitService = () => {
   const api = useApi();
@@ -33,10 +34,11 @@ export const useExemplaireProduitService = () => {
   };
 
   const create = async (
-    data: Omit<ExemplaireProduitFormValues, "id_exemplaire" | "prix_exemplaire">
+    data: Omit<ExemplaireProduitFormValues, "prix_exemplaire">
   ): Promise<ExemplaireProduitFormValues> => {
-    const response = await api.post("/stocks/exemplaires", data);
-
+    const newdata = omit(data, ["id_exemplaire"]);
+    const response = await api.post("/stocks/exemplaires", newdata);
+    console.log("execution");
     return response.data;
   };
 

@@ -7,7 +7,7 @@ import {
 import { CommandesService } from "../services/commande.service";
 import { Commande, ProduitDetail, UpdateCommande } from "../types/commande";
 import { useNavigate } from "react-router-dom";
-import { CommandeLimit } from "../../exemplaire/types/const";
+import { CommandeLimit } from "@/modules/stocks/exemplaire/types/const";
 
 // Hooks personnalisés
 
@@ -23,16 +23,13 @@ export const useCommandes = (filters = {}) => {
       const currentPage = lastPage.currentPage;
       const totalPages = lastPage.totalPages;
       if (currentPage < totalPages) {
-        
         return currentPage + 1;
       }
-      
+
       return undefined; // Plus de pages à charger
     },
   });
 };
-
-
 
 /**
  * Récupère une commande par son ID.
@@ -140,7 +137,6 @@ export const useDeleteCommande = () => {
       commandesServiceInstance.delete(id, type),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commandes"] });
-      queryClient.invalidateQueries({ queryKey: ["commande"] });
       navigate("/stocks/commandes");
     },
   });

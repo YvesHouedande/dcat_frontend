@@ -1,4 +1,6 @@
 // src/types/index.ts
+import { ApiDataItem } from "@/modules/stocks/reference/types/referenceTypes";
+import { ExemplaireProduit } from "../schemas/ExemplaireProduitSchema";
 
 export interface Delivery {
   id_livraison: number | string;
@@ -30,4 +32,18 @@ export interface PaginatedResponse<ExemplaireProduit> {
   totalPages: number;
   currentPage: number;
   totalItems: number;
+}
+
+export interface SortieExemplaire {
+  type_sortie: "vente directe" | "vente en ligne";
+  id_commande: number | string;
+  id_exemplaire: number | string;
+  id_sortie_exemplaire: number | string;
+  date_sortie?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SortieExemplaireResponse extends ApiDataItem {
+  exemplaire: ExemplaireProduit;
 }

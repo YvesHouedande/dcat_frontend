@@ -1,8 +1,12 @@
 // types/commande.ts
-import { ReferenceProduit } from "../../types/reference";
-import { ImageProduit, typeTypes } from "../../types/reference";
-import { familleTypes, modeleTypes, marqueTypes } from "../../types/reference";
-import { ExemplaireProduit } from "../../exemplaire/schemas/ExemplaireProduitSchema";
+import { ReferenceProduit } from "@/modules/stocks/types/reference";
+import { ImageProduit, typeTypes } from "@/modules/stocks/types/reference";
+import {
+  familleTypes,
+  modeleTypes,
+  marqueTypes,
+} from "@/modules/stocks/types/reference";
+import { ExemplaireProduit } from "@/modules/stocks/exemplaire/schemas/ExemplaireProduitSchema";
 import { formCommandeSchema } from "../schemas/CommandeSchema";
 import { z } from "zod";
 
@@ -40,10 +44,11 @@ export interface partenaire {
 export interface Commande {
   id_commande: number;
   date_de_commande: string;
-  etat_commande: "en_attente" | "Retournée" | "Livrée" | "annulée";
+  etat_commande: "en_attente" | "retournee" | "livree" | "annulee" | "en_cours";
   date_livraison: string | null;
   lieu_de_livraison: string;
   mode_de_paiement: "Espèce" | "Carte bancaire" | "Mobile Money" | "Virement";
+  commande_produits_reserves: boolean;
   client: Clients;
   partenaire: partenaire;
   created_at: string;
@@ -106,4 +111,19 @@ export interface CommandeFilter {
   date_livraison?: string;
   lieu_de_livraison?: string;
   mode_de_paiement?: string;
+}
+
+export enum etat_commande {
+  "en_attente" = "en_attente",
+  "retournee" = "retournee",
+  "livree" = "livree",
+  "annulee" = "annulee",
+  "en_cours" = "en_cours",
+}
+
+export enum mode_de_paiement {
+  "Espèce" = "Espèce",
+  "Carte bancaire" = "Carte bancaire",
+  "Mobile Money" = "Mobile Money",
+  "Virement" = "Virement",
 }

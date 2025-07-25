@@ -24,10 +24,11 @@
     // mine
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    },
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src", "src/modules/stocks/commande/components/CommandeCard.tsx"]
+  "include": [
+    "src",
+    "src/modules/marketing-commercial/commande/components/CommandeCard.tsx"
+  ]
 }

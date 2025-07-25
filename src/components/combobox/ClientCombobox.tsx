@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { useMemo } from "react";
 import { useApi } from "@/api/api";
-import { Clients } from "@/modules/stocks/commande/types/commande";
+import { Clients } from "@/modules/marketing-commercial/commande/types/commande";
 import { useQuery } from "@tanstack/react-query";
 
 interface ClientComboboxProps {

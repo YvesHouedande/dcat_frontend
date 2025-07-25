@@ -118,11 +118,35 @@ export const useProductService = () => {
     await apis.delete(`stocks/produits/${id}`);
   };
 
+  const deleteImageProduct = async (id: string | number): Promise<void> => {
+    await apis.delete(`stocks/produits/image/${id}`);
+  };
+
+  const uppdateImageProduct = async ({
+    images,
+    libelles,
+    numeros,
+  }: {
+    images: File[];
+    libelles: string[];
+    numeros: number[];
+  }): Promise<void> => {
+    const formData = new FormData();
+    images.forEach((image, index) => {
+      formData.append(`images`, image);
+      formData.append(`libelles`, libelles[index]);
+      formData.append(`numeros`, numeros[index].toString());
+    });
+    await apis.put(`stocks/produits/images/add/`, formData);
+  };
+
   return {
     getAll,
     getById,
     create,
     update,
     delete: deleteProduct,
+    deleteImage: deleteImageProduct,
+    updateImage: uppdateImageProduct,
   };
 };

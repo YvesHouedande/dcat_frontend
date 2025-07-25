@@ -16,7 +16,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useProducts } from "../../modules/stocks/reference/hooks/useProducts";
-import { useMemo } from "react";
 
 interface ProductComboboxProps {
   value: string;
@@ -30,22 +29,15 @@ export function ProductCombobox({
   isTools = false,
 }: ProductComboboxProps) {
   const [open, setOpen] = React.useState(false);
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const { products } = useProducts();
-  const allProducts = useMemo(() => products.data?.pages?.flatMap(page => page.data) || [], [products.data?.pages]);
+  const [searchTerm, setSearchTerm] = React.useState<string | undefined>(
+    undefined
+  );
+  const { products } = useProducts({
+    search: searchTerm,
+  });
+  const allProducts = products.data?.pages?.flatMap((page) => page.data);
+
   // Filtrer les produits selon la recherche
-  const filteredProducts = React.useMemo(() => {
-    if (!searchTerm) return allProducts;
-    return allProducts.filter(
-      (product) =>
-        (product.desi_produit ?? "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        (product.code_produit ?? "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-    );
-  }, [searchTerm, allProducts]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -58,7 +50,7 @@ export function ProductCombobox({
           disabled={products.isLoading}
         >
           {value
-            ? allProducts.find(
+            ? allProducts?.find(
                 (product) => String(product.id_produit) === value
               )?.desi_produit
             : `Sélectionner un ${isTools ? "outil" : "produit"}...`}
@@ -70,7 +62,7 @@ export function ProductCombobox({
           <CommandInput
             placeholder={`Rechercher un ${isTools ? "outil" : "produit"}...`}
             value={searchTerm}
-            onValueChange={setSearchTerm}
+            onValueChange={(v) => setSearchTerm(v === "" ? undefined : v)}
             className="h-9"
           />
           <CommandList>
@@ -78,7 +70,7 @@ export function ProductCombobox({
               Aucun {isTools ? "outil" : "produit"} trouvé.
             </CommandEmpty>
             <CommandGroup className="max-h-60 overflow-y-auto">
-              {filteredProducts.map((product) => (
+              {allProducts?.map((product) => (
                 <CommandItem
                   key={String(product.id_produit)}
                   value={String(product.id_produit)}
@@ -93,8 +85,8 @@ export function ProductCombobox({
                       alt={product.images?.[0]?.libelle_image}
                       className="w-8 h-8 rounded mr-2"
                     />
-                  </div>
-                  {product.code_produit} - {product.desi_produit}
+                  </div>{" "}
+                  {product.desi_produit}
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",

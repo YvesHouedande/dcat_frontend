@@ -36,7 +36,7 @@ import { CommandeFormValues } from "../types/commande";
 import { formCommandeSchema } from "../schemas/CommandeSchema";
 import { PartenaireCombobox } from "@/components/combobox/PartenaireCombobox";
 import { ProductCombobox } from "@/components/combobox/ProductCombobox";
-import { useProducts } from "../../exemplaire";
+import { useProducts } from "@/modules/stocks/exemplaire";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -57,7 +57,9 @@ const CommandeForm = () => {
   const createCommandeWithMarketing = useCreateCommandeWithMarketing();
   const updateCommande = useUpdateCommande();
   const { id } = useParams();
-  const { data: commande, isLoading: isLoadingCommande } = useCommande(Number(id));
+  const { data: commande, isLoading: isLoadingCommande } = useCommande(
+    Number(id)
+  );
   const isUpdate = commande !== undefined;
 
   const form = useForm<CommandeFormValues>({
@@ -69,7 +71,7 @@ const CommandeForm = () => {
       modePaiement: "",
       dateLivraison: undefined,
       produitsQuantites: {},
-    }
+    },
   });
 
   // Effet pour mettre à jour le formulaire quand la commande est chargée
@@ -77,16 +79,21 @@ const CommandeForm = () => {
     if (commande && !isLoadingCommande) {
       // Mise à jour des champs du formulaire
       form.reset({
-        id_client: commande?.client?.id ? String(commande.client.id) : undefined,
-        partenaireId: commande?.partenaire?.id_partenaire ? String(commande.partenaire.id_partenaire) : undefined,
+        id_client: commande?.client?.id
+          ? String(commande.client.id)
+          : undefined,
+        partenaireId: commande?.partenaire?.id_partenaire
+          ? String(commande.partenaire.id_partenaire)
+          : undefined,
         lieuLivraison: commande?.lieu_de_livraison || "",
         modePaiement: commande?.mode_de_paiement || "",
         dateLivraison: commande?.date_livraison || undefined,
-        produitsQuantites: commande?.produits ? 
-          commande.produits.reduce((acc, produit) => {
-            acc[String(produit.produit.id_produit)] = produit.quantite || 1;
-            return acc;
-          }, {} as Record<string, number>) : {},
+        produitsQuantites: commande?.produits
+          ? commande.produits.reduce((acc, produit) => {
+              acc[String(produit.produit.id_produit)] = produit.quantite || 1;
+              return acc;
+            }, {} as Record<string, number>)
+          : {},
       });
 
       // Mise à jour du type de destinataire
@@ -109,9 +116,7 @@ const CommandeForm = () => {
             mode_de_paiement: data.modePaiement,
             id_client: data.id_client,
             id_partenaire: Number(data.partenaireId),
-
           },
-          
         })
         .then(() => {
           toast.success("Commande mise à jour avec succès !");
@@ -271,7 +276,8 @@ const CommandeForm = () => {
           <div className="bg-white rounded-lg shadow-sm">
             <div className="p-6 border-b">
               <h1 className="text-2xl font-bold text-gray-900">
-                {isUpdate ? "Modifier la commande" : "Panier"} ({cartItems.length})
+                {isUpdate ? "Modifier la commande" : "Panier"} (
+                {cartItems.length})
               </h1>
             </div>
 
@@ -431,7 +437,9 @@ const CommandeForm = () => {
                 <div className="text-center py-12">
                   <ShoppingCart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500 text-lg">
-                    {isUpdate ? "Aucun produit dans cette commande" : "Votre panier est vide"}
+                    {isUpdate
+                      ? "Aucun produit dans cette commande"
+                      : "Votre panier est vide"}
                   </p>
                   {!isUpdate && (
                     <p className="text-gray-400 text-sm">
@@ -487,7 +495,10 @@ const CommandeForm = () => {
                               <ClientCombobox
                                 value={field.value}
                                 onChange={field.onChange}
-                                disabled={createCommandeWithMarketing.isLoading || isUpdate}
+                                disabled={
+                                  createCommandeWithMarketing.isLoading ||
+                                  isUpdate
+                                }
                               />
                             </FormControl>
                             <FormMessage />
@@ -504,9 +515,7 @@ const CommandeForm = () => {
                           <FormItem>
                             <FormLabel>Sélectionner le partenaire</FormLabel>
                             <FormControl>
-                              <PartenaireCombobox 
-                                {...field} 
-                              />
+                              <PartenaireCombobox {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -628,15 +637,16 @@ const CommandeForm = () => {
                     <Button
                       type="submit"
                       disabled={
-                        cartItems.length === 0 || 
-                        createCommande.isLoading || 
+                        cartItems.length === 0 ||
+                        createCommande.isLoading ||
                         createCommandeWithMarketing.isLoading
                       }
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 disabled:opacity-50 disabled:cursor-not-allowed"
                       size="lg"
                     >
                       Créer la commande
-                      {(createCommande.isLoading || createCommandeWithMarketing.isLoading) ? (
+                      {createCommande.isLoading ||
+                      createCommandeWithMarketing.isLoading ? (
                         <Loader2 className="w-4 h-4 ml-2 animate-spin" />
                       ) : (
                         <ArrowRight className="w-4 h-4 ml-2" />

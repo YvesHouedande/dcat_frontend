@@ -24,6 +24,7 @@ export function useExemplaireProduitForm({
 }: UseExemplaireProduitFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [margeError, setMargeError] = useState<string | null>(null);
 
   const { createExemplaireProduit, updateExemplaireProduit } =
     useExemplaireProduits();
@@ -39,30 +40,54 @@ export function useExemplaireProduitForm({
       num_serie: initialData?.num_serie || "",
       date_entree: initialData?.date_entree || toDatetimeLocal(new Date()),
       etat_exemplaire: initialData?.etat_exemplaire || "Disponible",
-      id_livraison: initialData?.id_livraison || "",
       id_produit: initialData?.id_produit || "",
+      prix_achat: initialData?.prix_achat || 0,
+      prix_de_revient: initialData?.prix_de_revient || 0,
+      coef_divers: initialData?.coef_divers || 0,
+      prix_de_vente: initialData?.prix_de_vente || 0,
+      frais_divers: initialData?.frais_divers || 0,
+      marge_basse: initialData?.marge_basse || 0,
+      marge_haute: initialData?.marge_haute || 0,
     },
   });
 
   const handleSubmit = async (data: ExemplaireProduitFormValues) => {
     setLoading(true);
     setError(null);
+    const marge_basse = Number(data.marge_basse) || 0;
+    const marge_haute = Number(data.marge_haute) || 0;
+    if (marge_basse > marge_haute) {
+      setMargeError(
+        "La marge basse ne peut pas être supérieure à la marge haute."
+      );
+      setLoading(false);
+      return;
+    }
     try {
+      // Calcul automatique des champs prix_de_revient et prix_de_vente
+      const prix_achat = Number(data.prix_achat) || 0;
+      const coef_divers = Number(data.coef_divers) || 0;
+      const marge_basse = Number(data.marge_basse) || 0;
+      const marge_haute = Number(data.marge_haute) || 0;
+      const prix_de_revient = prix_achat + coef_divers;
+      const marge = marge_basse + marge_haute / 2;
+      const prix_de_vente = prix_de_revient + marge;
+      const dataWithCalcul = {
+        ...data,
+        prix_de_revient,
+        prix_de_vente,
+      };
       if (isEditMode && initialData?.id_exemplaire) {
         await updateExemplaireProduit({
           id: initialData.id_exemplaire,
           data: {
-            ...data,
+            ...dataWithCalcul,
             id_exemplaire: initialData.id_exemplaire,
           },
         });
       } else {
         await createExemplaireProduit({
-          date_entree: data.date_entree,
-          etat_exemplaire: data.etat_exemplaire,
-          id_livraison: data.id_livraison,
-          id_produit: data.id_produit,
-          num_serie: data.num_serie,
+          ...dataWithCalcul,
         });
       }
       if (onSuccess) {
@@ -85,7 +110,6 @@ export function useExemplaireProduitForm({
       num_serie: data?.num_serie || "",
       date_entree: data?.date_entree || toDatetimeLocal(new Date()),
       etat_exemplaire: data?.etat_exemplaire || "invendu",
-      id_livraison: data?.id_livraison || "",
       id_produit: data?.id_produit || "",
     });
   };
@@ -97,5 +121,6 @@ export function useExemplaireProduitForm({
     error,
     reset,
     isEditMode,
+    margeError
   };
 }

@@ -13,22 +13,37 @@ import { Package, Search, Wrench } from "lucide-react";
 import ReferenceCarte from "@/modules/stocks/reference/components/ui/ReferenceCarte";
 import { useProducts } from "../hooks/useProducts";
 import {
-  useProductCategories,
+  useModeleByProduct,
   useProductFamilies,
   useProductMarques,
-  useProductModels,
 } from "../hooks/useOthers";
 import ProductCatalogSkeleton from "../../../../components/skeleton/ProductCatalogSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import Parametres from "../components/ui/Parametres";
+import SocialShareButton from "@/modules/marketing-commercial/marketing/components/SocialShareButton";
+import { Label } from "@/components/ui/label";
 
-export default function CataloguePage() {
+interface CataloguePageProps {
+  showSocialSharing?: boolean;
+}
+
+export default function CataloguePage({
+  showSocialSharing = false,
+}: CataloguePageProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [modelFilter, setModelFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [qteMax, setQteMax] = useState<number | null>(null);
+  const [qteMin, setQteMin] = useState<number | null>(null);
+  const [prixMax, setPrixMax] = useState<number | null>(null);
+  const [prixMin, setPrixMin] = useState<number | null>(null);
+
   const [productTypeFilter, setProductTypeFilter] = useState("all");
+  const [marqueId, setMarqueId] = useState<string | number | undefined>(
+    undefined
+  );
   const navigate = useNavigate();
 
   const {
@@ -38,46 +53,52 @@ export default function CataloguePage() {
     isFetchingNextPage,
   } = useProducts({
     searchTerm,
-    categoryFilter,
     modelFilter,
     brandFilter,
     familyFilter,
     productTypeFilter,
+    sortOrder,
+    qteMax,
+    qteMin,
+    prixMax,
+    prixMin,
   });
-
-  const { productCategories } = useProductCategories();
   const { productFamilies } = useProductFamilies();
   const { productMarques } = useProductMarques();
-  const { productModels } = useProductModels();
+  const { productModels } = useModeleByProduct(marqueId);
 
   const allProducts =
     productsQuery.data?.pages?.flatMap((page) => page.data) || [];
 
-  const filteredProducts = allProducts.filter((product) => {
-    const matchesSearch = product.desi_produit
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" ||
-      String(product.id_categorie) === categoryFilter;
-    const matchesProductType =
-      productTypeFilter === "all" ||
-      String(product.id_type_produit) === productTypeFilter;
-    const matchesModel =
-      modelFilter === "all" || String(product.id_modele) === modelFilter;
-    const matchesBrand =
-      brandFilter === "all" || String(product.id_marque) === brandFilter;
-    const matchesFamily =
-      familyFilter === "all" || String(product.id_famille) === familyFilter;
-    return (
-      matchesSearch &&
-      matchesCategory &&
-      matchesProductType &&
-      matchesModel &&
-      matchesBrand &&
-      matchesFamily
-    );
-  });
+  const filteredProducts = allProducts
+    .filter((product) => {
+      const matchesSearch = product.desi_produit
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesProductType =
+        productTypeFilter === "all" ||
+        String(product.id_type_produit) === productTypeFilter;
+      const matchesModel =
+        modelFilter === "all" || String(product.id_modele) === modelFilter;
+      const matchesBrand =
+        brandFilter === "all" || String(product.id_marque) === brandFilter;
+      const matchesFamily =
+        familyFilter === "all" || String(product.id_famille) === familyFilter;
+      return (
+        matchesSearch &&
+        matchesProductType &&
+        matchesModel &&
+        matchesBrand &&
+        matchesFamily
+      );
+    })
+    .sort((a, b) => {
+      if (sortOrder === "asc") {
+        return Number(a.prix_produit) - Number(b.prix_produit);
+      } else {
+        return Number(b.prix_produit) - Number(a.prix_produit);
+      }
+    });
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,15 +130,17 @@ export default function CataloguePage() {
     <div className="container mx-auto py-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Catalogue des Produits</h1>
-        <Button
-          onClick={() => {
-            navigate("nouveau");
-          }}
-          className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
-        >
-          <Wrench size={16} className="mr-2" />
-          Ajouter
-        </Button>
+        {!showSocialSharing && (
+          <Button
+            onClick={() => {
+              navigate("nouveau");
+            }}
+            className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
+          >
+            <Wrench size={16} className="mr-2" />
+            Ajouter
+          </Button>
+        )}
       </div>
 
       {/* Recherche + Filtres */}
@@ -139,67 +162,33 @@ export default function CataloguePage() {
               size="sm"
               onClick={() => {
                 setSearchTerm("");
-                setCategoryFilter("all");
                 setProductTypeFilter("all");
                 setFamilyFilter("all");
                 setModelFilter("all");
                 setBrandFilter("all");
               }}
               className="h-9 whitespace-nowrap"
+              style={{ display: showSocialSharing ? "none" : undefined }}
             >
               Réinitialiser les filtres
             </Button>
-            <Parametres />
+            {!showSocialSharing && <Parametres />}
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={familyFilter} onValueChange={setFamilyFilter}>
             <SelectTrigger className="w-40 h-9">
               <SelectValue placeholder="Catégorie" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes catégories</SelectItem>
-              {productCategories.data.map((category) => (
-                <SelectItem
-                  key={category.id_categorie}
-                  value={String(category.id_categorie)}
-                >
-                  {category.libelle}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={familyFilter} onValueChange={setFamilyFilter}>
-            <SelectTrigger className="w-40 h-9">
-              <SelectValue placeholder="Famille" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes familles</SelectItem>
               {productFamilies.data.map((family) => (
                 <SelectItem
                   key={family.id_famille}
                   value={String(family.id_famille)}
                 >
                   {family.libelle_famille}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={modelFilter} onValueChange={setModelFilter}>
-            <SelectTrigger className="w-40 h-9">
-              <SelectValue placeholder="Modèle" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous modèles</SelectItem>
-              {productModels.data.map((model) => (
-                <SelectItem
-                  key={model.id_modele}
-                  value={String(model.id_modele)}
-                >
-                  {model.libelle_modele}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -221,6 +210,76 @@ export default function CataloguePage() {
               ))}
             </SelectContent>
           </Select>
+
+          <Select
+            value={modelFilter}
+            onValueChange={(value) => {
+              setModelFilter(value);
+              setMarqueId(value);
+            }}
+          >
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue placeholder="Modèle" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous modèles</SelectItem>
+              {productModels.data?.map((model) => (
+                <SelectItem
+                  key={model.id_modele}
+                  value={String(model.id_modele)}
+                >
+                  {model.libelle_modele}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={sortOrder}
+            onValueChange={(value: "asc" | "desc") => setSortOrder(value)}
+          >
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue placeholder="Ordre de tri" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc">Prix croissant</SelectItem>
+              <SelectItem value="desc">Prix décroissant</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap gap-2 border py-4 px-1 rounded-md bg-gray-50">
+          <div className="flex gap-2">
+            <Label>Quantité min</Label>
+            <Input
+              type="number"
+              onChange={(e) => setQteMin(Number(e.target.value))}
+              min={0}
+            ></Input>
+          </div>
+          <div className="flex gap-2">
+            <Label>Quantité max</Label>
+            <Input
+              type="number"
+              onChange={(e) => setQteMax(Number(e.target.value))}
+              min={0}
+            ></Input>
+          </div>
+          <div className="flex gap-2">
+            <Label>Prix min</Label>
+            <Input
+              type="number"
+              onChange={(e) => setPrixMin(Number(e.target.value))}
+              min={0}
+            ></Input>
+          </div>
+          <div className="flex gap-2">
+            <Label>Prix max</Label>
+            <Input
+              type="number"
+              onChange={(e) => setPrixMax(Number(e.target.value))}
+              min={0}
+            ></Input>
+          </div>
         </div>
       </div>
 
@@ -240,7 +299,27 @@ export default function CataloguePage() {
           )}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filteredProducts.map((product) => (
-              <ReferenceCarte key={product.id_produit} product={product} />
+              <div key={product.id_produit} className="relative">
+                <ReferenceCarte product={product} />
+                {showSocialSharing && (
+                  <div className="mt-2 flex justify-center">
+                    <SocialShareButton
+                      product={{
+                        name: product.desi_produit,
+                        description: product.desc_produit || "",
+                        url:
+                          window.location.origin +
+                          "/produit/" +
+                          product.id_produit,
+                        image:
+                          product.images?.[0]?.url ||
+                          product .imagesMeta ||
+                          "",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
           {/* Pagination Skeleton */}

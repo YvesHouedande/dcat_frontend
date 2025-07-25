@@ -23,12 +23,9 @@ import {
   Search,
   Edit,
   Trash2,
-  ChevronRight,
   BadgePlus,
   Info,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
 import { ExemplaireProduitFormValues } from "../../schemas/ExemplaireProduitSchema";
 import {
   Select,
@@ -59,9 +56,7 @@ interface ExemplaireProduitTableProps {
   loading: boolean;
 }
 
-interface Props {
-  Id: string | number;
-}
+
 export function ExemplaireProduitTable({
   ExemplaireProduits,
   onPageChange,
@@ -87,7 +82,6 @@ export function ExemplaireProduitTable({
     idProduit,
     etatFilter
   );
-  const navigate = useNavigate();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -135,20 +129,9 @@ export function ExemplaireProduitTable({
 
   // Dans ton composant React (ExemplaireProduitTable ou un sous-composant)
 
-  const LivraisonReference: React.FC<Props> = ({ Id }) => {
-    const { livraison, isLoading, errorLivraisons } = useLivraisonData(Id);
+ 
 
-    if (isLoading) return <span>Chargement...</span>;
-    if (errorLivraisons) {
-      return <span className="text-red-500">Erreur de chargement</span>;
-    }
 
-    return <span>{livraison?.reference_livraison || Id}</span>;
-  };
-
-  const handleProductClick = (id: number | string) => {
-    navigate(`/stocks/achats/${id}`);
-  };
   function getEtatBadgeClass(etat: EtatExemplaire | string) {
     switch (etat) {
       case EtatExemplaire.Vendu:
@@ -295,22 +278,13 @@ export function ExemplaireProduitTable({
                   <TableCell>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${getEtatBadgeClass(
-                        instance.etat_exemplaire
+                        String(instance.etat_exemplaire)
                       )}`}
                     >
                       {instance.etat_exemplaire}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <button
-                      onClick={() => handleProductClick(instance.id_produit)}
-                      className="text-blue-600 hover:underline cursor-pointer hover:text-blue-800 flex items-center gap-1"
-                    >
-                      <LivraisonReference Id={instance.id_livraison} />
-                      <ChevronRight className="w-4 h-4" />
-                    </button>{" "}
-                  </TableCell>
-
+                  
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

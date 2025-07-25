@@ -1,22 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ReferenceProduit } from "@/modules/stocks/types/reference";
 import { useNavigate } from "react-router-dom";
-import {
-  ExemplaireProduitForm,
-  ExemplaireProduitFormValues,
-} from "@/modules/stocks/exemplaire";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
-import { UseFormReturn } from "react-hook-form";
-import { Package, Plus, Eye, ShoppingCart } from "lucide-react";
+
+import { Package} from "lucide-react";
+import { useState } from "react";
 
 interface ReferenceCarteProps {
   product: ReferenceProduit;
@@ -24,27 +12,7 @@ interface ReferenceCarteProps {
 
 function ReferenceCarte({ product }: ReferenceCarteProps) {
   const navigate = useNavigate();
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
-
-  const closeForm = () => {
-    setIsFormOpen(false);
-  };
-
-  const formRef = useRef<UseFormReturn<ExemplaireProduitFormValues>>(null);
-  const handleFormSuccess = () => {
-    if (formRef.current) {
-      toast.success(
-        `Exemplaire "${formRef.current.getValues(
-          "num_serie"
-        )}" ajouté avec succès`,
-        {
-          duration: 2000,
-        }
-      );
-      formRef.current.setValue("num_serie", "");
-    }
-  };
 
   const handleImageError = () => {
     setImageError(true);
@@ -52,22 +20,6 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
 
   return (
     <>
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Ajouter un exemplaire de produit</DialogTitle>
-          </DialogHeader>
-          <ExemplaireProduitForm
-            initialData={{
-              id_produit: String(product.id_produit),
-            }}
-            ref={formRef}
-            onCancel={closeForm}
-            onSuccess={handleFormSuccess}
-          />
-        </DialogContent>
-      </Dialog>
-
       <Card
         onClick={(e) => {
           e.stopPropagation();
@@ -118,24 +70,8 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
               )}
             </div>
           </div>
-
-          {/* Quick Actions Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-end justify-center pb-4">
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-700 border-0 shadow-lg"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`${product.id_produit}`);
-                }}
-              >
-                <Eye className="w-4 h-4 mr-1" />
-                Voir
-              </Button>
-            </div>
-          </div>
+          
+         
         </div>
 
         {/* Content Section */}
@@ -166,35 +102,6 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
             >
               🏷️ {product.type_produit}
             </Badge>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                toast.info(
-                  "La fonctionnalité de sortie n'est pas encore implémentée."
-                );
-              }}
-              variant="outline"
-              size="sm"
-              className="flex-1 h-10 text-sm font-medium border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600 transition-all duration-300 bg-white/50 backdrop-blur-sm"
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Sortie
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1 h-10 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-300 shadow-lg hover:shadow-xl"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsFormOpen(true);
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Ajouter
-            </Button>
           </div>
         </div>
 
