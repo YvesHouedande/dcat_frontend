@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { toDatetimeLocal } from "@/modules/stocks/utils/helpers";
-import { useExemplaireProduits } from "..";
+import {  useExemplaireCréation, useExemplaireUpdate } from "..";
 import {
   ExemplaireProduitEditSchema,
   ExemplaireProduitFormValues,
@@ -26,9 +26,8 @@ export function useExemplaireProduitForm({
   const [error, setError] = useState<Error | null>(null);
   const [margeError, setMargeError] = useState<string | null>(null);
 
-  const { createExemplaireProduit, updateExemplaireProduit } =
-    useExemplaireProduits();
-
+  const { createExemplaireProduit } = useExemplaireCréation();
+  const { updateExemplaireProduit } = useExemplaireUpdate();
   const schema = isEditMode
     ? ExemplaireProduitEditSchema
     : ExemplaireProduitSchema;

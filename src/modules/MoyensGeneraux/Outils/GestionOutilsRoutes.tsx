@@ -9,7 +9,7 @@ import MoyenGeneraux from "../MoyenGeneraux";
 import NotFound from "@/pages/NotFound";
 import Sortie from "./pages/sortie";
 import Retour from "./pages/retour";
-import Entree from "./pages/Entree";
+import Entree from "./pages/entree";
 
 function GestionOutilsRoutes() {
   return (

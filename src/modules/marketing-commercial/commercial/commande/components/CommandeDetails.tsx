@@ -199,10 +199,9 @@ const CommandeDetails = () => {
   };
   const FaireSortieExemplaire = ({ item }: { item: ProduitDetail }) => {
     setSortieLoading(true);
-    const { data, error } = useFetchExemplaireProduitByEtat(
+    const { ExemplaireProduitByEtat, error } = useFetchExemplaireProduitByEtat(
       item.produit.id_produit,
-      "Reserve",
-      item.quantite
+      "Reserve"
     );
     if (error) {
       toast.error(getAxiosErrorMessage(error));
@@ -210,7 +209,10 @@ const CommandeDetails = () => {
       return;
     }
 
-    if (!data?.data || data.total < item.quantite) {
+    if (
+      !ExemplaireProduitByEtat ||
+      ExemplaireProduitByEtat.length < item.quantite
+    ) {
       return (
         <Button
           size="sm"
@@ -223,7 +225,7 @@ const CommandeDetails = () => {
     const handleSortie = () => {
       setSortieLoading(true);
       for (let i = 0; i < item.quantite; i++) {
-        const id = data?.data[i].id_exemplaire;
+        const id = ExemplaireProduitByEtat[i].id_exemplaire;
         mutateSortieExemplaire(
           {
             id_commande: id,

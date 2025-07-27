@@ -56,12 +56,30 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
   const navigate = useNavigate();
   const [selectedPartenaireId, setSelectedPartenaireId] = useState<string>("");
   // La liste des interventions doit maintenant correspondre à la structure de données réelle
-  const [interventionsData, setInterventionsData] = useState<InterventionData[]>([]);
+  const [interventionsData, setInterventionsData] = useState<
+    InterventionData[]
+  >([]);
   const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState("");
   const { fetchPartners } = usePartenaireApi();
+
+  const loadPartenaires = useCallback(async () => {
+    try {
+      const partenairesData = await fetchPartners(1, 100);
+      setPartenaires(partenairesData.data);
+      // Sélectionnez le premier partenaire par défaut si la liste n'est pas vide
+      if (partenairesData.data.length > 0 && !selectedPartenaireId) {
+        setSelectedPartenaireId(
+          partenairesData.data[0].id_partenaire.toString()
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des partenaires:", error);
+      toast.error("Erreur lors du chargement des partenaires");
+    }
+  }, [fetchPartners, selectedPartenaireId]);
   useEffect(() => {
     // Convertir l'image en base64 au chargement du composant
     const img = new Image();
@@ -80,21 +98,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 
     // Charger la liste des partenaires
     loadPartenaires();
-  }, [fetchPartners]);
-
-  const loadPartenaires = async () => {
-    try {
-      const partenairesData = await fetchPartners();
-      setPartenaires(partenairesData.data);
-      // Sélectionnez le premier partenaire par défaut si la liste n'est pas vide
-      if (partenairesData.data.length > 0 && !selectedPartenaireId) {
-        setSelectedPartenaireId(partenairesData.data[0].id_partenaire.toString());
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des partenaires:", error);
-      toast.error("Erreur lors du chargement des partenaires");
-    }
-  };
+  }, [fetchPartners, loadPartenaires]);
 
   const loadInterventions = useCallback(async () => {
     if (!selectedPartenaireId) {
@@ -136,9 +140,10 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 
   const calculateTotalDuration = () => {
     let totalMinutes = 0;
-    interventionsData.forEach((item) => { // Itérez sur interventionsData
+    interventionsData.forEach((item) => {
+      // Itérez sur interventionsData
       const duration = item.intervention.duree; // Accès corrigé
-      if (typeof duration === 'string' && duration) {
+      if (typeof duration === "string" && duration) {
         const matches = duration.match(/(\d+)h(?:(\d+))?/);
         if (matches) {
           const hours = parseInt(matches[1]) || 0;
@@ -149,7 +154,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     });
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    return `${hours}h${minutes ? minutes.toString().padStart(2, '0') : ""}`;
+    return `${hours}h${minutes ? minutes.toString().padStart(2, "0") : ""}`;
   };
 
   const getSelectedPartenaire = () => {
@@ -169,10 +174,11 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
   const generateExcelContent = () => {
     const selectedPartenaire = getSelectedPartenaire();
     const headers = ["Date", "Type", "Problème", "Cause", "Actions", "Durée"];
-    const rows = interventionsData.map((item) => [ // Itérez sur interventionsData
+    const rows = interventionsData.map((item) => [
+      // Itérez sur interventionsData
       (() => {
         const date = new Date(item.intervention.date_intervention); // Accès corrigé
-        return isNaN(date.getTime()) ? '-' : format(date, "dd/MM/yyyy");
+        return isNaN(date.getTime()) ? "-" : format(date, "dd/MM/yyyy");
       })(),
       item.intervention.type_intervention ?? "",
       item.intervention.probleme_signale ?? "",
@@ -182,11 +188,15 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     ]);
 
     const csvContent = [
-      `Rapport d'interventions - ${selectedPartenaire?.nom_partenaire || "Partenaire"}`,
+      `Rapport d'interventions - ${
+        selectedPartenaire?.nom_partenaire || "Partenaire"
+      }`,
       `Généré le: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: fr })}`,
       "",
       headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
     ].join("\n");
 
     return csvContent;
@@ -194,12 +204,14 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 
   const generatePDFContent = () => {
     const selectedPartenaire = getSelectedPartenaire();
-    const partenaireName = selectedPartenaire?.nom_partenaire || "Partenaire inconnu";
+    const partenaireName =
+      selectedPartenaire?.nom_partenaire || "Partenaire inconnu";
 
-    const rows = interventionsData.map((item) => [ // Itérez sur interventionsData
+    const rows = interventionsData.map((item) => [
+      // Itérez sur interventionsData
       (() => {
         const date = new Date(item.intervention.date_intervention); // Accès corrigé
-        return isNaN(date.getTime()) ? '-' : format(date, "dd/MM/yyyy");
+        return isNaN(date.getTime()) ? "-" : format(date, "dd/MM/yyyy");
       })(),
       item.intervention.type_intervention ?? "",
       item.intervention.probleme_signale ?? "",
@@ -281,11 +293,15 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
         
         <div class="partenaire-info">
           <h3>Informations du partenaire</h3>
-          <p><strong>Nom :</strong> ${selectedPartenaire?.nom_partenaire || "N/A"}</p>
+          <p><strong>Nom :</strong> ${
+            selectedPartenaire?.nom_partenaire || "N/A"
+          }</p>
         </div>
         
         <div class="stats">
-          <p><strong>Nombre total d'interventions :</strong> ${interventionsData.length}</p>
+          <p><strong>Nombre total d'interventions :</strong> ${
+            interventionsData.length
+          }</p>
           <p><strong>Durée totale :</strong> ${calculateTotalDuration()}</p>
           <p><strong>Date de génération :</strong> ${format(
             new Date(),
@@ -330,12 +346,17 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 
   const handleExport = async (formatType: "pdf" | "excel") => {
     if (!selectedPartenaireId) {
-      toast.error("Veuillez sélectionner un partenaire pour générer le rapport.");
+      toast.error(
+        "Veuillez sélectionner un partenaire pour générer le rapport."
+      );
       return;
     }
-    if (interventionsData.length === 0) { // Vérifiez interventionsData
-        toast.info("Aucune intervention à exporter pour le partenaire sélectionné.");
-        return;
+    if (interventionsData.length === 0) {
+      // Vérifiez interventionsData
+      toast.info(
+        "Aucune intervention à exporter pour le partenaire sélectionné."
+      );
+      return;
     }
 
     setIsGeneratingReport(true);
@@ -346,13 +367,15 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
       if (formatType === "excel") {
         content = generateExcelContent();
         fileName = `rapport-interventions-${
-          selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") || "partenaire"
+          selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") ||
+          "partenaire"
         }.csv`;
         type = "text/csv;charset=utf-8;";
       } else {
         content = generatePDFContent();
         fileName = `rapport-interventions-${
-          selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") || "partenaire"
+          selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") ||
+          "partenaire"
         }.pdf`;
         type = "text/html";
       }
@@ -379,7 +402,9 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
         document.body.removeChild(a);
       }
 
-      toast.success(`Rapport exporté avec succès en format ${formatType.toUpperCase()}`);
+      toast.success(
+        `Rapport exporté avec succès en format ${formatType.toUpperCase()}`
+      );
     } catch (error) {
       console.error("Erreur lors de la génération du rapport:", error);
       toast.error(`Erreur lors de l'export en ${formatType.toUpperCase()}`);
@@ -474,10 +499,12 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
             </div>
           ) : partenaires.length === 0 && !isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
-                <p>Aucun partenaire n'est disponible.</p>
+              <p>Aucun partenaire n'est disponible.</p>
             </div>
           ) : isLoading ? (
-            <div className="text-center py-4">Chargement des interventions...</div>
+            <div className="text-center py-4">
+              Chargement des interventions...
+            </div>
           ) : (
             <>
               {getSelectedPartenaire() && (
@@ -523,39 +550,49 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      interventionsData.map((item) => ( // Itérez sur interventionsData
-                        <TableRow key={item.intervention.id_intervention}>
-                          <TableCell>
-                            {format(
-                              new Date(item.intervention.date_intervention), // Accès corrigé
-                              "dd/MM/yyyy"
-                            )}
-                          </TableCell>
-                          <TableCell>{item.intervention.type_intervention}</TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {item.intervention.probleme_signale}
-                          </TableCell>
-                          <TableCell>{item.intervention.cause_defaillance}</TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {item.intervention.rapport_intervention}
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {item.intervention.recommandation}
-                          </TableCell>
-                          <TableCell>{item.intervention.duree}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewIntervention(item.intervention)} // Passer l'objet intervention réel
-                              className="hover:bg-gray-100"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span className="ml-2">Détails</span>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      interventionsData.map(
+                        (
+                          item // Itérez sur interventionsData
+                        ) => (
+                          <TableRow key={item.intervention.id_intervention}>
+                            <TableCell>
+                              {format(
+                                new Date(item.intervention.date_intervention), // Accès corrigé
+                                "dd/MM/yyyy"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {item.intervention.type_intervention}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {item.intervention.probleme_signale}
+                            </TableCell>
+                            <TableCell>
+                              {item.intervention.cause_defaillance}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {item.intervention.rapport_intervention}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {item.intervention.recommandation}
+                            </TableCell>
+                            <TableCell>{item.intervention.duree}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleViewIntervention(item.intervention)
+                                } // Passer l'objet intervention réel
+                                className="hover:bg-gray-100"
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span className="ml-2">Détails</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      )
                     )}
                   </TableBody>
                 </Table>

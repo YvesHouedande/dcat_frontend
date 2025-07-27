@@ -7,10 +7,12 @@ export { ExemplaireProduitForm } from "./components/forms/ExemplaireProduitForm"
 export { ExemplaireProduitTable } from "./components/tables/ExemplaireProduitTable";
 export { DeliveryCombobox } from "@/components/combobox/DeliveryCombobox";
 export { ProductCombobox } from "@/components/combobox/ProductCombobox";
+import { useExemplaireCréation ,  useExemplaireUpdate} from "./hooks/useExemplaireProduits";
 
 // Hooks
 export { useExemplaireProduits } from "./hooks/useExemplaireProduits";
 export { useProducts } from "../reference/hooks/useProducts";
+export { useExemplaireCréation, useExemplaireUpdate };
 
 // Services
 export { useExemplaireProduitService } from "./services/ExemplaireProduit.service";

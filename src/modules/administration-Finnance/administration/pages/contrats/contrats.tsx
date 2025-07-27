@@ -77,7 +77,7 @@ const ModernContractGrid: React.FC = () => {
     queryFn: () =>
       selectedType && selectedType !== "all"
         ? fetchContratsByType(selectedType)
-        : fetchContrats(),
+        : fetchContrats({ page: 1, limit: 100 }),
   });
 
   // Récupération des partenaires pour affichage du nom
