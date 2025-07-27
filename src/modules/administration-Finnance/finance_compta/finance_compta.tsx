@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import {
   FileText,
   Calendar,
   Share2,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,11 +22,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { DemandeDocument, NatureDocument } from "../administration/types/interfaces";
-import { getAllNatureDocuments, getDocumentsByNature, deleteDocument } from "../services/finance_comptaService";
+import {
+  DemandeDocument,
+  NatureDocument,
+} from "../administration/types/interfaces";
+import useDocumentsApi from "../services/finance_comptaService";
 
 // Ajoute un type local pour la structure de réponse API attendue
 type DocsApiResponse = { success: boolean; data: DemandeDocument[] };
@@ -34,11 +37,34 @@ type DocsApiResponse = { success: boolean; data: DemandeDocument[] };
 const FinanceComptaGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [activeTab, setActiveTab] = useState<"finance" | "comptabilite">("finance");
   const [documents, setDocuments] = useState<DemandeDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { getAllNatureDocument, getDocumentsByNature, deleteDocument } = useDocumentsApi();
+  // Déterminer l'onglet actif basé sur la route
+  const getActiveTabFromRoute = useCallback((): "finance" | "comptabilite" => {
+    if (location.pathname.includes("/comptabilite")) {
+      return "comptabilite";
+    }
+    return "finance"; // par défaut
+  }, [location.pathname]);
+
+  const [activeTab, setActiveTab] = useState<"finance" | "comptabilite">(
+    getActiveTabFromRoute()
+  );
+
+  // Synchroniser l'onglet actif avec la route
+  useEffect(() => {
+    const newActiveTab = getActiveTabFromRoute();
+    setActiveTab((currentTab) => {
+      if (newActiveTab !== currentTab) {
+        return newActiveTab;
+      }
+      return currentTab;
+    });
+  }, [location.pathname, getActiveTabFromRoute]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,14 +74,21 @@ const FinanceComptaGrid: React.FC = () => {
 
       try {
         // Étape 1: Charger les natures de documents
-        const natures = await getAllNatureDocuments();
-        
-        const financeNature = natures.find(n => 
-          n.libelle && (n.libelle.toLowerCase().includes('finance') || n.libelle.toLowerCase().includes('financier'))
+        const natures = await getAllNatureDocument();
+
+        const financeNature = natures.find(
+          (n) =>
+            n.libelle &&
+            (n.libelle.toLowerCase().includes("finance") ||
+              n.libelle.toLowerCase().includes("financier"))
         );
-        
-        const comptabiliteNature = natures.find(n => 
-          n.libelle && (n.libelle.toLowerCase().includes('comptabilite') || n.libelle.toLowerCase().includes('comptable') || n.libelle.toLowerCase().includes('compta'))
+
+        const comptabiliteNature = natures.find(
+          (n) =>
+            n.libelle &&
+            (n.libelle.toLowerCase().includes("comptabilite") ||
+              n.libelle.toLowerCase().includes("comptable") ||
+              n.libelle.toLowerCase().includes("compta"))
         );
 
         // Étape 2: Déterminer la nature à utiliser en fonction de l'onglet actif
@@ -65,14 +98,16 @@ const FinanceComptaGrid: React.FC = () => {
         } else {
           natureToUse = comptabiliteNature;
         }
-        
+
         // Étape 3: Charger les documents si une nature a été trouvée
         if (natureToUse) {
-          const response = await getDocumentsByNature(natureToUse.id_nature_document);
+          const response = await getDocumentsByNature(
+            natureToUse.id_nature_document
+          );
           if (
             response &&
-            typeof response === 'object' &&
-            'success' in response &&
+            typeof response === "object" &&
+            "success" in response &&
             Array.isArray((response as unknown as DocsApiResponse).data)
           ) {
             setDocuments((response as unknown as DocsApiResponse).data);
@@ -84,11 +119,13 @@ const FinanceComptaGrid: React.FC = () => {
           }
         }
         // Si aucune nature n'est trouvée, documents restera un tableau vide, ce qui est correct.
-
       } catch (err: unknown) {
-        console.error(`Erreur lors du chargement des données pour l'onglet ${activeTab}:`, err);
+        console.error(
+          `Erreur lors du chargement des données pour l'onglet ${activeTab}:`,
+          err
+        );
         // Si c'est une erreur 404 (pas de documents), on affiche juste une liste vide.
-        if (typeof err === 'object' && err !== null && 'response' in err) {
+        if (typeof err === "object" && err !== null && "response" in err) {
           const errorObj = err as { response?: { status?: number } };
           if (errorObj.response?.status === 404) {
             setDocuments([]);
@@ -107,7 +144,7 @@ const FinanceComptaGrid: React.FC = () => {
 
   // Fonction pour extraire le type de fichier à partir de l'extension
   const getFileType = (filename: string): string => {
-    const extension = filename.split('.').pop()?.toLowerCase() || '';
+    const extension = filename.split(".").pop()?.toLowerCase() || "";
     return extension.toUpperCase();
   };
 
@@ -115,18 +152,29 @@ const FinanceComptaGrid: React.FC = () => {
   const filteredDocuments = searchQuery
     ? (documents || []).filter(
         (document) =>
-          document.libelle_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          document.lien_document.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          getFileType(document.lien_document).toLowerCase().includes(searchQuery.toLowerCase())
+          document.libelle_document
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          document.lien_document
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          getFileType(document.lien_document)
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
       )
-    : (documents || []);
+    : documents || [];
+
+  const handleTabChange = (newTab: "finance" | "comptabilite") => {
+    navigate(`/finance-et-compatibilite/${newTab}`);
+    setActiveTab(newTab);
+  };
 
   const handleAddDocument = () => {
-    navigate(`/administration/finance-compta/${activeTab}/nouveau`);
+    navigate(`/finance-et-compatibilite/${activeTab}/nouveau`);
   };
 
   const handleViewDocument = (id: number) => {
-    navigate(`/administration/finance-compta/${activeTab}/${id}/details`);
+    navigate(`/finance-et-compatibilite/${activeTab}/${id}/details`);
   };
 
   const handleDeleteDocument = async (id: number, e: React.MouseEvent) => {
@@ -134,7 +182,7 @@ const FinanceComptaGrid: React.FC = () => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) {
       try {
         await deleteDocument(id);
-        setDocuments(docs => docs.filter(doc => doc.id_documents !== id));
+        setDocuments((docs) => docs.filter((doc) => doc.id_documents !== id));
       } catch (err) {
         console.error("Erreur lors de la suppression:", err);
         alert("Erreur lors de la suppression du document");
@@ -160,7 +208,7 @@ const FinanceComptaGrid: React.FC = () => {
 
   const getFileIcon = (filename: string) => {
     const type = getFileType(filename).toLowerCase();
-    
+
     switch (type) {
       case "pdf":
         return <FileText size={28} className="text-red-500" />;
@@ -182,10 +230,10 @@ const FinanceComptaGrid: React.FC = () => {
       return format(date, "dd MMM", { locale: fr });
     } catch (err) {
       console.error("Erreur de formatage de date:", err);
-      return dateString.split('T')[0];
+      return dateString.split("T")[0];
     }
   };
-  
+
   const formatTime = (dateString?: string) => {
     if (!dateString) return "-";
     try {
@@ -193,7 +241,7 @@ const FinanceComptaGrid: React.FC = () => {
       return format(date, "HH:mm", { locale: fr });
     } catch (err) {
       console.error("Erreur de formatage d'heure:", err);
-      return dateString.split('T')[1]?.substring(0, 5) || "-";
+      return dateString.split("T")[1]?.substring(0, 5) || "-";
     }
   };
 
@@ -216,7 +264,11 @@ const FinanceComptaGrid: React.FC = () => {
   // Vérification de sécurité supplémentaire
   if (!Array.isArray(filteredDocuments)) {
     console.error("filteredDocuments n'est pas un tableau:", filteredDocuments);
-    return <div className="flex justify-center items-center h-64 text-red-600">Erreur de format de données</div>;
+    return (
+      <div className="flex justify-center items-center h-64 text-red-600">
+        Erreur de format de données
+      </div>
+    );
   }
 
   return (
@@ -229,32 +281,54 @@ const FinanceComptaGrid: React.FC = () => {
               Gestion des Documents Finance & Comptabilité
             </h1>
             <p className="text-sm text-gray-500">
-              {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} disponible{filteredDocuments.length !== 1 ? 's' : ''}
+              {filteredDocuments.length} document
+              {filteredDocuments.length !== 1 ? "s" : ""} disponible
+              {filteredDocuments.length !== 1 ? "s" : ""}
             </p>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="flex border rounded-md overflow-hidden">
-              <Button 
-                variant={viewMode === "grid" ? "default" : "ghost"} 
-                size="sm" 
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
                 className="rounded-none h-8"
                 onClick={() => setViewMode("grid")}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="3" y="3" width="7" height="7" />
                   <rect x="14" y="3" width="7" height="7" />
                   <rect x="3" y="14" width="7" height="7" />
                   <rect x="14" y="14" width="7" height="7" />
                 </svg>
               </Button>
-              <Button 
-                variant={viewMode === "list" ? "default" : "ghost"} 
-                size="sm" 
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
                 className="rounded-none h-8"
                 onClick={() => setViewMode("list")}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <line x1="8" y1="6" x2="21" y2="6" />
                   <line x1="8" y1="12" x2="21" y2="12" />
                   <line x1="8" y1="18" x2="21" y2="18" />
@@ -264,7 +338,11 @@ const FinanceComptaGrid: React.FC = () => {
                 </svg>
               </Button>
             </div>
-            <Button variant="outline" size="sm" className="text-gray-700 border-gray-300 h-8">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-gray-700 border-gray-300 h-8"
+            >
               <Filter size={14} className="mr-1" />
               Filtres
             </Button>
@@ -280,7 +358,13 @@ const FinanceComptaGrid: React.FC = () => {
         </div>
 
         {/* Onglets Finance/Comptabilité */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "finance" | "comptabilite")} className="mb-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) =>
+            handleTabChange(value as "finance" | "comptabilite")
+          }
+          className="mb-4"
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="finance">Finance</TabsTrigger>
             <TabsTrigger value="comptabilite">Comptabilité</TabsTrigger>
@@ -316,16 +400,18 @@ const FinanceComptaGrid: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     {getFileIcon(document.lien_document)}
                     <Badge
-                      className={`text-xs font-normal ${getFileTypeColor(document.lien_document)}`}
+                      className={`text-xs font-normal ${getFileTypeColor(
+                        document.lien_document
+                      )}`}
                     >
                       {getFileType(document.lien_document)}
                     </Badge>
                   </div>
-                  
+
                   <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-1 h-10">
                     {document.libelle_document}
                   </h3>
-                  
+
                   <div className="flex justify-between items-center text-xs text-gray-500">
                     <div className="flex items-center">
                       <Calendar size={12} className="mr-1" />
@@ -361,9 +447,11 @@ const FinanceComptaGrid: React.FC = () => {
                             <Share2 size={12} className="mr-2" />
                             Partager
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="cursor-pointer text-xs py-1 text-red-500"
-                            onClick={(e) => handleDeleteDocument(document.id_documents, e)}
+                            onClick={(e) =>
+                              handleDeleteDocument(document.id_documents, e)
+                            }
                           >
                             <Trash2 size={12} className="mr-2" />
                             Supprimer
@@ -372,7 +460,7 @@ const FinanceComptaGrid: React.FC = () => {
                       </DropdownMenu>
                     </div>
                   </div>
-                  
+
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 </CardContent>
               </Card>
@@ -384,55 +472,89 @@ const FinanceComptaGrid: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b">
-                  <th className="text-left p-3 text-xs font-medium text-gray-500">Titre</th>
-                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden md:table-cell">Fichier</th>
-                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden sm:table-cell">Type</th>
-                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden lg:table-cell">Date</th>
-                  <th className="text-right p-3 text-xs font-medium text-gray-500">Actions</th>
+                  <th className="text-left p-3 text-xs font-medium text-gray-500">
+                    Titre
+                  </th>
+                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden md:table-cell">
+                    Fichier
+                  </th>
+                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden sm:table-cell">
+                    Type
+                  </th>
+                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden lg:table-cell">
+                    Date
+                  </th>
+                  <th className="text-right p-3 text-xs font-medium text-gray-500">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredDocuments.map((document, index) => (
-                  <tr 
-                    key={document.id_documents} 
-                    className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                  <tr
+                    key={document.id_documents}
+                    className={`border-b hover:bg-gray-50 ${
+                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    }`}
                   >
                     <td className="p-3">
                       <div className="flex items-center">
                         {getFileIcon(document.lien_document)}
                         <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-800">{document.libelle_document}</p>
-                          <p className="text-xs text-gray-500 md:hidden">{document.lien_document}</p>
+                          <p className="text-sm font-medium text-gray-800">
+                            {document.libelle_document}
+                          </p>
+                          <p className="text-xs text-gray-500 md:hidden">
+                            {document.lien_document}
+                          </p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 text-sm text-gray-600 hidden md:table-cell">{document.lien_document}</td>
+                    <td className="p-3 text-sm text-gray-600 hidden md:table-cell">
+                      {document.lien_document}
+                    </td>
                     <td className="p-3 hidden sm:table-cell">
-                      <Badge className={`text-xs font-normal ${getFileTypeColor(document.lien_document)}`}>
+                      <Badge
+                        className={`text-xs font-normal ${getFileTypeColor(
+                          document.lien_document
+                        )}`}
+                      >
                         {getFileType(document.lien_document)}
                       </Badge>
                     </td>
                     <td className="p-3 text-sm text-gray-600 hidden lg:table-cell">
-                      {document.date_document ? 
-                      `${formatDate(document.date_document)} à ${formatTime(document.date_document)}` 
-                      : "-"}
+                      {document.date_document
+                        ? `${formatDate(document.date_document)} à ${formatTime(
+                            document.date_document
+                          )}`
+                        : "-"}
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="h-7 w-7 p-0"
-                          onClick={() => handleViewDocument(document.id_documents)}
+                          onClick={() =>
+                            handleViewDocument(document.id_documents)
+                          }
                         >
                           <Eye size={14} />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                        >
                           <Download size={14} />
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                            >
                               <MoreHorizontal size={14} />
                             </Button>
                           </DropdownMenuTrigger>
@@ -441,9 +563,11 @@ const FinanceComptaGrid: React.FC = () => {
                               <Share2 size={14} className="mr-2" />
                               Partager
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="cursor-pointer text-xs text-red-500"
-                              onClick={(e) => handleDeleteDocument(document.id_documents, e)}
+                              onClick={(e) =>
+                                handleDeleteDocument(document.id_documents, e)
+                              }
                             >
                               <Trash2 size={14} className="mr-2" />
                               Supprimer
@@ -464,19 +588,24 @@ const FinanceComptaGrid: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-8 bg-white rounded-lg border mt-4">
             <FileText size={48} className="text-gray-300 mb-2" />
             <p className="text-gray-600 mb-2">
-              {searchQuery 
+              {searchQuery
                 ? "Aucun document ne correspond à votre recherche"
-                : `Aucun document ${activeTab === "finance" ? "de finance" : "de comptabilité"} n'a encore été ajouté`
-              }
+                : `Aucun document ${
+                    activeTab === "finance" ? "de finance" : "de comptabilité"
+                  } n'a encore été ajouté`}
             </p>
             {searchQuery ? (
-              <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchQuery("")}
+              >
                 Réinitialiser la recherche
               </Button>
             ) : (
-              <Button 
-                variant="default" 
-                size="sm" 
+              <Button
+                variant="default"
+                size="sm"
                 onClick={handleAddDocument}
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -491,4 +620,4 @@ const FinanceComptaGrid: React.FC = () => {
   );
 };
 
-export default FinanceComptaGrid; 
+export default FinanceComptaGrid;

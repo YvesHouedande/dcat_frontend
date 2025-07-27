@@ -18,15 +18,15 @@ export default function GestionProjetsPage() {
   // Fonction utilitaire pour déterminer l'onglet actif à partir de l'URL
   const getActiveTabFromUrl = (pathname: string) => {
     // Vérifiez si le chemin contient '/taches'
-    if (pathname.includes("/technique/projets/taches")) {
+    if (pathname.includes("/gestion-des-projets/projets/taches")) {
       return "taches";
     }
     // Vérifiez si le chemin contient '/livrables'
-    if (pathname.includes("/technique/projets/livrables")) {
+    if (pathname.includes("/gestion-des-projets/projets/livrables")) {
       return "livrables";
     }
 
-    if (pathname.includes("/technique/projets/operations")) {
+    if (pathname.includes("/gestion-des-projets/projets/operations")) {
       return "operations";
     }
     // Si aucun sous-chemin spécifique n'est trouvé, l'onglet par défaut est 'projets-overview'
@@ -44,14 +44,14 @@ export default function GestionProjetsPage() {
 
   // Gestionnaire de changement d'onglet
   const handleTabChange = (value: string) => {
-    let newPath = "/technique/projets"; // Le chemin de base pour la page de gestion des projets
+    let newPath = "/gestion-des-projets/projets"; // Le chemin de base pour la page de gestion des projets
 
     if (value === "taches") {
-      newPath = "/technique/projets/taches";
+      newPath = "/gestion-des-projets/projets/taches";
     } else if (value === "livrables") {
-      newPath = "/technique/projets/livrables";
+      newPath = "/gestion-des-projets/projets/livrables";
     } else if (value === "operations") {
-      newPath = "/technique/projets/operations";
+      newPath = "/gestion-des-projets/projets/operations";
     }
     // Si 'value' est 'projets-overview', newPath reste "/technique/projets"
 

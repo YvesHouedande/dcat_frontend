@@ -64,6 +64,7 @@ export function ProductInstanceTable({
   totalPages,
   total,
   loading,
+  pageSize
 }: ProductInstanceTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -169,10 +170,18 @@ export function ProductInstanceTable({
                     {instance.coef_divers ? instance.coef_divers : 0}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
-                    {formatCurrency(instance.prix_de_revient ? Number(instance.prix_de_revient) : 0)}
+                    {formatCurrency(
+                      instance.prix_de_revient
+                        ? Number(instance.prix_de_revient)
+                        : 0
+                    )}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
-                    {formatCurrency(instance.prix_de_vente ? Number(instance.prix_de_vente) : 0)}
+                    {formatCurrency(
+                      instance.prix_de_vente
+                        ? Number(instance.prix_de_vente)
+                        : 0
+                    )}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
                     {instance.date_entree}
@@ -210,7 +219,9 @@ export function ProductInstanceTable({
 
       <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-2">
         <p className="text-sm text-gray-500">
-          Affichage de {productInstances.length} sur {total} exemplaires
+          Affichage de {total === 0 ? 0 : (currentPage - 1) * pageSize + 1} à{" "}
+          {Math.min(currentPage * pageSize, total)} sur {total} exemplaire
+          {total > 1 ? "s" : ""}
         </p>
         <div className="flex items-center space-x-2">
           <Button

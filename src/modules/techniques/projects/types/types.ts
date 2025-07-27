@@ -12,6 +12,16 @@ export interface Employe {
   email_employes:string;
 }
 
+export interface EmployeResponse {
+  data: Employe[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface Projet {
   id_projet: number;
   nom_projet: string;

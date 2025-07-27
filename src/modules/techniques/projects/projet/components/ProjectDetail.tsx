@@ -31,7 +31,7 @@ import {
   addDocumentToProjet, // Import for adding documents to project
 } from "../api/projets"; // Ensure paths are correct
 import { getFamilles } from "../api/famille"; // Ensure paths are correct
-import { getPartenaires } from "../api/partenaires"; // Ensure paths are correct
+import { usePartenairesApi } from "../api/partenaires"; // Ensure paths are correct
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -86,9 +86,14 @@ import {
   deleteTacheSafely,
   getTacheById,
 } from "../../tasks/api/taches";
-import { getOperationsByProjet, deleteOperation, updateOperation, createOperation } from "../../operation/api/operation";
+import {
+  getOperationsByProjet,
+  deleteOperation,
+  updateOperation,
+  createOperation,
+} from "../../operation/api/operation";
 import { getTachesByOperation } from "../../tasks/api/taches";
-import { getEmployes } from "../api/employes";
+import { useEmployesApi } from "../api/employes";
 import TacheForm from "../../tasks/components/TacheForm";
 import TaskDetail from "../../tasks/components/TaskDetail";
 import { LivrableTable } from "../../livrables/components/LivrableTable";
@@ -167,16 +172,12 @@ const ProjectTaskDetailWrapper: FC<ProjectTaskDetailWrapperProps> = ({
     <div>
       <Button
         variant="outline"
-        onClick={() => navigate(`/technique/projets/${id}/details/taches`)}
+        onClick={() => navigate(`/technique/projets/${id}/taches`)}
         className="mb-4"
       >
         ← Retour à la liste des tâches
       </Button>
-      <TaskDetail
-        tache={tache}
-        isEmbedded={true}
-        onEdit={onEdit}
-      />
+      <TaskDetail tache={tache} isEmbedded={true} onEdit={onEdit} />
     </div>
   );
 };
@@ -270,7 +271,7 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/technique/projets/${id}/details/livrables`)}
+          onClick={() => navigate(`/technique/projets/${id}/livrables`)}
           className="mt-4"
         >
           ← Retour à la liste des livrables
@@ -283,7 +284,7 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
     <div>
       <Button
         variant="outline"
-        onClick={() => navigate(`/technique/projets/${id}/details/livrables`)}
+        onClick={() => navigate(`/technique/projets/${id}/livrables`)}
         className="mb-4"
       >
         ← Retour à la liste des livrables
@@ -298,14 +299,14 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
               payload as UpdateLivrablePayload
             );
             toast.success("Livrable modifié avec succès !");
-            navigate(`/technique/projets/${id}/details/livrables`);
+            navigate(`/technique/projets/${id}/livrables`);
           } catch (err) {
             console.error("Erreur lors de la mise à jour du livrable:", err);
             toast.error("Erreur lors de la mise à jour du livrable");
             throw err;
           }
         }}
-        onCancel={() => navigate(`/technique/projets/${id}/details/livrables`)}
+        onCancel={() => navigate(`/technique/projets/${id}/livrables`)}
         projetsDisponibles={[projet]}
         natureDocumentsDisponibles={natureDocuments}
         onSaveDocument={async (livrableId, documentFile, textPayload) => {
@@ -392,7 +393,7 @@ const ProjectLivrableDetailsWrapper: FC = () => {
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/technique/projets/${id}/details/livrables`)}
+          onClick={() => navigate(`/technique/projets/${id}/livrables`)}
           className="mt-4"
         >
           ← Retour à la liste des livrables
@@ -405,7 +406,7 @@ const ProjectLivrableDetailsWrapper: FC = () => {
     <div>
       <Button
         variant="outline"
-        onClick={() => navigate(`/technique/projets/${id}/details/livrables`)}
+        onClick={() => navigate(`/technique/projets/${id}/livrables`)}
         className="mb-4"
       >
         ← Retour à la liste des livrables
@@ -420,7 +421,9 @@ interface ProjectTacheEditWrapperProps {
   operations: Operation[];
 }
 
-const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({ operations }) => {
+const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({
+  operations,
+}) => {
   const { tacheId, id } = useParams<{ tacheId: string; id: string }>();
   const navigate = useNavigate();
   const [tache, setTache] = useState<TacheWithAssignedEmployes | null>(null);
@@ -428,6 +431,7 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({ operations 
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getEmployes } = useEmployesApi();
 
   useEffect(() => {
     const loadData = async () => {
@@ -451,7 +455,7 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({ operations 
             getTacheById(tacheIdNum),
             getEmployesAssignes(tacheIdNum),
             getProjetById(projetId),
-            getEmployes(),
+            getEmployes({ limit: 100, page: 1 }),
           ]);
 
         if (!tacheData) {
@@ -487,7 +491,7 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({ operations 
     };
 
     loadData();
-  }, [tacheId, id]);
+  }, [tacheId, id, getEmployes]);
 
   if (loading) {
     return <div className="text-center py-8">Chargement de la tâche...</div>;
@@ -499,7 +503,7 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({ operations 
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/technique/projets/${id}/details/taches`)}
+          onClick={() => navigate(`/technique/projets/${id}/taches`)}
           className="mt-4"
         >
           ← Retour à la liste des tâches
@@ -512,7 +516,7 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({ operations 
     <div>
       <Button
         variant="outline"
-        onClick={() => navigate(`/technique/projets/${id}/details/taches`)}
+        onClick={() => navigate(`/technique/projets/${id}/taches`)}
         className="mb-4"
       >
         ← Retour à la liste des tâches
@@ -524,22 +528,32 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({ operations 
             // Mise à jour de la tâche
             await updateTache(tache.id_tache, formData);
             // Gestion des assignations
-            const currentEmployeesIds = tache.id_assigne_a.map((emp) => emp.id_employes);
-            const employeesToAdd = employesIds.filter((id) => !currentEmployeesIds.includes(id));
-            const employeesToRemove = currentEmployeesIds.filter((id) => !employesIds.includes(id));
+            const currentEmployeesIds = tache.id_assigne_a.map(
+              (emp) => emp.id_employes
+            );
+            const employeesToAdd = employesIds.filter(
+              (id) => !currentEmployeesIds.includes(id)
+            );
+            const employeesToRemove = currentEmployeesIds.filter(
+              (id) => !employesIds.includes(id)
+            );
             await Promise.all([
-              ...employeesToAdd.map((empId) => assignEmployeToTache(tache.id_tache, empId)),
-              ...employeesToRemove.map((empId) => removeEmployeFromTache(tache.id_tache, empId)),
+              ...employeesToAdd.map((empId) =>
+                assignEmployeToTache(tache.id_tache, empId)
+              ),
+              ...employeesToRemove.map((empId) =>
+                removeEmployeFromTache(tache.id_tache, empId)
+              ),
             ]);
             toast.success("Tâche modifiée avec succès !");
-            navigate(`/technique/projets/${id}/details/taches`);
+            navigate(`/technique/projets/${id}/taches`);
           } catch (err) {
             console.error("Erreur lors de la mise à jour de la tâche:", err);
             toast.error("Erreur lors de la mise à jour de la tâche");
             throw err;
           }
         }}
-        onCancel={() => navigate(`/technique/projets/${id}/details/taches`)}
+        onCancel={() => navigate(`/technique/projets/${id}/taches`)}
         employesDisponibles={employes}
         operationsDisponibles={operations}
       />
@@ -551,7 +565,8 @@ const ProjetDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-
+  const { getPartenaires } = usePartenairesApi();
+  const { getEmployes } = useEmployesApi();
   const [projet, setProjet] = useState<Projet | undefined>(undefined);
   const [allPartenaires, setAllPartenaires] = useState<Partenaire[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
@@ -607,7 +622,7 @@ const ProjetDetailsPage: React.FC = () => {
         fetchedLivrablesResponse, // NEW: Fetch livrables with documents
       ] = await Promise.all([
         getProjetById(projectId),
-        getPartenaires(),
+        getPartenaires({ limit: 100, page: 1 }),
         getFamilles(),
         getDocumentsByProjetId(projectId), // Fetch documents directly associated with the project
         getLivrablesWithDocumentsByProjetId(projectId), // NEW: Fetch livrables and their nested documents
@@ -687,11 +702,15 @@ const ProjetDetailsPage: React.FC = () => {
     const loadTaches = async () => {
       try {
         // Nouvelle logique : charger toutes les opérations du projet, puis toutes les tâches de chaque opération
-        const operationsResponse = await getOperationsByProjet(projet.id_projet);
+        const operationsResponse = await getOperationsByProjet(
+          projet.id_projet
+        );
         const operations = operationsResponse.data || [];
         const allBaseTaches = [];
         for (const operation of operations) {
-          const tachesResponse = await getTachesByOperation(operation.id_operation);
+          const tachesResponse = await getTachesByOperation(
+            operation.id_operation
+          );
           if (tachesResponse.data && Array.isArray(tachesResponse.data)) {
             allBaseTaches.push(...tachesResponse.data);
           }
@@ -704,7 +723,7 @@ const ProjetDetailsPage: React.FC = () => {
           })
         );
         setTaches(tachesWithAssignes);
-        const employesData = await getEmployes();
+        const employesData = await getEmployes({ limit: 100, page: 1 });
         setEmployes(employesData);
       } catch {
         setTaches([]);
@@ -714,7 +733,7 @@ const ProjetDetailsPage: React.FC = () => {
       }
     };
     loadTaches();
-  }, [projet?.id_projet]);
+  }, [projet?.id_projet, getEmployes]);
 
   // Chargement des natures de documents pour les livrables
   useEffect(() => {
@@ -852,10 +871,12 @@ const ProjetDetailsPage: React.FC = () => {
 
   // === HANDLERS POUR LA GESTION DES TÂCHES ===
   const handleOpenCreateTache = () => {
-    navigate(`/technique/projets/${id}/details/tache/nouvelle`);
+    navigate(`/gestion-des-projets/projets/${id}/tache/nouvelle`);
   };
   const handleOpenEditTache = (tache: TacheWithAssignedEmployes) => {
-    navigate(`/technique/projets/${id}/details/tache/${tache.id_tache}/editer`);
+    navigate(
+      `/gestion-des-projets/projets/${id}/tache/${tache.id_tache}/editer`
+    );
   };
   const handleSaveTache = async (
     formData: CreateTachePayload,
@@ -956,19 +977,23 @@ const ProjetDetailsPage: React.FC = () => {
 
   // === HANDLER POUR LA VUE DÉTAIL DE TÂCHE ===
   const handleViewTache = (tacheId: number) => {
-    navigate(`/technique/projets/${id}/details/tache/${tacheId}/detailsTache`);
+    navigate(
+      `/gestion-des-projets/projets/${id}/tache/${tacheId}/detailsTache`
+    );
   };
 
   // === HANDLERS POUR LA GESTION DES LIVRABLES ===
   const handleOpenCreateLivrable = () => {
-    navigate(`/technique/projets/${id}/details/livrable/nouveau`);
+    navigate(`/gestion-des-projets/projets/${id}/livrable/nouveau`);
   };
   const handleOpenEditLivrable = (livrableId: number) => {
-    navigate(`/technique/projets/${id}/details/livrable/${livrableId}/editer`);
+    navigate(
+      `/gestion-des-projets/projets/${id}/livrable/${livrableId}/editer`
+    );
   };
   const handleViewLivrable = (livrableId: number) => {
     navigate(
-      `/technique/projets/${id}/details/livrable/${livrableId}/detailsLivrable`
+      `/gestion-des-projets/projets/${id}/livrable/${livrableId}/detailsLivrable`
     );
   };
 
@@ -1139,14 +1164,19 @@ const ProjetDetailsPage: React.FC = () => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loadingOperations, setLoadingOperations] = useState(true);
   const [operationFormLoading, setOperationFormLoading] = useState(false);
-  const [operationFormError, setOperationFormError] = useState<string | null>(null);
-
+  const [operationFormError, setOperationFormError] = useState<string | null>(
+    null
+  );
 
   const handleOpenEditOperation = (operationId: number) => {
-    navigate(`/technique/projets/operations/${operationId}/editer`, { state: { fromProject: true, projectId: id } });
+    navigate(`/gestion-des-projets/projets/operations/${operationId}/editer`, {
+      state: { fromProject: true, projectId: id },
+    });
   };
   const handleViewOperation = (operationId: number) => {
-    navigate(`/technique/projets/${id}/details/operations/${operationId}/details`);
+    navigate(
+      `/gestion-des-projets/projets/${id}/operations/${operationId}`
+    );
   };
   const handleDeleteOperation = async (operationId: number) => {
     if (!window.confirm("Supprimer cette opération ?")) return;
@@ -1177,7 +1207,7 @@ const ProjetDetailsPage: React.FC = () => {
       }
       const res = await getOperationsByProjet(projet.id_projet);
       setOperations(res.data || []);
-      navigate(`/technique/projets/${id}/details/operations`);
+      navigate(`/gestion-des-projets/projets/${id}/operations`);
     } catch {
       setOperationFormError("Erreur lors de l'enregistrement de l'opération.");
       toast.error("Erreur lors de l'enregistrement de l'opération.");
@@ -1191,7 +1221,9 @@ const ProjetDetailsPage: React.FC = () => {
     setLoadingOperations(true);
     const loadOperations = async () => {
       try {
-        const operationsResponse = await getOperationsByProjet(projet.id_projet);
+        const operationsResponse = await getOperationsByProjet(
+          projet.id_projet
+        );
         setOperations(operationsResponse.data || []);
       } catch {
         setOperations([]);
@@ -1257,7 +1289,7 @@ const ProjetDetailsPage: React.FC = () => {
               Projet introuvable !
             </h1>
             <Button
-              onClick={() => navigate("/technique/projets")}
+              onClick={() => navigate("/gestion-des-projets/projets")}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -1275,10 +1307,17 @@ const ProjetDetailsPage: React.FC = () => {
 
   // Wrapper pour OperationDetailsPage dans le contexte de la page de détail du projet
   const ProjectOperationDetailsWrapper: FC = () => {
-    const { operationId, id } = useParams<{ operationId: string; id: string }>();
+    const { operationId, id } = useParams<{
+      operationId: string;
+      id: string;
+    }>();
     // const navigate = useNavigate();
     if (!operationId || !id) {
-      return <div className="text-center py-8 text-red-500">ID d'opération ou de projet manquant.</div>;
+      return (
+        <div className="text-center py-8 text-red-500">
+          ID d'opération ou de projet manquant.
+        </div>
+      );
     }
     return (
       <div>
@@ -1296,27 +1335,35 @@ const ProjetDetailsPage: React.FC = () => {
           <Tabs value={getActiveTab(location.pathname)} className="w-full">
             <TabsList className="mb-6">
               <TabsTrigger asChild value="details">
-                <NavLink to={`/technique/projets/${id}/details`} end>
+                <NavLink to={`/gestion-des-projets/projets/${id}`} end>
                   Détails
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="operations">
-                <NavLink to={`/technique/projets/${id}/details/operations`}>
+                <NavLink
+                  to={`/gestion-des-projets/projets/${id}/operations`}
+                >
                   Opérations
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="taches">
-                <NavLink to={`/technique/projets/${id}/details/taches`}>
+                <NavLink
+                  to={`/gestion-des-projets/projets/${id}/taches`}
+                >
                   Tâches
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="documents">
-                <NavLink to={`/technique/projets/${id}/details/documents`}>
+                <NavLink
+                  to={`/gestion-des-projets/projets/${id}/documents`}
+                >
                   Documents
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="livrables">
-                <NavLink to={`/technique/projets/${id}/details/livrables`}>
+                <NavLink
+                  to={`/gestion-des-projets/projets/${id}/livrables`}
+                >
                   Livrables
                 </NavLink>
               </TabsTrigger>
@@ -1327,7 +1374,7 @@ const ProjetDetailsPage: React.FC = () => {
                 <div className="flex items-center gap-4 mb-4">
                   <Button
                     variant="ghost"
-                    onClick={() => navigate("/technique/projets")}
+                    onClick={() => navigate("/gestion-des-projets/projets")}
                     className="hover:bg-blue-100 transition-colors"
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -1369,7 +1416,7 @@ const ProjetDetailsPage: React.FC = () => {
                       variant="outline"
                       onClick={() =>
                         navigate(
-                          `/technique/projets/${projet.id_projet}/editer`
+                          `/gestion-des-projets/projets/${projet.id_projet}/editer`
                         )
                       }
                     >
@@ -1377,10 +1424,10 @@ const ProjetDetailsPage: React.FC = () => {
                       Modifier
                     </Button>
                     <Button
-                    className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-blue-600 hover:bg-blue-700"
                       onClick={() =>
                         navigate(
-                          `/technique/projets/${id}/details/operations`
+                          `/gestion-des-projets/projets/${id}/operations`
                         )
                       }
                     >
@@ -1616,9 +1663,7 @@ const ProjetDetailsPage: React.FC = () => {
                           <span className="text-sm text-gray-600">Bloqué</span>
                           <Badge
                             variant={
-                              projet.etat === "bloqué"
-                                ? "default"
-                                : "secondary"
+                              projet.etat === "bloqué" ? "default" : "secondary"
                             }
                           >
                             {projet.etat === "bloqué" ? "✓" : "○"}
@@ -1668,17 +1713,24 @@ const ProjetDetailsPage: React.FC = () => {
                             {operations.length}
                           </Badge>
                         </CardTitle>
-                        <Sheet open={showOperationSheet} onOpenChange={setShowOperationSheet}>
+                        <Sheet
+                          open={showOperationSheet}
+                          onOpenChange={setShowOperationSheet}
+                        >
                           <SheetTrigger asChild>
                             <Button className="bg-blue-600 text-white">
                               + Nouvelle opération
                             </Button>
                           </SheetTrigger>
-                          <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                          <SheetContent
+                            side="right"
+                            className="w-full sm:max-w-md overflow-y-auto"
+                          >
                             <SheetHeader>
                               <SheetTitle>Ajouter une opération</SheetTitle>
                               <SheetDescription>
-                                Remplissez le formulaire pour ajouter une nouvelle opération à ce projet.
+                                Remplissez le formulaire pour ajouter une
+                                nouvelle opération à ce projet.
                               </SheetDescription>
                             </SheetHeader>
                             <OperationForm
@@ -1712,7 +1764,7 @@ const ProjetDetailsPage: React.FC = () => {
                   }
                 />
                 <Route
-                  path="operations/:operationId/details"
+                  path="operations/:operationId"
                   element={<ProjectOperationDetailsWrapper />}
                 />
               </Routes>
@@ -1756,7 +1808,8 @@ const ProjetDetailsPage: React.FC = () => {
                               onView={handleViewTache}
                               onEdit={(id: number) => {
                                 const tache = taches.find(
-                                  (t: TacheWithAssignedEmployes) => t.id_tache === id
+                                  (t: TacheWithAssignedEmployes) =>
+                                    t.id_tache === id
                                 );
                                 if (tache) handleOpenEditTache(tache);
                               }}
@@ -1793,7 +1846,7 @@ const ProjetDetailsPage: React.FC = () => {
                       projet={projet}
                       onEdit={(tacheId: number) =>
                         navigate(
-                          `/technique/projets/${id}/details/tache/${tacheId}/editer`
+                          `/technique/projets/${id}/tache/${tacheId}/editer`
                         )
                       }
                     />

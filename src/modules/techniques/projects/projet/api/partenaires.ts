@@ -1,30 +1,59 @@
-import axios from 'axios';
-import { Partenaire } from '../../types/types';
+import {
+  PartenaireResponse,
+  Partenaires,
+} from "@/modules/administration-Finnance/administration/types/interfaces";
+// src/modules/administration-Finance/administration/hooks/usePartenairesApi.ts
+import { useCallback } from "react";
+import { useApi } from "@/api/api";
+import { AxiosError } from "axios";
 
-const API_URL = import.meta.env.VITE_APP_API_URL;
+export const usePartenairesApi = () => {
+  const api = useApi();
 
-export const getPartenaires = async (): Promise<Partenaire[]> => {
-    try {
-        const response = await axios.get(`${API_URL}/administration/partenaires`);
+  const getPartenaires = useCallback(
+    async ({
+      limit,
+      page,
+    }: {
+      limit: number;
+      page: number;
+    }): Promise<Partenaires[]> => {
+      try {
+        const response = await api.get<PartenaireResponse>(
+          "/administration/partenaires",
+          {
+            params: { limit, page },
+          }
+        );
 
-        // *** CHANGEMENT ICI ***
-        // Si la réponse est directement un tableau, il suffit de le retourner.
-        const partenairesList = response.data;
+        const partenairesList = response.data.data;
 
         if (Array.isArray(partenairesList)) {
-            console.log("[API] Partenaires récupérés :", partenairesList);
-            return partenairesList; // Retourne directement le tableau des partenaires
+          console.log("[API] Partenaires récupérés :", partenairesList);
+          return partenairesList;
         } else {
-            // Si jamais l'API renvoie quelque chose d'inattendu (pas un tableau)
-            console.warn("La réponse de l'API pour les partenaires n'est pas un tableau valide.", response.data);
-            return [];
+          console.warn(
+            "La réponse de l'API pour les partenaires n'est pas un tableau valide.",
+            response.data
+          );
+          return [];
         }
-    } catch (error) {
-        console.error("Erreur lors de la récupération des partenaires :", error);
-        if (axios.isAxiosError(error)) {
-            const errorMessage = error.response?.data?.message || `Erreur serveur (${error.response?.status})`;
-            throw new Error(errorMessage);
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération des partenaires :",
+          error
+        );
+        if (error instanceof Error && "response" in error) {
+          const response = (error as AxiosError<{ message: string }>).response;
+          const message =
+            response?.data?.message || `Erreur serveur (${response?.status})`;
+          throw new Error(message);
         }
         throw error;
-    }
+      }
+    },
+    [api]
+  );
+
+  return { getPartenaires };
 };

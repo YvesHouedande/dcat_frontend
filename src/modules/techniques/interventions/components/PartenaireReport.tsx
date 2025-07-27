@@ -34,7 +34,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Intervention, Partenaire } from "../interface/interface";
 import { getInterventionsByPartenaire } from "../api/intervention";
-import { fetchPartners } from "@/modules/administration-Finnance/services/partenaireService";
+import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
 import { FileDown, Eye, ChevronDown, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -61,7 +61,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState("");
-
+  const { fetchPartners } = usePartenaireApi();
   useEffect(() => {
     // Convertir l'image en base64 au chargement du composant
     const img = new Image();
@@ -80,15 +80,15 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 
     // Charger la liste des partenaires
     loadPartenaires();
-  }, []);
+  }, [fetchPartners]);
 
   const loadPartenaires = async () => {
     try {
       const partenairesData = await fetchPartners();
-      setPartenaires(partenairesData);
+      setPartenaires(partenairesData.data);
       // Sélectionnez le premier partenaire par défaut si la liste n'est pas vide
-      if (partenairesData.length > 0 && !selectedPartenaireId) {
-        setSelectedPartenaireId(partenairesData[0].id_partenaire.toString());
+      if (partenairesData.data.length > 0 && !selectedPartenaireId) {
+        setSelectedPartenaireId(partenairesData.data[0].id_partenaire.toString());
       }
     } catch (error) {
       console.error("Erreur lors du chargement des partenaires:", error);

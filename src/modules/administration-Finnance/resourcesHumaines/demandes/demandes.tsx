@@ -42,14 +42,14 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { toast } from 'sonner';
+import { toast } from "sonner";
 import {
   useFilteredDemandes,
   useEmployes,
   useApprouverDemande,
   useRefuserDemande,
   useDeleteDemande,
-} from "../../../hooks";
+} from "../../hooks";
 
 const DemandesAnnuaire: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,9 +59,12 @@ const DemandesAnnuaire: React.FC = () => {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedDemandeId, setSelectedDemandeId] = useState<number | null>(null);
+  const [selectedDemandeId, setSelectedDemandeId] = useState<number | null>(
+    null
+  );
   const [approvalComment, setApprovalComment] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const [page, setPage] = useState(1);
   const navigate = useNavigate();
 
   // Chargement des demandes filtrées et des employés via TanStack Query
@@ -69,13 +72,27 @@ const DemandesAnnuaire: React.FC = () => {
     demandes: filteredDemandes,
     isLoading: demandesLoading,
     error: demandesError,
-  } = useFilteredDemandes({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    pagination,
+  } = useFilteredDemandes(16, {
     search: searchQuery,
     status: statusFilter || undefined,
     type: typeFilter || undefined,
   });
   const { data: employes, isLoading: employesLoading } = useEmployes();
+  const total = pagination?.total || 0;
+  const totalPages = pagination?.totalPages || 1;
 
+  const handlePageChange = (page: number) => {
+    if (page > page && hasNextPage) {
+      fetchNextPage();
+    }
+    if (page >= 1 && page <= totalPages) {
+      setPage(page);
+    }
+  };
   // Mutations
   const approuverDemande = useApprouverDemande();
   const refuserDemande = useRefuserDemande();
@@ -83,7 +100,10 @@ const DemandesAnnuaire: React.FC = () => {
 
   // Map employé pour accès rapide
   const employeMap = React.useMemo(() => {
-    const map = new Map<number, { nom_employes: string; prenom_employes: string }>();
+    const map = new Map<
+      number,
+      { nom_employes: string; prenom_employes: string }
+    >();
     employes?.forEach((employe) =>
       map.set(employe.id_employes, {
         nom_employes: employe.nom_employes,
@@ -94,20 +114,27 @@ const DemandesAnnuaire: React.FC = () => {
   }, [employes]);
 
   // Statistiques
-  const totalDemandes = filteredDemandes.length;
-  const enAttenteCount = filteredDemandes.filter((d) => d.status === "En attente").length;
-  const approuveesCount = filteredDemandes.filter((d) => d.status === "Approuvé" || d.status === "Approuvée").length;
-  const refuseesCount = filteredDemandes.filter((d) => d.status === "Refusé" || d.status === "Refusée").length;
+  const totalDemandes = filteredDemandes?.length || 0;
+  const enAttenteCount =
+    filteredDemandes?.filter((d) => d.status === "En attente").length || 0;
+  const approuveesCount =
+    filteredDemandes?.filter(
+      (d) => d.status === "Approuvé" || d.status === "Approuvée"
+    ).length || 0;
+  const refuseesCount =
+    filteredDemandes?.filter(
+      (d) => d.status === "Refusé" || d.status === "Refusée"
+    ).length || 0;
 
   // Navigation
   const handleAddDemande = () => {
-    navigate("/administration/demandes/nouvelle");
+    navigate("/resources-humaines/demandes/nouvelle");
   };
   const handleViewDemande = (id: number) => {
-    navigate(`/administration/demandes/${id}/details`);
+    navigate(`/resources-humaines/demandes/${id}`);
   };
   const handleEditDemande = (id: number) => {
-    navigate(`/administration/demandes/${id}/modifier`);
+    navigate(`/resources-humaines/demandes/${id}/modifier`);
   };
 
   // Dialogues d'action
@@ -159,40 +186,48 @@ const DemandesAnnuaire: React.FC = () => {
         onSuccess: () => {
           setShowDeleteDialog(false);
           setSelectedDemandeId(null);
-          toast.success('Demande supprimée avec succès');
+          toast.success("Demande supprimée avec succès");
         },
         onError: (err: unknown) => {
           if (err instanceof Error) {
             toast.error(err.message);
-          } else if (typeof err === 'object' && err !== null && 'message' in err) {
+          } else if (
+            typeof err === "object" &&
+            err !== null &&
+            "message" in err
+          ) {
             toast.error(String((err as { message?: string }).message));
           } else {
-            toast.error('Erreur lors de la suppression de la demande');
+            toast.error("Erreur lors de la suppression de la demande");
           }
-        }
+        },
       }
     );
   };
 
   const formatShortDate = (date: Date | string | null | undefined) => {
     if (!date) return "N/A"; // Gère les cas null/undefined
-    
+
     const dateObj = date instanceof Date ? date : new Date(date);
-    
+
     // Vérifie si la date est valide
     if (isNaN(dateObj.getTime())) return "N/A";
-    
+
     return format(dateObj, "dd MMM", { locale: fr });
   };
 
-  const calculateDuration = (startDate: string | Date | null, endDate: string | Date | null) => {
+  const calculateDuration = (
+    startDate: string | Date | null,
+    endDate: string | Date | null
+  ) => {
     if (!startDate || !endDate) return "N/A";
 
-    const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
-    const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+    const start =
+      typeof startDate === "string" ? new Date(startDate) : startDate;
+    const end = typeof endDate === "string" ? new Date(endDate) : endDate;
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return "N/A";
-    
+
     const days = differenceInDays(end, start) + 1; // +1 to include both start and end day
     return days === 1 ? "1 jour" : `${days} jours`;
   };
@@ -294,16 +329,36 @@ const DemandesAnnuaire: React.FC = () => {
     return colors[colorIndex];
   };
 
-  const uniqueTypes = Array.from(new Set(filteredDemandes.map((d) => d.type_demande)));
-  const uniqueStatuses = Array.from(new Set(filteredDemandes.map((d) => d.status)));
+  const uniqueTypes = Array.from(
+    new Set(filteredDemandes?.map((d) => d.type_demande) || [])
+  );
+  const uniqueStatuses = Array.from(
+    new Set(filteredDemandes?.map((d) => d.status) || [])
+  );
 
   if (demandesLoading || employesLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
         <div className="mb-4 text-gray-700">Chargement des demandes...</div>
-        <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        <svg
+          className="animate-spin h-8 w-8 text-blue-600"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
         </svg>
       </div>
     );
@@ -311,7 +366,11 @@ const DemandesAnnuaire: React.FC = () => {
   if (demandesError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-red-600 bg-gray-50">
-        <div className="mb-4 text-lg font-medium">{demandesError instanceof Error ? demandesError.message : String(demandesError)}</div>
+        <div className="mb-4 text-lg font-medium">
+          {demandesError instanceof Error
+            ? demandesError.message
+            : String(demandesError)}
+        </div>
         <Button
           onClick={() => window.location.reload()}
           variant="outline"
@@ -421,7 +480,10 @@ const DemandesAnnuaire: React.FC = () => {
                   className="h-10 text-gray-700 border-gray-300"
                 >
                   <Filter size={14} className="mr-1" />
-                  Statut {statusFilter && <span className="ml-1 font-semibold text-blue-600">•</span>}
+                  Statut{" "}
+                  {statusFilter && (
+                    <span className="ml-1 font-semibold text-blue-600">•</span>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -455,7 +517,10 @@ const DemandesAnnuaire: React.FC = () => {
                   className="h-10 text-gray-700 border-gray-300"
                 >
                   <Filter size={14} className="mr-1" />
-                  Type {typeFilter && <span className="ml-1 font-semibold text-blue-600">•</span>}
+                  Type{" "}
+                  {typeFilter && (
+                    <span className="ml-1 font-semibold text-blue-600">•</span>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -534,11 +599,11 @@ const DemandesAnnuaire: React.FC = () => {
           </div>
         </div>
 
-        {filteredDemandes.length > 0 ? (
+        {filteredDemandes?.length && filteredDemandes?.length > 0 ? (
           viewMode === "grid" ? (
             /* Grille compacte de demandes */
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {filteredDemandes.map((demande) => {
+              {filteredDemandes?.map((demande) => {
                 const employee = employeMap.get(demande.id_employes);
                 return (
                   <Card
@@ -551,10 +616,14 @@ const DemandesAnnuaire: React.FC = () => {
                         <Badge className={`${getStatusColor(demande.status)}`}>
                           <div className="flex items-center">
                             {getStatusIcon(demande.status)}
-                            <span className="ml-1 text-xs">{demande.status}</span>
+                            <span className="ml-1 text-xs">
+                              {demande.status}
+                            </span>
                           </div>
                         </Badge>
-                        <Badge className={`${getTypeColor(demande.type_demande)}`}>
+                        <Badge
+                          className={`${getTypeColor(demande.type_demande)}`}
+                        >
                           <div className="flex items-center">
                             {getTypeIcon(demande.type_demande)}
                             <span className="ml-1 text-xs">
@@ -615,12 +684,24 @@ const DemandesAnnuaire: React.FC = () => {
                               }}
                               className="cursor-pointer text-xs py-1 text-blue-600"
                             >
-                              <svg className="mr-2" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
+                              <svg
+                                className="mr-2"
+                                width="14"
+                                height="14"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z" />
+                              </svg>
                               Modifier
                             </DropdownMenuItem>
                             {demande.status === "En attente" && (
                               <>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleApproveClick(demande.id_demandes);
@@ -630,7 +711,7 @@ const DemandesAnnuaire: React.FC = () => {
                                   <CheckCircle size={14} className="mr-2" />
                                   Approuver
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleRejectClick(demande.id_demandes);
@@ -651,7 +732,9 @@ const DemandesAnnuaire: React.FC = () => {
                               disabled={deleteDemande.isLoading}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              {deleteDemande.isLoading ? 'Suppression...' : 'Supprimer'}
+                              {deleteDemande.isLoading
+                                ? "Suppression..."
+                                : "Supprimer"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -714,7 +797,7 @@ const DemandesAnnuaire: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDemandes.map((demande, index) => {
+                  {filteredDemandes?.map((demande, index) => {
                     const employee = employeMap.get(demande.id_employes);
                     return (
                       <tr
@@ -741,7 +824,8 @@ const DemandesAnnuaire: React.FC = () => {
                             </div>
                             <div className="ml-2">
                               <p className="text-sm font-medium text-gray-800">
-                                {employee?.prenom_employes} {employee?.nom_employes}
+                                {employee?.prenom_employes}{" "}
+                                {employee?.nom_employes}
                               </p>
                               <p className="text-xs text-gray-500 hidden sm:block md:hidden">
                                 {demande.type_demande}
@@ -765,7 +849,10 @@ const DemandesAnnuaire: React.FC = () => {
                         </td>
                         <td className="p-3 text-sm text-gray-600 hidden md:table-cell">
                           <div className="flex items-center">
-                            <Calendar size={14} className="mr-1 text-gray-400" />
+                            <Calendar
+                              size={14}
+                              className="mr-1 text-gray-400"
+                            />
                             <span>
                               {formatShortDate(demande.date_absence)} -{" "}
                               {formatShortDate(demande.date_retour)}
@@ -773,13 +860,20 @@ const DemandesAnnuaire: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-3 text-sm text-gray-600 hidden lg:table-cell">
-                          {calculateDuration(demande.date_absence, demande.date_retour)}
+                          {calculateDuration(
+                            demande.date_absence,
+                            demande.date_retour
+                          )}
                         </td>
                         <td className="p-3">
-                          <Badge className={`${getStatusColor(demande.status)}`}>
+                          <Badge
+                            className={`${getStatusColor(demande.status)}`}
+                          >
                             <div className="flex items-center">
                               {getStatusIcon(demande.status)}
-                              <span className="ml-1 text-xs">{demande.status}</span>
+                              <span className="ml-1 text-xs">
+                                {demande.status}
+                              </span>
                             </div>
                           </Badge>
                         </td>
@@ -827,12 +921,24 @@ const DemandesAnnuaire: React.FC = () => {
                                   }}
                                   className="cursor-pointer text-xs py-1 text-blue-600"
                                 >
-                                  <svg className="mr-2" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z"/></svg>
+                                  <svg
+                                    className="mr-2"
+                                    width="14"
+                                    height="14"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M12 20h9" />
+                                    <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19.5 3 21l1.5-4L16.5 3.5z" />
+                                  </svg>
                                   Modifier
                                 </DropdownMenuItem>
                                 {demande.status === "En attente" && (
                                   <>
-                                    <DropdownMenuItem 
+                                    <DropdownMenuItem
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleApproveClick(demande.id_demandes);
@@ -842,7 +948,7 @@ const DemandesAnnuaire: React.FC = () => {
                                       <CheckCircle size={14} className="mr-2" />
                                       Approuver
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem 
+                                    <DropdownMenuItem
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleRejectClick(demande.id_demandes);
@@ -863,7 +969,9 @@ const DemandesAnnuaire: React.FC = () => {
                                   disabled={deleteDemande.isLoading}
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
-                                  {deleteDemande.isLoading ? 'Suppression...' : 'Supprimer'}
+                                  {deleteDemande.isLoading
+                                    ? "Suppression..."
+                                    : "Supprimer"}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -885,7 +993,7 @@ const DemandesAnnuaire: React.FC = () => {
               Aucune demande trouvée
             </h3>
             <p className="text-gray-500 text-center max-w-md mb-4">
-              {filteredDemandes.length > 0
+              {filteredDemandes?.length && filteredDemandes?.length > 0
                 ? "Aucune demande ne correspond à vos critères de recherche. Essayez de modifier vos filtres ou d'effectuer une nouvelle recherche."
                 : "Il n'y a actuellement aucune demande enregistrée."}
             </p>
@@ -904,13 +1012,15 @@ const DemandesAnnuaire: React.FC = () => {
         )}
 
         {/* Pagination */}
-        {filteredDemandes.length > 0 && (
+
+        {filteredDemandes?.length && filteredDemandes?.length > 0 && (
           <div className="flex justify-between items-center mt-4 bg-white rounded-lg p-3 border">
             <div className="text-sm text-gray-600">
               Affichage de{" "}
-              <span className="font-medium">{filteredDemandes.length}</span>{" "}
-              demande{filteredDemandes.length > 1 ? "s" : ""} sur{" "}
-              <span className="font-medium">{filteredDemandes.length}</span> au total
+              {total === 0 ? 0 : (page - 1) * filteredDemandes?.length + 1} à{" "}
+              {Math.min(page * filteredDemandes?.length, total)} sur {total}{" "}
+              exemplaire
+              {total > 1 ? "s" : ""}
             </div>
             {/* Pagination buttons (still static in this corrected version, needs full implementation) */}
             <div className="flex gap-1">
@@ -918,7 +1028,8 @@ const DemandesAnnuaire: React.FC = () => {
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0 text-gray-500 border-gray-300"
-                disabled // Still disabled; requires pagination state
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1 || isFetchingNextPage}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -934,14 +1045,24 @@ const DemandesAnnuaire: React.FC = () => {
                   <path d="m15 18-6-6 6-6" />
                 </svg>
               </Button>
-              <Button variant="default" size="sm" className="h-8 w-8 p-0">
-                1
-              </Button>
+              {[...Array(totalPages)].map((_, i) => (
+                <Button
+                  key={i}
+                  variant={page === i + 1 ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => handlePageChange(i + 1)}
+                  disabled={page >= totalPages || isFetchingNextPage}
+                >
+                  {i + 1}
+                </Button>
+              ))}
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0 text-gray-500 border-gray-300"
-                disabled // Still disabled; requires pagination state
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages || isFetchingNextPage}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -968,10 +1089,11 @@ const DemandesAnnuaire: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Approuver la demande</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir approuver cette demande ? Cette action ne peut pas être annulée.
+              Êtes-vous sûr de vouloir approuver cette demande ? Cette action ne
+              peut pas être annulée.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="approval-comment">Commentaire (optionnel)</Label>
@@ -986,8 +1108,10 @@ const DemandesAnnuaire: React.FC = () => {
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={approuverDemande.isLoading}>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel disabled={approuverDemande.isLoading}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleApprove}
               disabled={approuverDemande.isLoading}
               className="bg-green-600 hover:bg-green-700"
@@ -1011,13 +1135,16 @@ const DemandesAnnuaire: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Refuser la demande</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir refuser cette demande ? Cette action ne peut pas être annulée.
+              Êtes-vous sûr de vouloir refuser cette demande ? Cette action ne
+              peut pas être annulée.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="rejection-reason">Motif du refus (recommandé)</Label>
+              <Label htmlFor="rejection-reason">
+                Motif du refus (recommandé)
+              </Label>
               <Textarea
                 id="rejection-reason"
                 placeholder="Expliquez pourquoi cette demande est refusée..."
@@ -1029,8 +1156,10 @@ const DemandesAnnuaire: React.FC = () => {
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={refuserDemande.isLoading}>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel disabled={refuserDemande.isLoading}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleReject}
               disabled={refuserDemande.isLoading}
               className="bg-red-600 hover:bg-red-700"
@@ -1049,10 +1178,7 @@ const DemandesAnnuaire: React.FC = () => {
       </AlertDialog>
 
       {/* Dialogue de suppression */}
-      <AlertDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-      >
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer la demande</AlertDialogTitle>

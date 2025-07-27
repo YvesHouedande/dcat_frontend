@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Projet, Employe, Tache, TacheWithAssignedEmployes, Operation } from "../types/types";
+import { Projet, Employe, Tache, TacheWithAssignedEmployes, Operation, EmployeResponse } from "../types/types";
 
 // Import components
 import { TacheHeader } from "../tasks/components/TacheHeader";
@@ -19,7 +19,7 @@ import {
     getEmployesAssignes 
 } from "../tasks/api/taches";
 import { fetchAllProjets } from "../projet/api/projets";
-import { getEmployes } from "../projet/api/employes";
+import { useEmployesApi } from "../projet/api/employes";
 import { getOperationsByProjet } from "../operation/api/operation";
 import { getTachesByOperation } from "../tasks/api/taches";
 import { SquareKanban, Clock, Flag, Gauge } from "lucide-react"; 
@@ -33,7 +33,7 @@ const TachesPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [operations, setOperations] = useState<Operation[]>([]);
-
+    const { getEmployes } = useEmployesApi();
     // Filter states
     const [searchTerm, setSearchTerm] = useState("");
     const [filterProjet, setFilterProjet] = useState<number>(0);
@@ -52,7 +52,7 @@ const TachesPage = () => {
                 console.log('[TachesPage] Début du chargement des projets et employés');
                 const [fetchedProjets, fetchedEmployes] = await Promise.all([
                     fetchAllProjets(),
-                    getEmployes(),
+                    getEmployes({limit: 100, page: 1}),
                 ]);
                 console.log('[TachesPage] Projets récupérés:', fetchedProjets);
                 console.log('[TachesPage] Employés récupérés:', fetchedEmployes);
@@ -65,7 +65,15 @@ const TachesPage = () => {
                 }
 
                 setProjets(projetsArray);
-                setEmployes(fetchedEmployes);
+                
+                // Vérifier que fetchedEmployes est un tableau
+                let employesArray: Employe[] = [];
+                if (fetchedEmployes && Array.isArray(fetchedEmployes)) {
+                    employesArray = fetchedEmployes;
+                } else if (fetchedEmployes && typeof fetchedEmployes === 'object' && 'data' in fetchedEmployes && Array.isArray((fetchedEmployes as EmployeResponse).data)) {
+                    employesArray = (fetchedEmployes as EmployeResponse).data;
+                }
+                setEmployes(employesArray);
 
                 // Charger toutes les opérations de tous les projets
                 const allOperations: Operation[] = [];
@@ -189,15 +197,15 @@ const TachesPage = () => {
     };
 
     const handleEditTache = (id: number) => {
-        navigate(`/technique/projets/taches/${id}/editer`);
+        navigate(`/gestion-des-projets/projets/taches/${id}/editer`);
     };
 
     const handleViewTache = (id: number) => {
-        navigate(`/technique/projets/taches/${id}/details`);
+        navigate(`/gestion-des-projets/projets/taches/${id}/details`);
     };
 
     const handleAddTask = () => {
-        navigate("/technique/projets/taches/nouvelle");
+        navigate("/gestion-des-projets/projets/taches/nouvelle");
     };
 
     // Handler pour assigner un employé
@@ -274,13 +282,18 @@ const TachesPage = () => {
     ]), [projets]);
 
     // Options for employee filter
-    const employesOptions = useMemo(() => ([
-        { id: 0, name: "Tous les employés" },
-        ...employes.map(e => ({
-            id: e.id_employes,
-            name: `${e.prenom_employes || ''} ${e.nom_employes || ''}`.trim() || `Employé #${e.id_employes}`
-        }))
-    ]), [employes]);
+    const employesOptions = useMemo(() => {
+        if (!Array.isArray(employes)) {
+            return [{ id: 0, name: "Tous les employés" }];
+        }
+        return [
+            { id: 0, name: "Tous les employés" },
+            ...employes.map(e => ({
+                id: e.id_employes,
+                name: `${e.prenom_employes || ''} ${e.nom_employes || ''}`.trim() || `Employé #${e.id_employes}`
+            }))
+        ];
+    }, [employes]);
 
     const clearFilters = () => {
         setSearchTerm("");

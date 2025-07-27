@@ -196,7 +196,7 @@ const LivrablesPage: React.FC = () => {
       <div className="p-6 min-h-screen">
         <div className="max-w-7xl mx-auto">
           {/* Header pour la page Livrables */}
-          <LivrableHeader onAddLivrable={() => navigate("/technique/projets/livrables/nouveau")} />
+          <LivrableHeader onAddLivrable={() => navigate("/gestion-des-projets/projets/livrables/nouveau")} />
 
           {/* Cartes KPI pour les Livrables */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -254,8 +254,8 @@ const LivrablesPage: React.FC = () => {
               <LivrableTable
                 livrables={currentLivrables}
                 onDelete={handleDelete}
-                onEdit={(id) => navigate(`/technique/projets/livrables/${id}/editer`)}
-                onView={(id) => navigate(`/technique/projets/livrables/${id}/details`)}
+                onEdit={(id) => navigate(`/gestion-des-projets/projets/livrables/${id}/editer`)}
+                onView={(id) => navigate(`/gestion-des-projets/projets/livrables/${id}/details`)}
                 projets={projets} // Passez les projets pour mapper les noms
               />
               <LivrablePagination

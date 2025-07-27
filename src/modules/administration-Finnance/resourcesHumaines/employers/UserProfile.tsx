@@ -16,17 +16,16 @@ import {
   MapPin,
   Briefcase,
   Calendar,
-  Facebook,
-  Twitter,
-  Linkedin,
-  Instagram,
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
-import { Employe, EmployeDocument } from "../../types/interfaces";
-import { fetchEmployeById } from "../../../services/employeService";
-import { fetchFonctionById } from "../../../services/fonctionService";
-import { fetchEmployeDocuments, downloadDocument } from "../../../services/documentService";
+import {
+  Employe,
+  EmployeDocument,
+} from "../../administration/types/interfaces";
+import { useEmployesApi } from "../../services/employeService";
+import { fetchFonctionById } from "../../services/fonctionService";
+import { useContratsApi } from "../../services/documentService";
 
 const ModernUserProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -37,7 +36,8 @@ const ModernUserProfile: React.FC = () => {
   const [jobTitle, setJobTitle] = useState<string>("Non spécifié");
   const [documents, setDocuments] = useState<EmployeDocument[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
-
+  const { fetchEmployeDocuments, downloadDocument } = useContratsApi();
+  const { fetchEmployeById } = useEmployesApi();
   useEffect(() => {
     const loadEmploye = async () => {
       try {
@@ -55,10 +55,12 @@ const ModernUserProfile: React.FC = () => {
 
         // Charger les données de l'employé
         const data = await fetchEmployeById(employeId);
-        
+
         // Vérifier les données reçues
         if (!data || !data.id_employes) {
-          throw new Error("Les données de l'employé sont invalides ou incomplètes");
+          throw new Error(
+            "Les données de l'employé sont invalides ou incomplètes"
+          );
         }
 
         setUserInfo(data);
@@ -85,17 +87,20 @@ const ModernUserProfile: React.FC = () => {
         } finally {
           setLoadingDocuments(false);
         }
-
       } catch (err) {
         console.error("Erreur lors du chargement des données:", err);
-        setError(err instanceof Error ? err.message : "Une erreur inattendue s'est produite");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Une erreur inattendue s'est produite"
+        );
       } finally {
         setLoading(false);
       }
     };
 
     loadEmploye();
-  }, [id]); // Dépendance unique sur l'ID
+  }, [id, fetchEmployeById, fetchEmployeDocuments]); // Dépendance unique sur l'ID
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -115,14 +120,14 @@ const ModernUserProfile: React.FC = () => {
       console.error("ID manquant pour la modification");
       return;
     }
-    navigate(`/administration/employers/${id}/editer`);
+    navigate(`/resources-humaines/employes/${id}/editer`);
   };
 
   const handleDownloadDocument = async (docId: string) => {
     try {
       const blob = await downloadDocument(docId);
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `document-${docId}`; // Le nom du fichier sera défini par le Content-Disposition du serveur
       document.body.appendChild(a);
@@ -140,7 +145,7 @@ const ModernUserProfile: React.FC = () => {
       <div className="flex flex-col justify-center items-center min-h-screen">
         <div className="mb-4">Chargement...</div>
         <div className="text-sm text-gray-500">
-          <div>ID dans l'URL: {id || 'Non défini'}</div>
+          <div>ID dans l'URL: {id || "Non défini"}</div>
           <div>Chemin complet: {window.location.pathname}</div>
         </div>
       </div>
@@ -152,10 +157,10 @@ const ModernUserProfile: React.FC = () => {
       <div className="flex flex-col justify-center items-center min-h-screen text-red-500">
         <div className="mb-4">{error || "Employé non trouvé"}</div>
         <div className="text-sm">
-          <div>ID dans l'URL: {id || 'Non défini'}</div>
+          <div>ID dans l'URL: {id || "Non défini"}</div>
           <div>Chemin complet: {window.location.pathname}</div>
-          <button 
-            onClick={() => navigate('/administration/employers')}
+          <button
+            onClick={() => navigate("/administration/employers")}
             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Retour à la liste
@@ -173,7 +178,8 @@ const ModernUserProfile: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center gap-6">
             <Avatar className="w-24 h-24 border-4 border-white">
               <AvatarFallback className="bg-gray-800 text-xl">
-                {userInfo.nom_employes.charAt(0) + userInfo.prenom_employes.charAt(0)}
+                {userInfo.nom_employes.charAt(0) +
+                  userInfo.prenom_employes.charAt(0)}
               </AvatarFallback>
             </Avatar>
 
@@ -191,13 +197,6 @@ const ModernUserProfile: React.FC = () => {
                 </Badge>
               </div>
             </div>
-
-            <Button
-              disabled
-              className="bg-white text-blue-700 hover:bg-blue-50"
-            >
-              MON ESPACE PERSONNEL
-            </Button>
           </div>
         </div>
       </div>
@@ -211,8 +210,8 @@ const ModernUserProfile: React.FC = () => {
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
           <TabsContent value="profil" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="md:col-span-2">
+            <div className="grid grid-cols-1 gap-6">
+              <Card>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-gray-800">
@@ -258,7 +257,9 @@ const ModernUserProfile: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Date d'embauche</p>
-                        <p className="font-medium">{userInfo.date_embauche_employes}</p>
+                        <p className="font-medium">
+                          {userInfo.date_embauche_employes}
+                        </p>
                       </div>
                     </div>
 
@@ -268,7 +269,9 @@ const ModernUserProfile: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Adresse</p>
-                        <p className="font-medium">{userInfo.adresse_employes}</p>
+                        <p className="font-medium">
+                          {userInfo.adresse_employes}
+                        </p>
                       </div>
                     </div>
 
@@ -288,84 +291,10 @@ const ModernUserProfile: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Téléphone</p>
-                        <p className="font-medium">{userInfo.contact_employes}</p>
+                        <p className="font-medium">
+                          {userInfo.contact_employes}
+                        </p>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">
-                    Actions rapides
-                  </h2>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-blue-600 hover:border-blue-200 group"
-                    >
-                      <FileText
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-blue-500"
-                      />
-                      Formulaires de demande
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-blue-600 hover:border-blue-200 group"
-                    >
-                      <Calendar
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-blue-500"
-                      />
-                      Demande de congés
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-blue-600 hover:border-blue-200 group"
-                    >
-                      <Upload
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-blue-500"
-                      />
-                      Mettre à jour mon CV
-                    </Button>
-                  </div>
-
-                  <div className="mt-6">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">
-                      Partager mon profil
-                    </h3>
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="p-2 h-auto w-auto rounded-full"
-                      >
-                        <Facebook size={16} className="text-blue-600" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="p-2 h-auto w-auto rounded-full"
-                      >
-                        <Twitter size={16} className="text-blue-400" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="p-2 h-auto w-auto rounded-full"
-                      >
-                        <Linkedin size={16} className="text-blue-700" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="p-2 h-auto w-auto rounded-full"
-                      >
-                        <Instagram size={16} className="text-pink-600" />
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -376,7 +305,11 @@ const ModernUserProfile: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-800">Documents</h2>
               <Button
-                onClick={() => navigate('/administration/documents/nouveau')}
+                onClick={() =>
+                  navigate(
+                    `/resources-humaines/employes/${id}/ajouter-document`
+                  )
+                }
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <Upload size={16} className="mr-2" />
@@ -402,10 +335,14 @@ const ModernUserProfile: React.FC = () => {
                   >
                     <div className="bg-gray-50 p-4 border-b">
                       <div className="flex justify-between">
-                        <Badge className={getStatusColor(doc.etat_document || "")}>
+                        <Badge
+                          className={getStatusColor(doc.etat_document || "")}
+                        >
                           {doc.etat_document}
                         </Badge>
-                        <span className="text-xs text-gray-500">{doc.date_document}</span>
+                        <span className="text-xs text-gray-500">
+                          {doc.date_document}
+                        </span>
                       </div>
                       <div className="mt-6 mb-4 flex justify-center">
                         <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
@@ -417,13 +354,19 @@ const ModernUserProfile: React.FC = () => {
                       <h3 className="font-medium text-gray-800 mb-1">
                         {doc.libelle_document}
                       </h3>
-                      <p className="text-sm text-gray-500 mb-4">{doc.lien_document}</p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        {doc.lien_document}
+                      </p>
                       <div className="flex justify-between">
                         <Button
                           variant="outline"
                           size="sm"
                           className="text-gray-600 text-xs"
-                          onClick={() => navigate(`/administration/documents/${doc.id_documents}/editer`)}
+                          onClick={() =>
+                            navigate(
+                              `/administration/documents/${doc.id_documents}/editer`
+                            )
+                          }
                         >
                           <Edit size={14} className="mr-1" />
                           Mettre à jour
@@ -432,7 +375,9 @@ const ModernUserProfile: React.FC = () => {
                           variant="outline"
                           size="sm"
                           className="text-blue-600 text-xs"
-                          onClick={() => handleDownloadDocument(doc.id_documents.toString())}
+                          onClick={() =>
+                            handleDownloadDocument(doc.id_documents.toString())
+                          }
                         >
                           <Download size={14} className="mr-1" />
                           Télécharger
@@ -459,10 +404,7 @@ const ModernUserProfile: React.FC = () => {
                       Modifier vos informations de profil
                     </p>
                   </div>
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleClick(id)}
-                  >
+                  <Button variant="outline" onClick={() => handleClick(id)}>
                     <ExternalLink size={16} className="mr-2" />
                     Accéder
                   </Button>
@@ -488,7 +430,7 @@ const ModernUserProfile: React.FC = () => {
                       Modifier votre mot de passe et sécurité
                     </p>
                   </div>
-                  <Button variant="outline">
+                  <Button disabled variant="outline">
                     <ExternalLink size={16} className="mr-2" />
                     Accéder
                   </Button>

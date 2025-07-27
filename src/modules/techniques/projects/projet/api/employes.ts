@@ -1,14 +1,34 @@
-import axios from 'axios';
-import { Employe } from '../../types/types'; // Assurez-vous que le chemin est correct
+// src/modules/administration/hooks/useEmployesApi.ts
+import { useCallback } from "react";
+import { useApi } from "@/api/api";
+import { Employe, EmployeResponse } from "../../types/types";
 
-const API_URL = import.meta.env.VITE_APP_API_URL;
-export const getEmployes = async (): Promise<Employe[]> => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/employes`);
-    // L'API semble retourner un objet avec une propriété 'data' qui est le tableau
-    return response.data;
-  } catch (error) {
-    console.error("Erreur lors de la récupération des employés :", error);
-    throw error;
-  }
+export const useEmployesApi = () => {
+  const api = useApi();
+
+  const getEmployes = useCallback(
+    async ({
+      limit,
+      page,
+    }: {
+      limit: number;
+      page: number;
+    }): Promise<Employe[]> => {
+      try {
+        const response = await api.get<EmployeResponse>(
+          "/administration/employes",
+          {
+            params: { limit, page },
+          }
+        );
+        return response.data.data;
+      } catch (error) {
+        console.error("Erreur lors de la récupération des employés :", error);
+        throw error;
+      }
+    },
+    [api]
+  );
+
+  return { getEmployes };
 };

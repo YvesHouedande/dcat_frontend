@@ -22,15 +22,15 @@ export const InterventionsReportsPage: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/technique/interventions')}>
+            <Button variant="outline" onClick={() => navigate('/gestion-des-interventions/interventions')}>
               <Home className="mr-2 h-4 w-4" />
               Tableau de bord
             </Button>
-            <Button variant="outline" onClick={() => navigate('/technique/interventions/liste')}>
+            <Button variant="outline" onClick={() => navigate('/gestion-des-interventions/interventions/liste')}>
               <FileText className="mr-2 h-4 w-4" />
               Voir toutes les interventions
             </Button>
-            <Button onClick={() => navigate('/technique/interventions')}>
+            <Button onClick={() => navigate('/gestion-des-interventions/interventions')}>
               <Plus className="mr-2 h-4 w-4" />
               Nouvelle Intervention
             </Button>

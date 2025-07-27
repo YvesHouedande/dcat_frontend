@@ -20,22 +20,30 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Contrat, MutationError, UpdateContratData } from "../../types/interfaces";
-import { fetchContratById, updateContrat } from "../../../services/contratService";
-import { fetchPartners } from "../../../services/partenaireService";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import DocumentSheet from './DocumentSheet';
-
+import {
+  Contrat,
+  MutationError,
+  UpdateContratData,
+} from "../../types/interfaces";
+import { useContratsApi } from "../../../services/contratService";
+import { usePartenaireApi } from "../../../services/partenaireService";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import DocumentSheet from "./DocumentSheet";
+import { Textarea } from "@/components/ui/textarea";
 
 // Type pour le formulaire d'édition (sans duree_contrat car calculé automatiquement)
-type ContratFormData = Omit<Contrat, 'id_contrat' | 'duree_contrat'>;
+type ContratFormData = Omit<Contrat, "id_contrat" | "duree_contrat">;
 
 const EditerContrat: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [partenaires, setPartenaires] = useState<Array<{ id: number; nom: string }>>([]);
+  const [partenaires, setPartenaires] = useState<
+    Array<{ id: number; nom: string }>
+  >([]);
+  const { fetchContratById, updateContrat } = useContratsApi();
+  const { fetchPartners } = usePartenaireApi();
   const [formData, setFormData] = useState<ContratFormData>({
     nom_contrat: "",
     type_de_contrat: "standard",
@@ -44,11 +52,20 @@ const EditerContrat: React.FC = () => {
     reference: "",
     statut: "actif",
     id_partenaire: undefined,
+    nom_interlocuteur: "",
+    contact_interlocuteur: "",
+    contenu_contrat: "",
+    cout: 0,
+    modalite_paiement: "",
   });
 
   // Récupérer le contrat à éditer
-  const { data: contrat, isLoading, isError } = useQuery({
-    queryKey: ['contrat', id],
+  const {
+    data: contrat,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["contrat", id],
     queryFn: () => fetchContratById(id!),
     enabled: !!id,
   });
@@ -64,6 +81,11 @@ const EditerContrat: React.FC = () => {
         reference: contrat.reference,
         statut: contrat.statut,
         id_partenaire: contrat.id_partenaire,
+        nom_interlocuteur: contrat.nom_interlocuteur,
+        contact_interlocuteur: contrat.contact_interlocuteur,
+        contenu_contrat: contrat.contenu_contrat,
+        cout: Number(contrat.cout),
+        modalite_paiement: contrat.modalite_paiement,
       });
     }
   }, [contrat]);
@@ -72,24 +94,39 @@ const EditerContrat: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const partenairesData = await fetchPartners();
-        setPartenaires(partenairesData.map((partenaire: { id_partenaire: number; nom_partenaire: string }) => ({
-          id: partenaire.id_partenaire,
-          nom: partenaire.nom_partenaire
-        })));
+        const partenairesData = await fetchPartners(1, 100);
+        setPartenaires(
+          partenairesData.data.map(
+            (partenaire: {
+              id_partenaire: number;
+              nom_partenaire: string;
+            }) => ({
+              id: partenaire.id_partenaire,
+              nom: partenaire.nom_partenaire,
+            })
+          )
+        );
       } catch (error) {
         console.error("Erreur lors du chargement des partenaires:", error);
       }
     };
     loadData();
-  }, []);
+  }, [fetchPartners]);
 
   // Fonction utilitaire pour calculer la durée du contrat
-  const calculerDureeContrat = (dateDebutStr: string, dateFinStr: string): string => {
+  const calculerDureeContrat = (
+    dateDebutStr: string,
+    dateFinStr: string
+  ): string => {
     if (!dateDebutStr || !dateFinStr) return "";
     const dateDebut = new Date(dateDebutStr);
     const dateFin = new Date(dateFinStr);
-    if (isNaN(dateDebut.getTime()) || isNaN(dateFin.getTime()) || dateFin <= dateDebut) return "";
+    if (
+      isNaN(dateDebut.getTime()) ||
+      isNaN(dateFin.getTime()) ||
+      dateFin <= dateDebut
+    )
+      return "";
     const diffTime = dateFin.getTime() - dateDebut.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const diffMonths = Math.floor(diffDays / 30.4375); // moyenne mois
@@ -97,7 +134,7 @@ const EditerContrat: React.FC = () => {
     const remainingMonths = diffMonths % 12;
     let duree = "";
     if (diffYears > 0) {
-      duree = `${diffYears} an${diffYears > 1 ? 's' : ''}`;
+      duree = `${diffYears} an${diffYears > 1 ? "s" : ""}`;
       if (remainingMonths > 0) {
         duree += ` et ${remainingMonths} mois`;
       }
@@ -114,22 +151,20 @@ const EditerContrat: React.FC = () => {
     (data: UpdateContratData) => updateContrat(id!, data),
     {
       onSuccess: () => {
-        toast.success('Contrat modifié avec succès !');
-        queryClient.invalidateQueries({ queryKey: ['contrats'] });
-        queryClient.invalidateQueries({ queryKey: ['contrat', id] });
-        navigate('/administration/contrats');
+        toast.success("Contrat modifié avec succès !");
+        queryClient.invalidateQueries({ queryKey: ["contrats"] });
+        queryClient.invalidateQueries({ queryKey: ["contrat", id] });
+        navigate("/administration/contrats");
       },
       onError: (error: MutationError) => {
-        toast.error('Erreur lors de la modification du contrat', {
-          description: error.message || 'Une erreur inattendue s\'est produite',
+        toast.error("Erreur lors de la modification du contrat", {
+          description: error.message || "Une erreur inattendue s'est produite",
         });
       },
     }
   );
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -143,13 +178,16 @@ const EditerContrat: React.FC = () => {
     // Calculer automatiquement la durée du contrat
     let duree_contrat = "";
     if (formData.date_debut && formData.date_fin) {
-      duree_contrat = calculerDureeContrat(formData.date_debut, formData.date_fin);
+      duree_contrat = calculerDureeContrat(
+        formData.date_debut,
+        formData.date_fin
+      );
       if (!duree_contrat) {
-        toast.error('La date de fin doit être postérieure à la date de début');
+        toast.error("La date de fin doit être postérieure à la date de début");
         return;
       }
     } else {
-      toast.error('Veuillez renseigner les dates de début et de fin');
+      toast.error("Veuillez renseigner les dates de début et de fin");
       return;
     }
 
@@ -161,7 +199,9 @@ const EditerContrat: React.FC = () => {
       date_fin: formData.date_fin,
       reference: formData.reference,
       statut: formData.statut,
-      id_partenaire: formData.id_partenaire ? Number(formData.id_partenaire) : undefined,
+      id_partenaire: formData.id_partenaire
+        ? Number(formData.id_partenaire)
+        : undefined,
       duree_contrat: duree_contrat, // Durée calculée automatiquement
     };
 
@@ -169,10 +209,18 @@ const EditerContrat: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center min-h-screen text-lg text-gray-600 animate-pulse">Chargement du contrat...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen text-lg text-gray-600 animate-pulse">
+        Chargement du contrat...
+      </div>
+    );
   }
   if (isError) {
-    return <div className="flex flex-col items-center justify-center min-h-screen text-red-600">Erreur lors du chargement du contrat.</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-red-600">
+        Erreur lors du chargement du contrat.
+      </div>
+    );
   }
 
   return (
@@ -187,7 +235,7 @@ const EditerContrat: React.FC = () => {
             <DocumentSheet
               contratId={parseInt(id!)}
               onDocumentAdded={() => {
-                queryClient.invalidateQueries({ queryKey: ['contrat', id] });
+                queryClient.invalidateQueries({ queryKey: ["contrat", id] });
               }}
               trigger={
                 <Button
@@ -277,10 +325,85 @@ const EditerContrat: React.FC = () => {
                         <SelectContent>
                           <SelectItem value="standard">Standard</SelectItem>
                           <SelectItem value="cadre">Contrat cadre</SelectItem>
-                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="maintenance">
+                            Maintenance
+                          </SelectItem>
                           <SelectItem value="support">Support</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nom_interlocuteur">
+                        Nom de l'interlocuteur{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="nom_interlocuteur"
+                        name="nom_interlocuteur"
+                        placeholder="Entrez le nom de l'interlocuteur"
+                        value={formData.nom_interlocuteur}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_interlocuteur">
+                        Contact de l'interlocuteur{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="contact_interlocuteur"
+                        name="contact_interlocuteur"
+                        placeholder="Entrez le contact de l'interlocuteur"
+                        value={formData.contact_interlocuteur}
+                        onChange={handleInputChange}
+                        required
+                        type="tel"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="contenu_contrat">
+                        contenu du contrat
+                      </Label>
+                      <Textarea
+                        id="contenu_contrat"
+                        name="contenu_contrat"
+                        placeholder="Entrez le contenu du contrat"
+                        value={formData.contenu_contrat}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            contenu_contrat: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cout">
+                        Coût du contrat <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        required
+                        id="cout"
+                        name="cout"
+                        placeholder="Entrez le coût du contrat"
+                        value={formData.cout}
+                        onChange={handleInputChange}
+                        type="number"
+                        min={0}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="modalite_paiement">
+                        Modalités de paiement
+                      </Label>
+                      <Input
+                        id="modalite_paiement"
+                        name="modalite_paiement"
+                        placeholder="Entrez les modalités de paiement"
+                        value={formData.modalite_paiement}
+                        onChange={handleInputChange}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="status">
@@ -321,9 +444,13 @@ const EditerContrat: React.FC = () => {
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {formData.date_debut ? (
-                              format(new Date(formData.date_debut), "dd MMMM yyyy", {
-                                locale: fr,
-                              })
+                              format(
+                                new Date(formData.date_debut),
+                                "dd MMMM yyyy",
+                                {
+                                  locale: fr,
+                                }
+                              )
                             ) : (
                               <span>Sélectionner une date</span>
                             )}
@@ -332,7 +459,11 @@ const EditerContrat: React.FC = () => {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={formData.date_debut ? new Date(formData.date_debut) : undefined}
+                            selected={
+                              formData.date_debut
+                                ? new Date(formData.date_debut)
+                                : undefined
+                            }
                             onSelect={(date) => {
                               if (date) {
                                 setFormData({
@@ -347,7 +478,9 @@ const EditerContrat: React.FC = () => {
                       </Popover>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="date_fin">Date de fin <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="date_fin">
+                        Date de fin <span className="text-red-500">*</span>
+                      </Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -356,9 +489,13 @@ const EditerContrat: React.FC = () => {
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {formData.date_fin ? (
-                              format(new Date(formData.date_fin), "dd MMMM yyyy", {
-                                locale: fr,
-                              })
+                              format(
+                                new Date(formData.date_fin),
+                                "dd MMMM yyyy",
+                                {
+                                  locale: fr,
+                                }
+                              )
                             ) : (
                               <span>Sélectionner une date</span>
                             )}
@@ -367,7 +504,11 @@ const EditerContrat: React.FC = () => {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={formData.date_fin ? new Date(formData.date_fin) : undefined}
+                            selected={
+                              formData.date_fin
+                                ? new Date(formData.date_fin)
+                                : undefined
+                            }
                             onSelect={(date) => {
                               if (date) {
                                 setFormData({
@@ -388,18 +529,23 @@ const EditerContrat: React.FC = () => {
                       <div className="p-3 bg-gray-50 border rounded-md">
                         {formData.date_debut && formData.date_fin ? (
                           <span className="text-sm text-gray-700">
-                            {calculerDureeContrat(formData.date_debut, formData.date_fin)}
+                            {calculerDureeContrat(
+                              formData.date_debut,
+                              formData.date_fin
+                            )}
                           </span>
                         ) : (
                           <span className="text-sm text-gray-500 italic">
-                            Sélectionnez les dates de début et de fin pour calculer la durée
+                            Sélectionnez les dates de début et de fin pour
+                            calculer la durée
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="reference">
-                        Référence du contrat <span className="text-red-500">*</span>
+                        Référence du contrat{" "}
+                        <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="reference"
@@ -412,8 +558,6 @@ const EditerContrat: React.FC = () => {
                     </div>
                   </div>
                 </div>
-
-
               </div>
             </CardContent>
           </Card>
@@ -437,8 +581,6 @@ const EditerContrat: React.FC = () => {
             </Button>
           </div>
         </form>
-
-
       </div>
     </div>
   );

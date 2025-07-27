@@ -111,7 +111,7 @@ const dashboardConfig: Record<
       },
       {
         title: "Gestion des equipements et moyens de travail",
-        route: "/gestion-des-equiments-et-moyens-travail",
+        route: "/gestion-equipements-et-moyens-travail",
         icon: Printer,
         color: "from-orange-400 to-orange-500",
       },

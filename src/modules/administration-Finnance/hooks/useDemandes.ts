@@ -1,36 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import {
-  fetchDemandes,
-  fetchDemandeById,
-  fetchDemandesByType,
-  fetchDemandesByEmploye,
-  createDemande,
-  updateDemande,
-  deleteDemande,
-  approuverDemande,
-  refuserDemande,
-  addDocumentToDemande,
-  deleteDocumentFromDemande,
-  getAllEmployes,
-  fetchEmployeById,
-  getAllNatureDocuments,
-  fetchDocumentsByDemande,
-  type CreateDemandeData,
-} from '../services/demandeService';
-import { Demande } from '../administration/types/interfaces';
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
+import { type CreateDemandeData } from "../services/demandeService";
+import { Demande } from "../administration/types/interfaces";
+import { useDemandesApi } from "../services/demandeService";
 
 // Clés de requête pour TanStack Query
 export const demandeKeys = {
-  all: ['demandes'] as const,
-  lists: () => [...demandeKeys.all, 'list'] as const,
-  list: (filters: { type?: string; employeId?: number }) => [...demandeKeys.lists(), filters] as const,
-  details: () => [...demandeKeys.all, 'detail'] as const,
+  all: ["demandes"] as const,
+  lists: () => [...demandeKeys.all, "list"] as const,
+  list: (filters: { type?: string; employeId?: number }) =>
+    [...demandeKeys.lists(), filters] as const,
+  details: () => [...demandeKeys.all, "detail"] as const,
   detail: (id: number) => [...demandeKeys.details(), id] as const,
-  documents: (demandeId: number) => [...demandeKeys.detail(demandeId), 'documents'] as const,
-  employes: ['employes'] as const,
+  documents: (demandeId: number) =>
+    [...demandeKeys.detail(demandeId), "documents"] as const,
+  employes: ["employes"] as const,
   employe: (id: number) => [...demandeKeys.employes, id] as const,
-  natures: ['natures'] as const,
+  natures: ["natures"] as const,
 };
 
 // ===== HOOKS DE REQUÊTE (READ) =====
@@ -38,52 +29,44 @@ export const demandeKeys = {
 /**
  * Hook pour récupérer toutes les demandes
  */
-export const useDemandes = (token?: string) => {
-  return useQuery(
-    demandeKeys.lists(),
-    () => fetchDemandes(token),
-    {
-      staleTime: 1000 * 60 * 2, // 2 minutes
-      cacheTime: 1000 * 60 * 10, // 10 minutes (anciennement gcTime)
-    }
-  );
+export const useDemandes = () => {
+  const { fetchDemandes } = useDemandesApi();
+  return useQuery(demandeKeys.lists(), () => fetchDemandes(), {
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    cacheTime: 1000 * 60 * 10, // 10 minutes (anciennement gcTime)
+  });
 };
 
 /**
  * Hook pour récupérer une demande par ID
  */
-export const useDemande = (id: number, token?: string) => {
-  return useQuery(
-    demandeKeys.detail(id),
-    () => fetchDemandeById(id, token),
-    {
-      enabled: !!id && !isNaN(id),
-      staleTime: 1000 * 60 * 5, // 5 minutes
-    }
-  );
+export const useDemande = (id: number) => {
+  const { fetchDemandeById } = useDemandesApi();
+  return useQuery(demandeKeys.detail(id), () => fetchDemandeById(id), {
+    enabled: !!id && !isNaN(id),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 };
 
 /**
  * Hook pour récupérer les demandes par type
  */
-export const useDemandesByType = (type: string, token?: string) => {
-  return useQuery(
-    demandeKeys.list({ type }),
-    () => fetchDemandesByType(type, token),
-    {
-      enabled: !!type,
-      staleTime: 1000 * 60 * 3, // 3 minutes
-    }
-  );
+export const useDemandesByType = (type: string) => {
+  const { fetchDemandesByType } = useDemandesApi();
+  return useQuery(demandeKeys.list({ type }), () => fetchDemandesByType(type), {
+    enabled: !!type,
+    staleTime: 1000 * 60 * 3, // 3 minutes
+  });
 };
 
 /**
  * Hook pour récupérer les demandes par employé
  */
-export const useDemandesByEmploye = (employeId: number, token?: string) => {
+export const useDemandesByEmploye = (employeId: number) => {
+  const { fetchDemandesByEmploye } = useDemandesApi();
   return useQuery(
     demandeKeys.list({ employeId }),
-    () => fetchDemandesByEmploye(employeId, token),
+    () => fetchDemandesByEmploye(employeId),
     {
       enabled: !!employeId && !isNaN(employeId),
       staleTime: 1000 * 60 * 3, // 3 minutes
@@ -94,52 +77,44 @@ export const useDemandesByEmploye = (employeId: number, token?: string) => {
 /**
  * Hook pour récupérer tous les employés
  */
-export const useEmployes = (token?: string) => {
-  return useQuery(
-    demandeKeys.employes,
-    () => getAllEmployes(token),
-    {
-      staleTime: 1000 * 60 * 10, // 10 minutes
-      cacheTime: 1000 * 60 * 30, // 30 minutes
-    }
-  );
+export const useEmployes = () => {
+  const { getAllEmployes } = useDemandesApi();
+  return useQuery(demandeKeys.employes, () => getAllEmployes(), {
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    cacheTime: 1000 * 60 * 30, // 30 minutes
+  });
 };
 
 /**
  * Hook pour récupérer un employé par ID
  */
-export const useEmploye = (id: number, token?: string) => {
-  return useQuery(
-    demandeKeys.employe(id),
-    () => fetchEmployeById(id, token),
-    {
-      enabled: !!id && !isNaN(id),
-      staleTime: 1000 * 60 * 10, // 10 minutes
-    }
-  );
+export const useEmploye = (id: number) => {
+  const { fetchEmployeById } = useDemandesApi();
+  return useQuery(demandeKeys.employe(id), () => fetchEmployeById(id), {
+    enabled: !!id && !isNaN(id),
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
 };
 
 /**
  * Hook pour récupérer toutes les natures de documents
  */
-export const useNatureDocuments = (token?: string) => {
-  return useQuery(
-    demandeKeys.natures,
-    () => getAllNatureDocuments(token),
-    {
-      staleTime: 1000 * 60 * 30, // 30 minutes
-      cacheTime: 1000 * 60 * 60, // 1 heure
-    }
-  );
+export const useNatureDocuments = () => {
+  const { getAllNatureDocuments } = useDemandesApi();
+  return useQuery(demandeKeys.natures, () => getAllNatureDocuments(), {
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    cacheTime: 1000 * 60 * 60, // 1 heure
+  });
 };
 
 /**
  * Hook pour récupérer les documents d'une demande
  */
-export const useDocumentsByDemande = (demandeId: number, token?: string) => {
+export const useDocumentsByDemande = (demandeId: number) => {
+  const { fetchDocumentsByDemande } = useDemandesApi();
   return useQuery(
     demandeKeys.documents(demandeId),
-    () => fetchDocumentsByDemande(demandeId, token),
+    () => fetchDocumentsByDemande(demandeId),
     {
       enabled: !!demandeId && !isNaN(demandeId),
       staleTime: 1000 * 60 * 5, // 5 minutes
@@ -154,18 +129,21 @@ export const useDocumentsByDemande = (demandeId: number, token?: string) => {
  */
 export const useCreateDemande = () => {
   const queryClient = useQueryClient();
+  const { createDemande } = useDemandesApi();
 
   return useMutation({
-    mutationFn: ({ data, token }: { data: CreateDemandeData; token?: string }) =>
-      createDemande(data, token),
+    mutationFn: ({ data }: { data: CreateDemandeData }) => createDemande(data),
     onSuccess: (newDemande) => {
       // Invalider et refetch les listes de demandes
       queryClient.invalidateQueries({ queryKey: demandeKeys.lists() });
-      
+
       // Ajouter la nouvelle demande au cache
-      queryClient.setQueryData(demandeKeys.detail(newDemande.id_demandes), newDemande);
-      
-      toast.success('Demande créée avec succès');
+      queryClient.setQueryData(
+        demandeKeys.detail(newDemande.id_demandes),
+        newDemande
+      );
+
+      toast.success("Demande créée avec succès");
     },
     onError: (error: Error) => {
       toast.error(`Erreur lors de la création: ${error.message}`);
@@ -178,18 +156,22 @@ export const useCreateDemande = () => {
  */
 export const useUpdateDemande = () => {
   const queryClient = useQueryClient();
+  const { updateDemande } = useDemandesApi();
 
   return useMutation({
-    mutationFn: ({ id, data, token }: { id: number; data: Partial<Demande>; token?: string }) =>
-      updateDemande(id, data, token),
+    mutationFn: ({ id, data }: { id: number; data: Partial<Demande> }) =>
+      updateDemande(id, data),
     onSuccess: (updatedDemande) => {
       // Invalider et refetch les listes de demandes
       queryClient.invalidateQueries({ queryKey: demandeKeys.lists() });
-      
+
       // Mettre à jour le cache de la demande spécifique
-      queryClient.setQueryData(demandeKeys.detail(updatedDemande.id_demandes), updatedDemande);
-      
-      toast.success('Demande mise à jour avec succès');
+      queryClient.setQueryData(
+        demandeKeys.detail(updatedDemande.id_demandes),
+        updatedDemande
+      );
+
+      toast.success("Demande mise à jour avec succès");
     },
     onError: (error: Error) => {
       toast.error(`Erreur lors de la mise à jour: ${error.message}`);
@@ -202,18 +184,18 @@ export const useUpdateDemande = () => {
  */
 export const useDeleteDemande = () => {
   const queryClient = useQueryClient();
+  const { deleteDemande } = useDemandesApi();
 
   return useMutation({
-    mutationFn: ({ id, token }: { id: number; token?: string }) =>
-      deleteDemande(id, token),
+    mutationFn: ({ id }: { id: number }) => deleteDemande(id),
     onSuccess: (_, { id }) => {
       // Invalider et refetch les listes de demandes
       queryClient.invalidateQueries({ queryKey: demandeKeys.lists() });
-      
+
       // Supprimer la demande du cache
       queryClient.removeQueries({ queryKey: demandeKeys.detail(id) });
-      
-      toast.success('Demande supprimée avec succès');
+
+      toast.success("Demande supprimée avec succès");
     },
     onError: (error: Error) => {
       toast.error(`Erreur lors de la suppression: ${error.message}`);
@@ -226,18 +208,22 @@ export const useDeleteDemande = () => {
  */
 export const useApprouverDemande = () => {
   const queryClient = useQueryClient();
+  const { approuverDemande } = useDemandesApi();
 
   return useMutation({
-    mutationFn: ({ id, commentaire, token }: { id: number; commentaire?: string; token?: string }) =>
-      approuverDemande(id, commentaire, token),
+    mutationFn: ({ id, commentaire }: { id: number; commentaire?: string }) =>
+      approuverDemande(id, commentaire),
     onSuccess: (updatedDemande) => {
       // Invalider et refetch les listes de demandes
       queryClient.invalidateQueries({ queryKey: demandeKeys.lists() });
-      
+
       // Mettre à jour le cache de la demande spécifique
-      queryClient.setQueryData(demandeKeys.detail(updatedDemande.id_demandes), updatedDemande);
-      
-      toast.success('Demande approuvée avec succès');
+      queryClient.setQueryData(
+        demandeKeys.detail(updatedDemande.id_demandes),
+        updatedDemande
+      );
+
+      toast.success("Demande approuvée avec succès");
     },
     onError: (error: Error) => {
       toast.error(`Erreur lors de l'approbation: ${error.message}`);
@@ -250,18 +236,22 @@ export const useApprouverDemande = () => {
  */
 export const useRefuserDemande = () => {
   const queryClient = useQueryClient();
+  const { refuserDemande } = useDemandesApi();
 
   return useMutation({
-    mutationFn: ({ id, motif, token }: { id: number; motif?: string; token?: string }) =>
-      refuserDemande(id, motif, token),
+    mutationFn: ({ id, motif }: { id: number; motif?: string }) =>
+      refuserDemande(id, motif),
     onSuccess: (updatedDemande) => {
       // Invalider et refetch les listes de demandes
       queryClient.invalidateQueries({ queryKey: demandeKeys.lists() });
-      
+
       // Mettre à jour le cache de la demande spécifique
-      queryClient.setQueryData(demandeKeys.detail(updatedDemande.id_demandes), updatedDemande);
-      
-      toast.success('Demande refusée avec succès');
+      queryClient.setQueryData(
+        demandeKeys.detail(updatedDemande.id_demandes),
+        updatedDemande
+      );
+
+      toast.success("Demande refusée avec succès");
     },
     onError: (error: Error) => {
       toast.error(`Erreur lors du refus: ${error.message}`);
@@ -274,25 +264,32 @@ export const useRefuserDemande = () => {
  */
 export const useAddDocumentToDemande = () => {
   const queryClient = useQueryClient();
-
+  const { addDocumentToDemande } = useDemandesApi();
   return useMutation({
-    mutationFn: ({ 
-      demandeId, 
-      documentData, 
-      token 
-    }: { 
-      demandeId: number; 
-      documentData: { file: File; libelle_document: string; classification_document: string; id_nature_document: number }; 
-      token?: string 
-    }) => addDocumentToDemande(demandeId, documentData, token),
+    mutationFn: ({
+      demandeId,
+      documentData,
+    }: {
+      demandeId: number;
+      documentData: {
+        file: File;
+        libelle_document: string;
+        classification_document: string;
+        id_nature_document: number;
+      };
+    }) => addDocumentToDemande(demandeId, documentData),
     onSuccess: (_newDocument, { demandeId }) => {
       // Invalider les documents de la demande
-      queryClient.invalidateQueries({ queryKey: demandeKeys.documents(demandeId) });
-      
+      queryClient.invalidateQueries({
+        queryKey: demandeKeys.documents(demandeId),
+      });
+
       // Invalider la demande elle-même car elle contient les documents
-      queryClient.invalidateQueries({ queryKey: demandeKeys.detail(demandeId) });
-      
-      toast.success('Document ajouté avec succès');
+      queryClient.invalidateQueries({
+        queryKey: demandeKeys.detail(demandeId),
+      });
+
+      toast.success("Document ajouté avec succès");
     },
     onError: (error: Error) => {
       toast.error(`Erreur lors de l'ajout du document: ${error.message}`);
@@ -305,28 +302,32 @@ export const useAddDocumentToDemande = () => {
  */
 export const useDeleteDocumentFromDemande = () => {
   const queryClient = useQueryClient();
-
+  const { deleteDocumentFromDemande } = useDemandesApi();
   return useMutation({
-    mutationFn: ({ 
-      demandeId, 
-      documentId, 
-      token 
-    }: { 
-      demandeId: number; 
-      documentId: number; 
-      token?: string 
-    }) => deleteDocumentFromDemande(demandeId, documentId, token),
+    mutationFn: ({
+      demandeId,
+      documentId,
+    }: {
+      demandeId: number;
+      documentId: number;
+    }) => deleteDocumentFromDemande(demandeId, documentId),
     onSuccess: (_, { demandeId }) => {
       // Invalider les documents de la demande
-      queryClient.invalidateQueries({ queryKey: demandeKeys.documents(demandeId) });
-      
+      queryClient.invalidateQueries({
+        queryKey: demandeKeys.documents(demandeId),
+      });
+
       // Invalider la demande elle-même car elle contient les documents
-      queryClient.invalidateQueries({ queryKey: demandeKeys.detail(demandeId) });
-      
-      toast.success('Document supprimé avec succès');
+      queryClient.invalidateQueries({
+        queryKey: demandeKeys.detail(demandeId),
+      });
+
+      toast.success("Document supprimé avec succès");
     },
     onError: (error: Error) => {
-      toast.error(`Erreur lors de la suppression du document: ${error.message}`);
+      toast.error(
+        `Erreur lors de la suppression du document: ${error.message}`
+      );
     },
   });
 };
@@ -336,14 +337,19 @@ export const useDeleteDocumentFromDemande = () => {
 /**
  * Hook pour obtenir les statistiques des demandes
  */
-export const useDemandesStats = (token?: string) => {
-  const { data: demandes, isLoading, error } = useDemandes(token);
-
+export const useDemandesStats = () => {
+  const { data, isLoading, error } = useDemandes();
+  const demandes = data?.data;
   const stats = {
     total: demandes?.length || 0,
-    enAttente: demandes?.filter(d => d.status === 'En attente').length || 0,
-    approuvees: demandes?.filter(d => d.status === 'Approuvée' || d.status === 'Approuvé').length || 0,
-    refusees: demandes?.filter(d => d.status === 'Refusée' || d.status === 'Refusé').length || 0,
+    enAttente: demandes?.filter((d) => d.status === "En attente").length || 0,
+    approuvees:
+      demandes?.filter(
+        (d) => d.status === "Approuvée" || d.status === "Approuvé"
+      ).length || 0,
+    refusees:
+      demandes?.filter((d) => d.status === "Refusée" || d.status === "Refusé")
+        .length || 0,
   };
 
   return {
@@ -356,38 +362,120 @@ export const useDemandesStats = (token?: string) => {
 /**
  * Hook pour filtrer et rechercher les demandes
  */
-export const useFilteredDemandes = (
-  filters: {
-    search?: string;
-    status?: string;
-    type?: string;
-    employeId?: number;
-  },
-  token?: string
-) => {
-  const { data: demandes, isLoading, error } = useDemandes(token);
-  const { data: employes } = useEmployes(token);
+export const useFilteredDemandess = (filters: {
+  search?: string;
+  status?: string;
+  type?: string;
+  employeId?: number;
+}) => {
+  const { data, isLoading, error } = useDemandes();
+  const { data: employes } = useEmployes();
+  const demandes = data?.data;
+  const filteredDemandes =
+    demandes?.filter((demande) => {
+      const employe = employes?.find(
+        (e) => e.id_employes === demande.id_employes
+      );
 
-  const filteredDemandes = demandes?.filter((demande) => {
-    const employe = employes?.find(e => e.id_employes === demande.id_employes);
-    
-    const matchesSearch = !filters.search || 
-      employe?.nom_employes.toLowerCase().includes(filters.search.toLowerCase()) ||
-      employe?.prenom_employes.toLowerCase().includes(filters.search.toLowerCase()) ||
-      demande.type_demande.toLowerCase().includes(filters.search.toLowerCase()) ||
-      demande.motif.toLowerCase().includes(filters.search.toLowerCase()) ||
-      demande.status.toLowerCase().includes(filters.search.toLowerCase());
+      const matchesSearch =
+        !filters.search ||
+        employe?.nom_employes
+          .toLowerCase()
+          .includes(filters.search.toLowerCase()) ||
+        employe?.prenom_employes
+          .toLowerCase()
+          .includes(filters.search.toLowerCase()) ||
+        demande.type_demande
+          .toLowerCase()
+          .includes(filters.search.toLowerCase()) ||
+        demande.motif.toLowerCase().includes(filters.search.toLowerCase()) ||
+        demande.status.toLowerCase().includes(filters.search.toLowerCase());
 
-    const matchesStatus = !filters.status || demande.status === filters.status;
-    const matchesType = !filters.type || demande.type_demande === filters.type;
-    const matchesEmploye = !filters.employeId || demande.id_employes === filters.employeId;
+      const matchesStatus =
+        !filters.status || demande.status === filters.status;
+      const matchesType =
+        !filters.type || demande.type_demande === filters.type;
+      const matchesEmploye =
+        !filters.employeId || demande.id_employes === filters.employeId;
 
-    return matchesSearch && matchesStatus && matchesType && matchesEmploye;
-  }) || [];
+      return matchesSearch && matchesStatus && matchesType && matchesEmploye;
+    }) || [];
 
   return {
     demandes: filteredDemandes,
     isLoading,
     error,
   };
-}; 
+};
+
+export const useFilteredDemandes = (
+  limit = 16,
+  filters: {
+    search?: string;
+    status?: string;
+    type?: string;
+    employeId?: number;
+  }
+) => {
+  const { fetchFilteredDemandes } = useDemandesApi();
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error,
+  } = useInfiniteQuery({
+    queryKey: ["filtered-demandes", limit],
+    queryFn: ({ pageParam = 1 }) =>
+      fetchFilteredDemandes({
+        page: pageParam,
+        limit,
+      }),
+    getNextPageParam: (lastPage) => {
+      const { pagination } = lastPage;
+      const nextPage = pagination.page + 1;
+      return nextPage <= pagination.totalPages ? nextPage : undefined;
+    },
+  });
+  const demandes = data?.pages.flatMap((page) => page.data);
+  const { data: employes } = useEmployes();
+  const filteredDemandes =
+    demandes?.filter((demande) => {
+      const employe = employes?.find(
+        (e) => e.id_employes === demande.id_employes
+      );
+
+      const matchesSearch =
+        !filters.search ||
+        employe?.nom_employes
+          .toLowerCase()
+          .includes(filters.search.toLowerCase()) ||
+        employe?.prenom_employes
+          .toLowerCase()
+          .includes(filters.search.toLowerCase()) ||
+        demande.type_demande
+          .toLowerCase()
+          .includes(filters.search.toLowerCase()) ||
+        demande.motif.toLowerCase().includes(filters.search.toLowerCase()) ||
+        demande.status.toLowerCase().includes(filters.search.toLowerCase());
+
+      const matchesStatus =
+        !filters.status || demande.status === filters.status;
+      const matchesType =
+        !filters.type || demande.type_demande === filters.type;
+      const matchesEmploye =
+        !filters.employeId || demande.id_employes === filters.employeId;
+
+      return matchesSearch && matchesStatus && matchesType && matchesEmploye;
+    }) || [];
+  return {
+    demandes: filteredDemandes,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error,
+    pagination: data?.pages[0]?.pagination,
+  };
+};

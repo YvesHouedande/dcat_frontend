@@ -35,10 +35,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ParametresVente from "../ui/ParametresLivraison";
-import { useExemplaireProduits } from "../../hooks/useExemplaireProduits";
+// import ParametresVente from "../ui/ParametresLivraison";
+import { useFetchExemplaireProduitByEtat } from "../../hooks/useExemplaireProduits";
 import { format } from "date-fns";
 import { EtatExemplaire } from "./EtatExemplaire";
+import { useParams } from "react-router-dom";
 
 interface ExemplaireProduitTableProps {
   ExemplaireProduits: ExemplaireProduitFormValues[];
@@ -47,7 +48,7 @@ interface ExemplaireProduitTableProps {
   onOutEdit: (id: string | number) => void;
   onEdit: (instance: ExemplaireProduitFormValues) => void;
   onDelete: (id: string | number) => void;
-  onInfo: (open: boolean) => void;
+  onInfo: (open: boolean, id: string | number) => void;
   onAdd: () => void;
   currentPage: number;
   totalPages: number;
@@ -55,7 +56,6 @@ interface ExemplaireProduitTableProps {
   total: number;
   loading: boolean;
 }
-
 
 export function ExemplaireProduitTable({
   ExemplaireProduits,
@@ -77,11 +77,9 @@ export function ExemplaireProduitTable({
   >("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [etatFilter, setEtatFilter] = useState<"all" | EtatExemplaire>("all");
-  const idProduit = ExemplaireProduits[0]?.id_produit;
-  const { ExemplaireProduitByEtat } = useExemplaireProduits(
-    idProduit,
-    etatFilter
-  );
+  const idProduit = useParams().id;
+  const { ExemplaireProduitByEtat, loading: loadingExemplaireProduitByEtat } =
+    useFetchExemplaireProduitByEtat(idProduit, etatFilter);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -129,9 +127,6 @@ export function ExemplaireProduitTable({
 
   // Dans ton composant React (ExemplaireProduitTable ou un sous-composant)
 
- 
-
-
   function getEtatBadgeClass(etat: EtatExemplaire | string) {
     switch (etat) {
       case EtatExemplaire.Vendu:
@@ -172,7 +167,7 @@ export function ExemplaireProduitTable({
           />
         </form>
         <div className="flex gap-2 w-full sm:w-auto">
-          <ParametresVente />
+          {/* <ParametresVente /> */}
 
           <Button onClick={onAdd} variant={"blue"} className="w-full sm:w-auto">
             <BadgePlus className="mr-2 h-4 w-4" /> Ajouter un exemplaire
@@ -247,15 +242,14 @@ export function ExemplaireProduitTable({
           <TableHeader className="bg-gray-50">
             <TableRow>
               <TableHead className="font-semibold">N° Série</TableHead>
-              <TableHead className="font-semibold">Prix</TableHead>
               <TableHead className="font-semibold">Date d'entrée</TableHead>
+              <TableHead className="font-semibold">Prix d'achat</TableHead>
               <TableHead className="font-semibold">État</TableHead>
-              <TableHead className="font-semibold">Livraison</TableHead>
               <TableHead className="w-[80px] font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {loadingExemplaireProduitByEtat ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-4">
                   Chargement...
@@ -271,20 +265,21 @@ export function ExemplaireProduitTable({
               filteredInstances.map((instance) => (
                 <TableRow key={instance.id_exemplaire}>
                   <TableCell>{instance.num_serie}</TableCell>
-                  <TableCell>
-                    {instance.prix_exemplaire || "Non défini"}
-                  </TableCell>
                   <TableCell>{formatDateSafe(instance.created_at)}</TableCell>
+                  <TableCell>{instance.prix_achat}</TableCell>
                   <TableCell>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${getEtatBadgeClass(
                         String(instance.etat_exemplaire)
                       )}`}
                     >
-                      {instance.etat_exemplaire}
+                      {instance.etat_exemplaire
+                        ? instance.etat_exemplaire.charAt(0).toUpperCase() +
+                          instance.etat_exemplaire.slice(1)
+                        : "N/A"}
                     </span>
                   </TableCell>
-                  
+
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -326,7 +321,11 @@ export function ExemplaireProduitTable({
                           </DropdownMenuItem>
                         )}
 
-                        <DropdownMenuItem onClick={() => onInfo(true)}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            onInfo(true, String(instance.id_exemplaire))
+                          }
+                        >
                           <Info className="mr-2 h-4 w-4 text-blue-600" />{" "}
                           information
                         </DropdownMenuItem>

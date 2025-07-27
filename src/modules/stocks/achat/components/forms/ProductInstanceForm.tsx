@@ -17,6 +17,7 @@ import React from "react";
 
 import { UseFormReturn } from "react-hook-form";
 import { ExemplaireProduitFormValues } from "@/modules/stocks/exemplaire";
+import DebugZod from "@/modules/stocks/utils/debug";
 
 interface ExemplaireProduitFormProps {
   initialData?: ExemplaireProduitFormValues;
@@ -194,16 +195,7 @@ export const ProductInstanceForm = React.forwardRef<
             </div>
           )}
           {/* DEBUG TEMPORAIRE : Affichage des données et erreurs Zod */}
-          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-300 rounded text-xs text-gray-800">
-            <div className="font-bold mb-1">[DEBUG] Données à envoyer :</div>
-            <pre className="overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(form.getValues(), null, 2)}
-            </pre>
-            <div className="font-bold mt-2 mb-1">[DEBUG] Erreurs Zod :</div>
-            <pre className="overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(form.formState.errors, null, 2)}
-            </pre>
-          </div>
+          <DebugZod form={form} />
           {margeError && (
             <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded">
               {margeError}

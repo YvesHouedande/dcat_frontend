@@ -30,7 +30,7 @@ import {
   getInterventionEmployees,
   removeDocumentFromIntervention,
 } from "../api/intervention";
-import { getPartenaires } from "../../projects/projet/api/partenaires";
+import { usePartenairesApi } from "../../projects/projet/api/partenaires";
 import { AddDocumentSheet } from "./AddDocumentSheet";
 import {
   Download,
@@ -49,7 +49,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { fetchContratById } from '@/modules/administration-Finnance/services/contratService';
+import { useContratsApi } from '@/modules/administration-Finnance/services/contratService';
 import { Contrat } from '@/modules/administration-Finnance/administration/types/interfaces';
 
 
@@ -71,14 +71,15 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
   const [contrat, setContrat] = useState<Contrat | null>(null);
-
+  const { fetchContratById } = useContratsApi();
+  const { getPartenaires } = usePartenairesApi();
   const loadData = useCallback(async () => {
     try {
       const [documentsResponse, employesResponse, partenairesResponse] =
         await Promise.all([
           getInterventionDocuments(intervention.id_intervention),
           getInterventionEmployees(intervention.id_intervention),
-          getPartenaires(),
+          getPartenaires({ limit: 100, page: 1 }),
         ]);
 
       let docsToSet: InterventionDocument[] = [];
@@ -107,7 +108,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [intervention.id_intervention, intervention.id_partenaire]);
+  }, [intervention.id_intervention, intervention.id_partenaire, getPartenaires]);
 
   useEffect(() => {
     loadData();

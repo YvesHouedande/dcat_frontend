@@ -30,7 +30,7 @@ import {
   getProjetAssociatedPartenaires,
 } from "../projet/api/projets"; // Chemin corrigé vers src/api/projets.ts
 import { getFamilles } from "../projet/api/famille"; // Chemin corrigé vers src/api/famille.ts
-import { getPartenaires } from "../projet/api/partenaires"; // Chemin corrigé vers src/api/partenaires.ts
+import { usePartenairesApi } from "../projet/api/partenaires"; // Chemin corrigé vers src/api/partenaires.ts
 
 const ProjetsPage = () => {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ const ProjetsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const projetsPerPage = 10;
   const [error, setError] = useState<string | null>(null);
-
+  const { getPartenaires } = usePartenairesApi(); 
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEtat, setFilterEtat] = useState("en_cours");
@@ -76,7 +76,7 @@ const ProjetsPage = () => {
             filterPartenaire
           ),
           getFamilles(),
-          getPartenaires(),
+          getPartenaires({limit: 100, page: 1}),
         ]);
 
       // Handle projets response - fetchAllProjets returns ApiResponse<Projet[]>
@@ -301,7 +301,7 @@ const ProjetsPage = () => {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => navigate("/technique/projets/liste")}
+            onClick={() => navigate("/gestion-des-projets/projets/liste")}
           >
             <FileText className="mr-2 h-4 w-4" />
             Voir tous les projets
@@ -316,7 +316,7 @@ const ProjetsPage = () => {
               <BarChart3Icon className="mr-2 h-4 w-4" />
               Rapports
             </Button> */}
-          <Button onClick={() => navigate("/technique/projets/nouveau")}>
+          <Button onClick={() => navigate("/gestion-des-projets/projets/nouveau")}>
             <Plus className="mr-2 h-4 w-4" />
             Nouveau Projet
           </Button>
@@ -375,7 +375,7 @@ const ProjetsPage = () => {
           <h2 className="text-xl font-semibold">Tous les Projets</h2>
           <Button
             variant="outline"
-            onClick={() => navigate("/technique/projets/liste")}
+            onClick={() => navigate("/gestion-des-projets/projets/liste")}
           >
             Voir la liste détaillée
           </Button>
@@ -421,8 +421,8 @@ const ProjetsPage = () => {
             <ProjetTable
               projets={currentProjets}
               onDelete={handleDelete}
-              onView={(id) => navigate(`/technique/projets/${id}/details`)}
-              onEdit={(id) => navigate(`/technique/projets/${id}/editer`)}
+              onView={(id) => navigate(`/gestion-des-projets/projets/${id}/details`)}
+              onEdit={(id) => navigate(`/gestion-des-projets/projets/${id}/editer`)}
               partenaires={partenaires}
               familles={familles}
               projectPartnersMap={projectPartnersMap}

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, ArrowLeft } from "lucide-react";
 import Layout from "@/components/Layout";
 import TacheForm from "../../tasks/components/TacheForm";
-import { getEmployes } from "../../projet/api/employes";
+import { useEmployesApi } from "../../projet/api/employes";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetTrigger } from "@/components/ui/sheet";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -28,7 +28,7 @@ const OperationDetailsPage: React.FC<OperationDetailsPageProps> = ({ embedded = 
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const { getEmployes } = useEmployesApi();
   useEffect(() => {
     const opId = operationId || id;
     const loadData = async () => {
@@ -59,8 +59,8 @@ const OperationDetailsPage: React.FC<OperationDetailsPageProps> = ({ embedded = 
       }
     };
     loadData();
-    getEmployes().then(setEmployes).catch(() => setEmployes([]));
-  }, [id, operationId]);
+    getEmployes({ limit: 100, page: 1 }).then(setEmployes).catch(() => setEmployes([]));
+  }, [id, operationId, getEmployes]);
 
   // Handler pour création de tâche
   const handleCreateTache = async (formData: CreateTachePayload, employesIds: number[]) => {

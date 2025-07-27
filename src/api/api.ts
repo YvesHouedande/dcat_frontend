@@ -9,7 +9,7 @@ export function getAxiosErrorMessage(error: unknown): string {
     return (
       error.response?.data?.message ||
       error.response?.data?.error ||
-      error.response?.data?.details || 
+      error.response?.data?.details ||
       "Une erreur est survenue"
     );
   }
@@ -42,7 +42,6 @@ export const useApi = () => {
         if (keycloak.token) {
           // Actualiser le token s'il expire bientôt (dans les 30 secondes)
           try {
-            
             const refreshed = await keycloak.updateToken(30);
             if (refreshed) {
               console.log("Token refreshed");
@@ -81,7 +80,10 @@ export const useApi = () => {
       async (error) => {
         if (error.response) {
           const status = error.response.status;
-
+          if (status === 404) {
+            toast.warning(getAxiosErrorMessage(error));
+            return Promise.reject(error);
+          }
           if (status === 401) {
             toast.error("Session expirée. Reconnexion en cours...");
             // Essayer de rafraîchir le token
@@ -107,7 +109,9 @@ export const useApi = () => {
             toast.error(`Erreur ${status}: ${getAxiosErrorMessage(error)}`);
           }
         } else if (error.request) {
-          toast.error("Le serveur ne répond pas. Vérifiez votre connexion. ", {description: getAxiosErrorMessage(error)});
+          toast.error("Le serveur ne répond pas. Vérifiez votre connexion. ", {
+            description: getAxiosErrorMessage(error),
+          });
         } else {
           toast.error("Erreur: " + error.message);
         }

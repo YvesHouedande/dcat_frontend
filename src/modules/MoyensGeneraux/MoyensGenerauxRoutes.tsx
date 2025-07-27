@@ -7,9 +7,8 @@ import ProductRegistrationForm from "./Outils/pages/referenceRegistration.tsx";
 import ReferencePage from "./Outils/pages/referencePage.tsx";
 import CataloguePage from "./Outils/pages/cataloguePage.tsx";
 import ReferenceEditForm from "./Outils/pages/referenceRegistration.tsx";
-import EntreeSortie from "./Outils/pages/EntreeSortie.tsx";
-import { MoyensDesTravailPage } from "./Outils/moyens_de_travail/pages/MoyensDesTravailPage.tsx";
-import { MaintenancePage } from "./Maintenance/pages/MaintenancePage.tsx";
+import { MoyensDesTravailPage } from "./EquipemntMoyensTravail/moyens_de_travail/pages/MoyensDesTravailPage.tsx";
+import { MaintenancePage } from "./EquipemntMoyensTravail/Maintenance/pages/MaintenancePage.tsx";
 const MoyenGenerauxgRoutes: React.FC = () => {
   return (
     <Routes>
@@ -19,7 +18,7 @@ const MoyenGenerauxgRoutes: React.FC = () => {
         <Route path=":id" element={<ReferencePage />} />
         <Route path=":id/edit" element={<ReferenceEditForm />} />
         <Route path="nouveau" element={<ProductRegistrationForm />} />
-        <Route path="sorties" element={<EntreeSortie />} />
+       
       </Route>
       <Route path="/maitenance-entretients" element={<MoyensGenerauxLayout />}>
         <Route index element={<MaintenancePage />} />

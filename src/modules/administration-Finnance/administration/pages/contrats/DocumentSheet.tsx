@@ -28,7 +28,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ContratDocument, NatureDocument } from "../../types/interfaces";
-import { addDocumentToContrat, fetchNaturesDocument } from "../../../services/contratService";
+import { useContratsApi } from "../../../services/contratService";
 import { toast } from "sonner";
 import { useQuery } from '@tanstack/react-query';
 
@@ -48,7 +48,7 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
   onOpenChange
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
-  
+  const { addDocumentToContrat, fetchNaturesDocument } = useContratsApi();
   // Utiliser les props externes si fournies, sinon utiliser l'état interne
   const open = isOpen !== undefined ? isOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;

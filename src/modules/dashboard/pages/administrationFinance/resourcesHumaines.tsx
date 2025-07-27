@@ -1,10 +1,10 @@
-import Layout from '@/components/Layout';
-import { FolderArchive , Users, CalendarDays} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import Layout from "@/components/Layout";
+import { FolderArchive, Users, CalendarDays } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 function ResourcesHumaines() {
-    const onNavigate = useNavigate();
+  const onNavigate = useNavigate();
   return (
     <Layout>
       <div className="w-full h-full flex flex-col p-4 md:p-6">
@@ -18,7 +18,7 @@ function ResourcesHumaines() {
           </button>
 
           <button
-            onClick={() => onNavigate("/administration/employers")}
+            onClick={() => onNavigate("/resources-humaines/employes")}
             className={`cursor-pointer w-full h-1/2 p-4 flex flex-col items-center justify-center text-center font-semibold text-white rounded-lg shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 hover:shadow-xl hover:scale-105 transform transition-all duration-300 ease-in-out`}
           >
             <Users className="h-12 w-12 mb-4" />
@@ -26,16 +26,18 @@ function ResourcesHumaines() {
           </button>
 
           <button
-            onClick={() => onNavigate("/administration/demandes")}
+            onClick={() => onNavigate("/resources-humaines/demandes")}
             className={`cursor-pointer w-full h-1/2 p-4 flex flex-col items-center justify-center text-center font-semibold text-white rounded-lg shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 hover:shadow-xl hover:scale-105 transform transition-all duration-300 ease-in-out`}
           >
             <CalendarDays className="h-12 w-12 mb-4" />
-            <span className="text-xl">{"Gestion des demandes d'absence (congés et permissions)"}</span>
+            <span className="text-xl">
+              {"Gestion des demandes d'absence (congés et permissions)"}
+            </span>
           </button>
         </div>
       </div>
     </Layout>
-  )
+  );
 }
 
-export default ResourcesHumaines
+export default ResourcesHumaines;

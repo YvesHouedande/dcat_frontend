@@ -159,16 +159,20 @@ export const useUpdateImageProdcut = () => {
       images,
       libelles,
       numeros,
+      id_produit,
     }: {
       images: File[];
       libelles: string[];
       numeros: number[];
+      id_produit: string | number | undefined;
     }) =>
       productService.updateImage({
         images,
         libelles,
         numeros,
+        id_produit,
       }),
+    // Correction : déplacer 'enabled' dans le hook d'appel, pas ici dans useMutation
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PRODUIT_KEY] });
     },

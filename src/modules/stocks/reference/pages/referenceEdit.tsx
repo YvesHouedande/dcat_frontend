@@ -55,16 +55,17 @@ import {
   categorieTypes,
   modeleTypes,
 } from "../../types/reference";
+import DebugZod from "../../utils/debug";
 
 export type FormValues = z.infer<typeof referenceSchema>;
 
 const DEFAULT_VALUES: Partial<FormValues> = {
   id_type_produit: 1,
-  desi_produit: "",
+  desi_produit: undefined,
   desc_produit: undefined,
-  caracteristiques: "",
-  emplacement_produit: "",
-  code_produit: "",
+  caracteristiques: undefined,
+  emplacement_produit: undefined,
+  code_produit: undefined,
 };
 
 type ReferenceFieldName =
@@ -97,12 +98,18 @@ export default function ReferenceEditForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(referenceSchema),
     defaultValues: {
-      ...product.data,
-      id_marque: product.data?.id_marque ?? undefined,
-      id_modele: product.data?.id_modele ?? undefined,
-      id_categorie: product.data?.id_categorie ?? undefined,
-      id_famille: product.data?.id_famille ?? undefined,
+      code_produit: product.data?.code_produit,
       id_type_produit: product.data?.id_type_produit ?? 1,
+      id_marque: product.data?.id_marque,
+      id_modele: product.data?.id_modele,
+      id_categorie: product.data?.id_categorie,
+      id_famille: product.data?.id_famille,
+      desi_produit: product.data?.desi_produit,
+      desc_produit: product.data?.desc_produit,
+      caracteristiques: product.data?.caracteristiques,
+      emplacement_produit: product.data?.emplacement_produit,
+      images: product.data?.images,
+      imagesMeta: product.data?.imagesMeta,
     },
   });
 
@@ -142,13 +149,19 @@ export default function ReferenceEditForm() {
   useEffect(() => {
     if (isEditMode && product.data) {
       const formData = {
-        ...DEFAULT_VALUES,
-        ...product.data,
-        id_marque: product.data.id_marque || undefined,
-        id_modele: product.data.id_modele || undefined,
-        id_categorie: product.data.id_categorie || undefined,
-        id_famille: product.data.id_famille || undefined,
-        id_type_produit: product.data.id_type_produit || 1,
+        id_produit: product.data?.id_produit,
+        code_produit: product.data?.code_produit,
+        id_type_produit: product.data?.id_type_produit ?? 1,
+        id_marque: product.data?.id_marque,
+        id_modele: product.data?.id_modele,
+        id_categorie: product.data?.id_categorie,
+        id_famille: product.data?.id_famille,
+        desi_produit: product.data?.desi_produit,
+        desc_produit: product.data?.desc_produit,
+        caracteristiques: product.data?.caracteristiques,
+        emplacement_produit: product.data?.emplacement_produit,
+        images: product.data?.images,
+        imagesMeta: product.data?.imagesMeta,
       };
 
       const images = product.data.images
@@ -206,71 +219,92 @@ export default function ReferenceEditForm() {
 
   // Image handlers
   const handleImageSelected = useCallback(
-    (imageDataUrl: string, file: File) => {
+    async (imageDataUrl: string, file: File) => {
       const newImage: ImageProduit = {
         libelle_image: file.name.replace(/\.[^/.]+$/, ""),
         numero_image: productImages.length + 1,
         file,
         dataUrl: imageDataUrl,
       };
-      setProductImages((prev) => [...prev, newImage]);
-      setIsFormDirty(true);
+      if (isEditMode && product.data?.id_produit) {
+        try {
+          await updateImage.mutateAsync(
+            {
+              images: [newImage.file as File],
+              libelles: [newImage.libelle_image],
+              numeros: [Number(newImage.numero_image)],
+              id_produit: product.data?.id_produit,
+            },
+            {
+              onSuccess: () => {
+                setProductImages((prev) => [...prev, newImage]);
+                setIsFormDirty(true);
+                toast.success("Image mise à jour avec succès");
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour de l'image:", error);
+        }
+      } else {
+        try {
+          setProductImages((prev) => [...prev, newImage]);
+          setIsFormDirty(true);
+        } catch (error) {
+          console.error("Erreur lors de la création de l'image:", error);
+        }
+      }
     },
-    [productImages.length]
+    [productImages.length, updateImage, isEditMode, product.data?.id_produit]
   );
 
   const handleImageChange = useCallback(
-    (action: string, index: number, value?: string | number) => {
-      setProductImages((prev) => {
-        let updated = [...prev];
-        switch (action) {
-          case "label":
-            if (isEditMode) {
-              updateImage.mutate(
-                {
-                  images: [updated[index].file as File],
-                  libelles: [String(value)],
-                  numeros: [Number(updated[index].numero_image)],
-                },
-                {
-                  onSuccess: () => {
-                    updated[index] = {
-                      ...updated[index],
-                      libelle_image: String(value),
-                    };
-                  },
-                }
-              );
-            } else {
-              updated[index] = {
-                ...updated[index],
-                libelle_image: String(value),
-              };
-            }
-            break;
-          case "remove":
-            if (isEditMode) {
-              deleteImage.mutate(Number(updated[index].id_image), {
-                onSuccess: () => {
-                  updated = updated.filter((_, i) => i !== index);
-                },
-              });
-            } else {
-              updated = updated.filter((_, i) => i !== index);
-            }
+    async (action: string, index: number, value?: string | number) => {
+      if (action === "label") {
+        // Mode création - mise à jour directe de l'état local
+        setProductImages((prev) =>
+          prev.map((img, i) =>
+            i === index ? { ...img, libelle_image: String(value) } : img
+          )
+        );
+      } else if (action === "remove") {
+        if (isEditMode) {
+          const currentImage = productImages[index];
 
-            break;
-          case "reorder": {
-            const [movedImage] = updated.splice(index, 1);
-            updated.splice(Number(value), 0, movedImage);
-            break;
+          try {
+            await deleteImage.mutateAsync(Number(currentImage.id_image));
+
+            // Mettre à jour l'état local seulement après succès de la mutation
+            setProductImages((prev) => {
+              const updated = prev.filter((_, i) => i !== index);
+              return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
+            });
+
+            toast.success("Image supprimée avec succès");
+          } catch (error) {
+            toast.error("Erreur lors de la suppression de l'image");
+            console.error("Error deleting image:", error);
           }
+        } else {
+          // Mode création - suppression directe de l'état local
+          setProductImages((prev) => {
+            const updated = prev.filter((_, i) => i !== index);
+            return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
+          });
         }
-        return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
-      });
+      } else if (action === "reorder") {
+        // Réorganisation - mise à jour directe de l'état local
+        setProductImages((prev) => {
+          const updated = [...prev];
+          const [movedImage] = updated.splice(index, 1);
+          updated.splice(Number(value), 0, movedImage);
+          return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
+        });
+      }
+
       setIsFormDirty(true);
     },
-    [deleteImage, isEditMode, updateImage]
+    [deleteImage, isEditMode, productImages]
   );
 
   // Form handlers
@@ -414,6 +448,7 @@ export default function ReferenceEditForm() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Classification Section */}
               <div className="px-4 pb-4 rounded-md">
+                <DebugZod form={form} />
                 <h3 className="font-medium mb-4 text-lg">
                   Classification du produit
                 </h3>

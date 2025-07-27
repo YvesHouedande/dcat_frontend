@@ -6,7 +6,7 @@ import TacheForm from '../components/TacheForm';
 import { Employe, TacheWithAssignedEmployes, CreateTachePayload, Operation } from '../../types/types'; 
 import {getTacheById, updateTache, getEmployesAssignes, assignEmployeToTache, removeEmployeFromTache} from '../api/taches';
 import { getAllOperations } from '../../operation/api/operation'; 
-import { getEmployes } from '../../projet/api/employes'; // Supposons que getEmployes est encore valide pour tous les employés
+import { useEmployesApi } from '../../projet/api/employes'; // Supposons que getEmployes est encore valide pour tous les employés
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
 
@@ -21,7 +21,7 @@ const EditerTachePage = () => {
   const [employesAssignes, setEmployesAssignes] = useState<Employe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const { getEmployes } = useEmployesApi();
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -47,7 +47,7 @@ const EditerTachePage = () => {
         const [tacheData, operationsResponse, employesData, employesAssignesData] = await Promise.all([
           getTacheById(tacheId), 
           getAllOperations(), // <-- Récupérer toutes les opérations
-          getEmployes(),
+          getEmployes({limit: 100, page: 1}),
           getEmployesAssignes(tacheId) 
         ]);
 
@@ -77,7 +77,7 @@ const EditerTachePage = () => {
     };
 
     loadData();
-  }, [id]); 
+  }, [id, getEmployes]); 
 
   const handleSaveTache = async (formData: CreateTachePayload, selectedEmployeesIds: number[]) => {
     if (!id) {

@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
+import { useExemplaireProduit } from "../../hooks/useExemplaireProduits";
 
 // Types pour nos paramètres
 
@@ -18,12 +19,16 @@ import { Label } from "@/components/ui/label";
 interface ExemplaireInformationProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  id: string | number;
 }
 
 export default function ExemplaireInformation({
   open,
   onOpenChange,
+  id,
 }: ExemplaireInformationProps) {
+  const { data: exemplaire } = useExemplaireProduit(id);
+
   return (
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent className="w-full max-w-2xl">
@@ -57,42 +62,30 @@ export default function ExemplaireInformation({
                   <Label className="text-xs text-gray-500">
                     Numéro de série
                   </Label>
-                  <p className="text-sm text-gray-900 font-mono">1234567890</p>
+                  <p className="text-sm text-gray-900 font-mono">
+                    {exemplaire?.num_serie}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">Date d'entrée</Label>
-                  <p className="text-sm text-gray-900">2024-06-25</p>
+                  <p className="text-sm text-gray-900">
+                    {exemplaire?.date_entree}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">Prix d'achat</Label>
                   <p className="text-sm text-gray-900 font-semibold">
-                    120 000 FCFA
+                    {exemplaire?.prix_achat}
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">État</Label>
                   <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                    Disponible
+                    {exemplaire?.etat_exemplaire
+                      ? exemplaire.etat_exemplaire.charAt(0).toUpperCase() +
+                        exemplaire.etat_exemplaire.slice(1)
+                      : "N/A"}
                   </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Section lot de livraison */}
-            <div className="bg-white rounded-lg p-5 shadow border">
-              <h2 className="font-semibold text-gray-800 mb-4 text-base tracking-tight">
-                Lot de livraison
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-500">Numéro de lot</Label>
-                  <p className="text-sm text-gray-900">LOT123456</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">
-                    Date de livraison
-                  </Label>
-                  <p className="text-sm text-gray-900">2024-06-20</p>
                 </div>
               </div>
             </div>
@@ -105,53 +98,40 @@ export default function ExemplaireInformation({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-xs text-gray-500">Prix de vente</Label>
-                  <p className="text-sm text-gray-900">130 000 FCFA</p>
+                  <p className="text-sm text-gray-900">
+                    {exemplaire?.prix_de_vente}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">Marge haute</Label>
-                  <p className="text-sm text-gray-900">10 000 FCFA</p>
+                  <p className="text-sm text-gray-900">
+                    {exemplaire?.marge_haute}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">Marge basse</Label>
-                  <p className="text-sm text-gray-900">5 000 FCFA</p>
+                  <p className="text-sm text-gray-900">
+                    {exemplaire?.marge_basse}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">Frais divers</Label>
-                  <p className="text-sm text-gray-900">2 000 FCFA</p>
+                  <p className="text-sm text-gray-900">
+                    {exemplaire?.frais_divers}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">
-                    Variante (cota des frais)
+                    Coefficient divers
                   </Label>
-                  <p className="text-sm text-gray-900">1 000 FCFA</p>
+                  <p className="text-sm text-gray-900">
+                    {exemplaire?.coef_divers}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Section sortie */}
-            <div className="bg-white rounded-lg p-5 shadow border">
-              <h2 className="font-semibold text-gray-800 mb-4 text-base tracking-tight">
-                Dernière sortie
-              </h2>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-500">Motif</Label>
-                  <p className="text-sm text-gray-900">Vente</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">
-                    Prix de sortie
-                  </Label>
-                  <p className="text-sm text-gray-900 font-semibold">
-                    130 000 FCFA
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">Date</Label>
-                  <p className="text-sm text-gray-900">2024-06-26</p>
-                </div>
-              </div>
-            </div>
+            
           </div>
 
           <SheetFooter>

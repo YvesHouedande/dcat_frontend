@@ -102,6 +102,7 @@ export const useProductService = () => {
   ): Promise<ReferenceProduit> => {
     const formData = transformData(produit);
     // Note: Assurez-vous que l'ID du produit est bien défini dans l'objet produit
+    ;
     const response = await apis.put(
       `stocks/produits/${produit.id_produit}`,
       formData
@@ -126,10 +127,12 @@ export const useProductService = () => {
     images,
     libelles,
     numeros,
+    id_produit,
   }: {
     images: File[];
     libelles: string[];
     numeros: number[];
+    id_produit: string | number | undefined;
   }): Promise<void> => {
     const formData = new FormData();
     images.forEach((image, index) => {
@@ -137,7 +140,7 @@ export const useProductService = () => {
       formData.append(`libelles`, libelles[index]);
       formData.append(`numeros`, numeros[index].toString());
     });
-    await apis.put(`stocks/produits/images/add/`, formData);
+    await apis.post(`stocks/produits/images/add/${id_produit}`, formData);
   };
 
   return {

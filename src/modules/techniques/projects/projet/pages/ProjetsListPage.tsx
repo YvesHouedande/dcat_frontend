@@ -15,11 +15,11 @@ import { Home, Plus } from "lucide-react";
 // Importation des fonctions API
 import { 
   fetchAllProjets, 
-  deleteProjetWithConfirmation, 
+  deleteProjetWithConfirmation,   
   getProjetAssociatedPartenaires 
 } from "../api/projets";
 import { getFamilles } from "../api/famille";
-import { getPartenaires } from "../api/partenaires";
+import { usePartenairesApi } from "../api/partenaires";
 
 export const ProjetsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -39,6 +39,7 @@ export const ProjetsListPage: React.FC = () => {
     limit: number;
     totalPages: number;
   } | null>(null);
+  const { getPartenaires } = usePartenairesApi();
 
   // Map pour stocker les associations Projet ID -> Partenaire IDs
   const [projectPartnersMap, setProjectPartnersMap] = useState<Map<number, number[]>>(new Map());
@@ -47,10 +48,16 @@ export const ProjetsListPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [fetchedProjets, fetchedFamilles, fetchedPartenaires] = await Promise.all([
-        fetchAllProjets(currentPage, projetsPerPage, searchTerm, filterEtat, filterPartenaire),
+        const [fetchedProjets, fetchedFamilles, fetchedPartenaires] = await Promise.all([
+        fetchAllProjets(
+          currentPage,
+          projetsPerPage,
+          searchTerm,
+          filterEtat,
+          filterPartenaire
+        ),
         getFamilles(),
-        getPartenaires()
+        getPartenaires({ limit: 100, page: 1 })
       ]);
 
       // Handle projets response
@@ -168,7 +175,7 @@ export const ProjetsListPage: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/technique/projets')}>
+            <Button variant="outline" onClick={() => navigate('/gestion-des-projets/projets')}>
               <Home className="mr-2 h-4 w-4" />
               Tableau de bord
             </Button>
@@ -177,7 +184,7 @@ export const ProjetsListPage: React.FC = () => {
               <BarChart3 className="mr-2 h-4 w-4" />
               Rapports
             </Button> */}
-            <Button onClick={() => navigate('/technique/projets/nouveau')}>
+            <Button onClick={() => navigate('/gestion-des-projets/projets/nouveau')}>
               <Plus className="mr-2 h-4 w-4" />
               Nouveau Projet
             </Button>
@@ -242,8 +249,8 @@ export const ProjetsListPage: React.FC = () => {
                 <ProjetTable
                   projets={projets}
                   onDelete={handleDelete}
-                  onView={(id) => navigate(`/technique/projets/${id}/details`)}
-                  onEdit={(id) => navigate(`/technique/projets/${id}/editer`)}
+                  onView={(id) => navigate(`/gestion-des-projets/projets/${id}/details`)}
+                  onEdit={(id) => navigate(`/gestion-des-projets/projets/${id}/editer`)}
                   partenaires={partenaires}
                   familles={familles}
                   projectPartnersMap={projectPartnersMap}

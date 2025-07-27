@@ -17,15 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Save, Building, X } from "lucide-react";
 import { Entite, Interlocuteur, Partenaires } from "../../types/interfaces";
 import {
-  fetchPartnerById,
-  updatePartner,
-  fetchEntites,
-  addEntite,
-  deleteEntite,
-  fetchInterlocuteursByPartenaire,
-  updateInterlocuteur,
-  deleteInterlocuteur,
-  addInterlocuteur,
+  usePartenaireApi
 } from '@/modules/administration-Finnance/services/partenaireService';
 import axios from "axios";
 import { toast } from "sonner";
@@ -35,7 +27,7 @@ const EditPartnerForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
+  const { fetchPartnerById, updatePartner, fetchEntites, addEntite, deleteEntite, fetchInterlocuteursByPartenaire, updateInterlocuteur, deleteInterlocuteur, addInterlocuteur } = usePartenaireApi();
   // Charger les données du partenaire
   const { data: partnerData, isLoading: loadingPartner, error: partnerError } = useQuery({
     queryKey: ['partenaire', id],

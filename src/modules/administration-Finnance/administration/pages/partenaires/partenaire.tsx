@@ -14,6 +14,8 @@ import {
   MapPin,
   Building,
   Users,
+  Loader2,
+  ArrowDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,15 +25,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
-import {  Interlocuteur } from "../../types/interfaces";
-import { fetchPartners, fetchEntites, deletePartner } from "@/modules/administration-Finnance/services/partenaireService";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { Interlocuteur } from "../../types/interfaces";
+import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Interface pour les entités
-
 
 // Supprimer le singleton PartenairesStore et ses usages
 
@@ -40,7 +55,7 @@ const getInitials = (name: string) => {
 
   return name
     .split(" ")
-    .map(part => part[0])
+    .map((part) => part[0])
     .join("")
     .toUpperCase()
     .substring(0, 2);
@@ -51,16 +66,34 @@ const ModernPartenaireGrid: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-
+  const { fetchPartners, fetchEntites, deletePartner } = usePartenaireApi();
   // Charger les partenaires avec React Query
-  const { data: partenaires, isLoading: loading, error, refetch } = useQuery({
-    queryKey: ['partenaires'],
-    queryFn: fetchPartners,
+  const {
+    data,
+    isLoading: loading,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["partenaires"],
+    queryFn: ({ pageParam = 1 }) => fetchPartners(pageParam, 16),
+    getNextPageParam: (lastPage) => {
+      const currentPage = lastPage.pagination.page;
+      const totalPages = lastPage.pagination.totalPages;
+      if (currentPage < totalPages) {
+        return currentPage + 1;
+      }
+      return undefined; // Plus de pages à charger
+    },
   });
+
+  const partenaires = data?.pages.flatMap((page) => page.data);
 
   // Charger les entités avec React Query
   const { data: entites, isLoading: entitesLoading } = useQuery({
-    queryKey: ['entites'],
+    queryKey: ["entites"],
     queryFn: fetchEntites,
   });
 
@@ -70,7 +103,7 @@ const ModernPartenaireGrid: React.FC = () => {
     onSuccess: () => {
       toast.success("Partenaire supprimé avec succès !");
       setConfirmDeleteId(null);
-      queryClient.invalidateQueries({ queryKey: ['partenaires'] });
+      queryClient.invalidateQueries({ queryKey: ["partenaires"] });
     },
     onError: () => {
       toast.error("Erreur lors de la suppression du partenaire.");
@@ -80,36 +113,37 @@ const ModernPartenaireGrid: React.FC = () => {
   // Fonction pour obtenir le nom de l'entité à partir de son ID
   const getEntiteName = (idEntite: number | string): string => {
     if (!entites) return `Entité ${idEntite}`;
-    const entite = entites.find(e => e.id_entite === Number(idEntite));
+    const entite = entites.find((e) => e.id_entite === Number(idEntite));
     return entite ? entite.denomination : `Entité ${idEntite}`;
   };
 
-  const filteredPartenaires = searchQuery && partenaires
-    ? partenaires.filter(
-        (partenaire) =>
-          partenaire.nom_partenaire
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          partenaire.specialite
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          partenaire.localisation
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          partenaire.type_partenaire
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          getEntiteName(partenaire.id_entite)
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          (partenaire.interlocuteurs && partenaire.interlocuteurs.some(
-            (interlocuteur) =>
-              `${interlocuteur.prenom_interlocuteur} ${interlocuteur.nom_interlocuteur}`
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase())
-          ))
-      )
-    : partenaires || [];
+  const filteredPartenaires =
+    searchQuery && partenaires
+      ? partenaires.filter(
+          (partenaire) =>
+            partenaire.nom_partenaire
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            partenaire.specialite
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            partenaire.localisation
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            partenaire.type_partenaire
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            getEntiteName(partenaire.id_entite)
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            (partenaire.interlocuteurs &&
+              partenaire.interlocuteurs.some((interlocuteur) =>
+                `${interlocuteur.prenom_interlocuteur} ${interlocuteur.nom_interlocuteur}`
+                  .toLowerCase()
+                  .includes(searchQuery.toLowerCase())
+              ))
+        )
+      : partenaires || [];
 
   const getAvatarColor = (id: number) => {
     const colors = [
@@ -166,11 +200,13 @@ const ModernPartenaireGrid: React.FC = () => {
   };
 
   const handleClickVoirProfile = (id: string | number) => {
-    navigate(`/administration/partenaires/profil/${id}`);
+    navigate(`/gestion-administrative/partenaires/${id}`);
   };
 
   // Fonction pour afficher les interlocuteurs dans une tooltip
-  const renderInterlocuteursList = (interlocuteurs: Interlocuteur[] | undefined) => {
+  const renderInterlocuteursList = (
+    interlocuteurs: Interlocuteur[] | undefined
+  ) => {
     if (!interlocuteurs || interlocuteurs.length === 0) {
       return "Aucun interlocuteur";
     }
@@ -178,9 +214,14 @@ const ModernPartenaireGrid: React.FC = () => {
     return (
       <div className="p-2">
         {interlocuteurs.map((interlocuteur, index) => (
-          <div key={interlocuteur.id_interlocuteur} className={`${index > 0 ? 'mt-2 pt-2 border-t' : ''}`}>
+          <div
+            key={interlocuteur.id_interlocuteur}
+            className={`${index > 0 ? "mt-2 pt-2 border-t" : ""}`}
+          >
             <p className="font-medium">{`${interlocuteur.prenom_interlocuteur} ${interlocuteur.nom_interlocuteur}`}</p>
-            <p className="text-sm text-gray-500">{interlocuteur.fonction_interlocuteur}</p>
+            <p className="text-sm text-gray-500">
+              {interlocuteur.fonction_interlocuteur}
+            </p>
           </div>
         ))}
       </div>
@@ -237,19 +278,23 @@ const ModernPartenaireGrid: React.FC = () => {
     }
 
     if (!partenaires || filteredPartenaires.length === 0) {
-      const message = searchQuery 
-        ? "Aucun partenaire ne correspond à votre recherche" 
+      const message = searchQuery
+        ? "Aucun partenaire ne correspond à votre recherche"
         : "Aucun partenaire disponible pour le moment";
-      
+
       return (
         <div className="col-span-full flex flex-col items-center justify-center py-12">
           <p className="text-gray-600 mb-4">{message}</p>
           {searchQuery && (
-            <Button variant="outline" onClick={() => setSearchQuery("")}>Réinitialiser la recherche</Button>
+            <Button variant="outline" onClick={() => setSearchQuery("")}>
+              Réinitialiser la recherche
+            </Button>
           )}
-          <Button 
-            onClick={() => navigate("/administration/partenaires/ajouter")}
-            className="bg-blue-600 hover:bg-blue-700 mt-4" 
+          <Button
+            onClick={() =>
+              navigate("/gestion-administrative/partenaires/ajouter")
+            }
+            className="bg-blue-600 hover:bg-blue-700 mt-4"
           >
             <UserPlus size={16} className="mr-2" />
             Ajouter un partenaire
@@ -269,7 +314,9 @@ const ModernPartenaireGrid: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <Avatar
-                    className={`h-12 w-12 ${getAvatarColor(partenaire.id_partenaire)}`}
+                    className={`h-12 w-12 ${getAvatarColor(
+                      partenaire.id_partenaire
+                    )}`}
                   >
                     <AvatarFallback
                       className={`${getAvatarColor(partenaire.id_partenaire)}`}
@@ -299,11 +346,7 @@ const ModernPartenaireGrid: React.FC = () => {
                 <div className="relative">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                      >
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <MoreHorizontal size={16} />
                       </Button>
                     </DropdownMenuTrigger>
@@ -331,9 +374,24 @@ const ModernPartenaireGrid: React.FC = () => {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-red-600 hover:bg-red-50"
-                        onClick={() => setConfirmDeleteId(partenaire.id_partenaire)}
+                        onClick={() =>
+                          setConfirmDeleteId(partenaire.id_partenaire)
+                        }
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 mr-2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
                         Supprimer
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -400,12 +458,18 @@ const ModernPartenaireGrid: React.FC = () => {
           </Card>
         ))}
         {/* AlertDialog global pour la suppression */}
-        <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
+        <AlertDialog
+          open={!!confirmDeleteId}
+          onOpenChange={(open) => {
+            if (!open) setConfirmDeleteId(null);
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
               <AlertDialogDescription>
-                Êtes-vous sûr de vouloir supprimer ce partenaire ? Cette action est irréversible.
+                Êtes-vous sûr de vouloir supprimer ce partenaire ? Cette action
+                est irréversible.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -413,11 +477,34 @@ const ModernPartenaireGrid: React.FC = () => {
                 Annuler
               </AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => confirmDeleteId && deletePartenaire(confirmDeleteId)}
+                onClick={() =>
+                  confirmDeleteId && deletePartenaire(confirmDeleteId)
+                }
                 disabled={deleting}
               >
                 {deleting ? (
-                  <span className="flex items-center"><svg className="animate-spin h-4 w-4 mr-2 text-red-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Suppression...</span>
+                  <span className="flex items-center">
+                    <svg
+                      className="animate-spin h-4 w-4 mr-2 text-red-600"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                      ></path>
+                    </svg>
+                    Suppression...
+                  </span>
                 ) : (
                   "Supprimer"
                 )}
@@ -438,7 +525,9 @@ const ModernPartenaireGrid: React.FC = () => {
               Annuaire des partenaires
             </h1>
             <p className="text-gray-500">
-              {filteredPartenaires.length} partenaire{filteredPartenaires.length > 1 ? 's' : ''} trouvé{filteredPartenaires.length > 1 ? 's' : ''}
+              {filteredPartenaires.length} partenaire
+              {filteredPartenaires.length > 1 ? "s" : ""} trouvé
+              {filteredPartenaires.length > 1 ? "s" : ""}
             </p>
           </div>
 
@@ -448,7 +537,9 @@ const ModernPartenaireGrid: React.FC = () => {
               Filtres
             </Button>
             <Button
-              onClick={() => navigate("/administration/partenaires/ajouter")}
+              onClick={() =>
+                navigate("/gestion-administrative/partenaires/ajouter")
+              }
               className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
             >
               <UserPlus size={16} className="mr-2" />
@@ -474,6 +565,21 @@ const ModernPartenaireGrid: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {renderPartenairesList()}
+        </div>
+        <div className="flex justify-center gap-4">
+          <Button
+            variant="outline"
+            className="text-gray-700 border-gray-300"
+            onClick={() => fetchNextPage()}
+            disabled={!hasNextPage || isFetchingNextPage}
+          >
+            {isFetchingNextPage ? (
+              <Loader2 size={16} className="mr-2 animate-spin" />
+            ) : (
+              <ArrowDown size={16} className="mr-2" />
+            )}
+            Charger plus de partenaires
+          </Button>
         </div>
       </div>
     </div>

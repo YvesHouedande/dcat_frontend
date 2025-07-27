@@ -13,20 +13,19 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, Upload, Save, X, FileText } from "lucide-react";
-import { DemandeDocument, NatureDocument } from "../administration/types/interfaces";
 import {
-  getAllNatureDocuments,
-  getDocumentsByNature,
-  updateDocument,
-} from "../services/finance_comptaService";
+  DemandeDocument,
+  NatureDocument,
+} from "../administration/types/interfaces";
+import useDocumentsApi from "../services/finance_comptaService";
 
 // Définir le type du formulaire pour inclure classification_document
-
 
 const EditFinanceCompta: React.FC = () => {
   const { type, id } = useParams<{ type: string; id: string }>();
   const navigate = useNavigate();
-  
+  const { getAllNatureDocument, updateDocument, getDocumentsByNature } =
+    useDocumentsApi();
   const [formData, setFormData] = useState<Partial<DemandeDocument>>({
     libelle_document: "",
     lien_document: "",
@@ -34,31 +33,36 @@ const EditFinanceCompta: React.FC = () => {
     id_nature_document: 0,
     classification_document: "",
   });
-  
+
   const [natures, setNatures] = useState<NatureDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
-  const [originalDocument, setOriginalDocument] = useState<DemandeDocument | null>(null);
+  const [originalDocument, setOriginalDocument] =
+    useState<DemandeDocument | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
-      
+
       setLoading(true);
-      
+
       try {
         // 1. Charger toutes les natures de document
-        const naturesData = await getAllNatureDocuments();
+        const naturesData = await getAllNatureDocument();
         setNatures(naturesData);
 
         // 2. Déterminer la nature actuelle (finance ou compta)
         let currentNature: NatureDocument | undefined;
         if (type === "finance") {
-          currentNature = naturesData.find(n => n.libelle && /finance|financier/i.test(n.libelle));
+          currentNature = naturesData.find(
+            (n) => n.libelle && /finance|financier/i.test(n.libelle)
+          );
         } else if (type === "comptabilite") {
-          currentNature = naturesData.find(n => n.libelle && /comptabilite|comptable|compta/i.test(n.libelle));
+          currentNature = naturesData.find(
+            (n) => n.libelle && /comptabilite|comptable|compta/i.test(n.libelle)
+          );
         }
 
         if (!currentNature) {
@@ -68,28 +72,34 @@ const EditFinanceCompta: React.FC = () => {
         }
 
         // 3. Charger les documents de cette nature
-        const documents = await getDocumentsByNature(currentNature.id_nature_document);
-        
+        const documents = await getDocumentsByNature(
+          currentNature.id_nature_document
+        );
+
         // 4. Trouver le document spécifique par ID
-        const documentData = documents.find(doc => doc.id_documents === parseInt(id));
+        const documentData = documents.find(
+          (doc) => doc.id_documents === parseInt(id)
+        );
 
         if (!documentData) {
           toast.error("Document non trouvé.");
           setLoading(false);
           return;
         }
-        
+
         setOriginalDocument(documentData);
-        
+
         // Pré-remplir le formulaire
         setFormData({
           libelle_document: documentData.libelle_document || "",
           lien_document: documentData.lien_document || "",
-          date_document: documentData.date_document ? documentData.date_document.split('T')[0] : "",
+          date_document: documentData.date_document
+            ? documentData.date_document.split("T")[0]
+            : "",
           id_nature_document: documentData.id_nature_document || 0,
           classification_document: documentData.classification_document || "",
         });
-        
+
         setFileName(documentData.lien_document || "");
       } catch (error) {
         console.error("Erreur lors du chargement des données:", error);
@@ -103,9 +113,9 @@ const EditFinanceCompta: React.FC = () => {
   }, [id, type]);
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -114,9 +124,9 @@ const EditFinanceCompta: React.FC = () => {
     if (file) {
       setSelectedFile(file);
       setFileName(file.name);
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        lien_document: file.name
+        lien_document: file.name,
       }));
     }
   };
@@ -124,15 +134,15 @@ const EditFinanceCompta: React.FC = () => {
   const removeFile = () => {
     setSelectedFile(null);
     setFileName(originalDocument?.lien_document || "");
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      lien_document: originalDocument?.lien_document || ""
+      lien_document: originalDocument?.lien_document || "",
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!(formData.libelle_document ?? "").trim()) {
       toast.error("Le titre du document est requis");
       return;
@@ -159,7 +169,7 @@ const EditFinanceCompta: React.FC = () => {
       toast.success("Document modifié avec succès");
 
       // Rediriger vers la liste
-      navigate(`/administration/finance-compta/${type}`);
+      navigate(`/finance-et-compatibilite/${type}`);
     } catch (error) {
       console.error("Erreur lors de la modification du document:", error);
       toast.error("Impossible de modifier le document");
@@ -169,7 +179,9 @@ const EditFinanceCompta: React.FC = () => {
   };
 
   const getTitle = () => {
-    return type === "finance" ? "Modifier le Document Finance" : "Modifier le Document Comptabilité";
+    return type === "finance"
+      ? "Modifier le Document Finance"
+      : "Modifier le Document Comptabilité";
   };
 
   if (loading) {
@@ -188,7 +200,9 @@ const EditFinanceCompta: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/administration/finance-compta/${type}/${id}/details`)}
+            onClick={() =>
+              navigate(`/finance-et-compatibilite/${type}/${id}/details`)
+            }
             className="flex items-center gap-2"
           >
             <ArrowLeft size={16} />
@@ -209,7 +223,9 @@ const EditFinanceCompta: React.FC = () => {
                 <Input
                   id="libelle_document"
                   value={formData.libelle_document}
-                  onChange={(e) => handleInputChange("libelle_document", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("libelle_document", e.target.value)
+                  }
                   placeholder="Entrez le titre du document"
                   required
                 />
@@ -220,14 +236,19 @@ const EditFinanceCompta: React.FC = () => {
                 <Label htmlFor="nature">Type de document *</Label>
                 <Select
                   value={(formData.id_nature_document ?? 0).toString()}
-                  onValueChange={(value) => handleInputChange("id_nature_document", parseInt(value))}
+                  onValueChange={(value) =>
+                    handleInputChange("id_nature_document", parseInt(value))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionnez un type" />
                   </SelectTrigger>
                   <SelectContent>
                     {natures.map((nature) => (
-                      <SelectItem key={nature.id_nature_document} value={nature.id_nature_document.toString()}>
+                      <SelectItem
+                        key={nature.id_nature_document}
+                        value={nature.id_nature_document.toString()}
+                      >
                         {nature.libelle}
                       </SelectItem>
                     ))}
@@ -242,7 +263,9 @@ const EditFinanceCompta: React.FC = () => {
                   id="date_document"
                   type="date"
                   value={formData.date_document}
-                  onChange={(e) => handleInputChange("date_document", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("date_document", e.target.value)
+                  }
                 />
               </div>
 
@@ -252,7 +275,9 @@ const EditFinanceCompta: React.FC = () => {
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <div className="flex items-center gap-3">
                     <FileText className="h-5 w-5 text-gray-500" />
-                    <span className="text-sm font-medium">{originalDocument?.lien_document}</span>
+                    <span className="text-sm font-medium">
+                      {originalDocument?.lien_document}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -267,7 +292,9 @@ const EditFinanceCompta: React.FC = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => document.getElementById('file-input')?.click()}
+                        onClick={() =>
+                          document.getElementById("file-input")?.click()
+                        }
                       >
                         Sélectionner un nouveau fichier
                       </Button>
@@ -309,7 +336,9 @@ const EditFinanceCompta: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(`/administration/finance-compta/${type}/${id}/details`)}
+                  onClick={() =>
+                    navigate(`/finance-et-compatibilite/${type}/${id}/details`)
+                  }
                   disabled={saving}
                 >
                   Annuler
@@ -324,7 +353,9 @@ const EditFinanceCompta: React.FC = () => {
                   ) : (
                     <Save size={16} />
                   )}
-                  {saving ? "Modification en cours..." : "Enregistrer les modifications"}
+                  {saving
+                    ? "Modification en cours..."
+                    : "Enregistrer les modifications"}
                 </Button>
               </div>
             </form>
@@ -335,4 +366,4 @@ const EditFinanceCompta: React.FC = () => {
   );
 };
 
-export default EditFinanceCompta; 
+export default EditFinanceCompta;

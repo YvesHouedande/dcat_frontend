@@ -10,16 +10,17 @@ import {
   getProjetAssociatedPartenaires,
   addDocumentToProjet, // Import the new function for adding documents to a project
 } from '../api/projets';
-import { getPartenaires } from '../api/partenaires';
+import { usePartenairesApi } from '../api/partenaires';
 import { getFamilles } from '../api/famille';
-import { getEmployes } from '../api/employes';
+import { useEmployesApi } from '../api/employes';
 import { getAllNatureDocuments } from '../../livrables/api/livrables'; // Import the function to get document natures
 import { toast } from 'sonner'; // Import toast for messages
 
 const EditerProjetPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
+  const { getPartenaires } = usePartenairesApi();
+  const { getEmployes } = useEmployesApi();
   const [projet, setProjet] = useState<Projet | undefined>(undefined);
   const [initialPartnerIds, setInitialPartnerIds] = useState<number[]>([]);
   const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
@@ -52,9 +53,9 @@ const EditerProjetPage = () => {
         ] = await Promise.all([
           getProjetById(projectId),
           getProjetAssociatedPartenaires(projectId),
-          getPartenaires(),
+          getPartenaires({limit: 100, page: 1}),
           getFamilles(),
-          getEmployes(),
+          getEmployes({limit: 100, page: 1}),
           getAllNatureDocuments(), // Call to fetch document natures
         ]);
 
@@ -92,7 +93,7 @@ const EditerProjetPage = () => {
       }
     };
     loadData();
-  }, [id]);
+  }, [id, getPartenaires, getEmployes]);
 
   const handleSaveProjet = async (projetMisAJour: Projet) => {
     try {

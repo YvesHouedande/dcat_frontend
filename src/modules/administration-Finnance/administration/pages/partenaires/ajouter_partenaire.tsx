@@ -16,11 +16,7 @@ import { Save, Building, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Entite, Interlocuteur, Partenaires } from "../../types/interfaces";
 import {
-  addPartner,
-  fetchEntites,
-  addEntite,
-  deleteEntite, 
-  addMultipleInterlocuteurs
+  usePartenaireApi
 } from '@/modules/administration-Finnance/services/partenaireService';
 import { useApiCall } from '@/hooks/useAPiCall';
 import { omit } from "@/lib/utils";
@@ -36,7 +32,7 @@ interface TempInterlocuteur extends Omit<Interlocuteur, 'id_partenaire' | 'id_in
 const AddPartnerForm: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
+  const { addPartner, fetchEntites, addEntite, deleteEntite, addMultipleInterlocuteurs } = usePartenaireApi();
   const {
     data: entites,
     loading: loadingEntites,

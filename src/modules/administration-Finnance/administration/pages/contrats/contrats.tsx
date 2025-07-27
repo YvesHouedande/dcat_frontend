@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import {
   Clock,
   Trash2,
   Edit,
-  FileText
+  FileText,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,35 +45,46 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Contrat, Partenaires, MutationError } from "../../types/interfaces";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchContrats, fetchContratsByType, deleteContrat } from '../../../services/contratService';
-import { fetchPartners } from '../../../services/partenaireService';
-import { toast } from 'sonner';
-
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useContratsApi } from "../../../services/contratService";
+import { usePartenaireApi } from "../../../services/partenaireService";
+import { toast } from "sonner";
 
 const ModernContractGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
-  const [contractToDelete, setContractToDelete] = useState<Contrat | null>(null);
+  const [contractToDelete, setContractToDelete] = useState<Contrat | null>(
+    null
+  );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deletingContractId, setDeletingContractId] = useState<number | null>(null);
-
+  const [deletingContractId, setDeletingContractId] = useState<number | null>(
+    null
+  );
+  const { fetchContrats, fetchContratsByType, deleteContrat } =
+    useContratsApi();
+  const { fetchPartners } = usePartenaireApi();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // Récupération des contrats
-  const { data: contrats, isLoading, isError, refetch } = useQuery({
-    queryKey: ['contrats', selectedType],
-    queryFn: () => selectedType && selectedType !== "all" ? fetchContratsByType(selectedType) : fetchContrats(),
+  const {
+    data: contrats,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["contrats", selectedType],
+    queryFn: () =>
+      selectedType && selectedType !== "all"
+        ? fetchContratsByType(selectedType)
+        : fetchContrats(),
   });
 
   // Récupération des partenaires pour affichage du nom
   const { data: partenaires } = useQuery({
-    queryKey: ['partenaires'],
-    queryFn: fetchPartners,
+    queryKey: ["partenaires"],
+    queryFn: () => fetchPartners(1, 100),
   });
-
-
 
   // Mutation pour supprimer un contrat
   const deleteMutation = useMutation({
@@ -82,15 +93,15 @@ const ModernContractGrid: React.FC = () => {
       setDeletingContractId(id);
     },
     onSuccess: () => {
-      toast.success('Contrat supprimé avec succès');
-      queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      toast.success("Contrat supprimé avec succès");
+      queryClient.invalidateQueries({ queryKey: ["contrats"] });
       setIsDeleteDialogOpen(false);
       setContractToDelete(null);
       setDeletingContractId(null);
     },
     onError: (error: MutationError) => {
-      toast.error('Erreur lors de la suppression du contrat', {
-        description: error.message || 'Une erreur inattendue s\'est produite',
+      toast.error("Erreur lors de la suppression du contrat", {
+        description: error.message || "Une erreur inattendue s'est produite",
       });
       setIsDeleteDialogOpen(false);
       setContractToDelete(null);
@@ -99,11 +110,16 @@ const ModernContractGrid: React.FC = () => {
   });
 
   // Utilitaire pour obtenir le nom du partenaire
-  const getPartenaireNom = (id_partenaire?: number) => {
-    if (!id_partenaire || !partenaires) return "-";
-    const partenaire = partenaires.find((p: Partenaires) => p.id_partenaire === id_partenaire);
-    return partenaire ? partenaire.nom_partenaire : "-";
-  };
+  const getPartenaireNom = useCallback(
+    (id_partenaire?: number) => {
+      if (!id_partenaire || !partenaires) return "-";
+      const partenaire = partenaires.data.find(
+        (p: Partenaires) => p.id_partenaire === id_partenaire
+      );
+      return partenaire ? partenaire.nom_partenaire : "-";
+    },
+    [partenaires]
+  );
 
   // Filtrage
   const filteredContrats = useMemo(() => {
@@ -111,17 +127,29 @@ const ModernContractGrid: React.FC = () => {
     return searchQuery
       ? contrats.filter(
           (contrat: Contrat) =>
-            contrat.nom_contrat.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (contrat.id_partenaire ? getPartenaireNom(contrat.id_partenaire).toLowerCase().includes(searchQuery.toLowerCase()) : false) ||
-            (contrat.duree_contrat || "").toLowerCase().includes(searchQuery.toLowerCase())
+            contrat.nom_contrat
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            (contrat.id_partenaire
+              ? getPartenaireNom(contrat.id_partenaire)
+                  .toLowerCase()
+                  .includes(searchQuery.toLowerCase())
+              : false) ||
+            (contrat.duree_contrat || "")
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase())
         )
       : contrats;
-  }, [contrats, searchQuery, partenaires]);
+  }, [contrats, searchQuery, getPartenaireNom]);
 
   // Types de contrats disponibles (basés sur les données existantes)
   const contractTypes = useMemo(() => {
     if (!Array.isArray(contrats)) return [];
-    const types = new Set(contrats.map((contrat: Contrat) => contrat.type_de_contrat).filter(Boolean));
+    const types = new Set(
+      contrats
+        .map((contrat: Contrat) => contrat.type_de_contrat)
+        .filter(Boolean)
+    );
     return Array.from(types).sort();
   }, [contrats]);
 
@@ -137,7 +165,7 @@ const ModernContractGrid: React.FC = () => {
     const diffYears = Math.floor(diffMonths / 12);
     const remainingMonths = diffMonths % 12;
     if (diffYears > 0) {
-      let result = `${diffYears} an${diffYears > 1 ? 's' : ''}`;
+      let result = `${diffYears} an${diffYears > 1 ? "s" : ""}`;
       if (remainingMonths > 0) {
         result += ` et ${remainingMonths} mois`;
       }
@@ -148,15 +176,15 @@ const ModernContractGrid: React.FC = () => {
   };
 
   const handleClick = () => {
-    navigate("/administration/contrats/nouveau");
+    navigate("/gestion-administrative/contrats/nouveau");
   };
 
   const handleClickVoirContrat = (id: number) => {
-    navigate(`/administration/contrats/${id}/details`);
+    navigate(`/gestion-administrative/contrats/${id}`);
   };
 
   const handleClickEditerContrat = (id: number) => {
-    navigate(`/administration/contrats/${id}/editer`);
+    navigate(`/gestion-administrative/contrats/${id}/editer`);
   };
 
   const handleDeleteClick = (contrat: Contrat) => {
@@ -174,8 +202,6 @@ const ModernContractGrid: React.FC = () => {
     setIsDeleteDialogOpen(false);
     setContractToDelete(null);
   };
-
-
 
   // Statut visuel simplifié
   const getContractStatus = (dateFin: string) => {
@@ -223,10 +249,22 @@ const ModernContractGrid: React.FC = () => {
         <div className="relative">
           {/* Animation de documents qui se superposent */}
           <div className="relative w-24 h-32">
-            <div className="absolute inset-0 bg-white border-2 border-gray-200 rounded-lg shadow-lg animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="absolute inset-0 bg-white border-2 border-gray-200 rounded-lg shadow-lg animate-bounce" style={{ animationDelay: '150ms', transform: 'translateY(-2px)' }}></div>
-            <div className="absolute inset-0 bg-white border-2 border-gray-200 rounded-lg shadow-lg animate-bounce" style={{ animationDelay: '300ms', transform: 'translateY(-4px)' }}></div>
-            <div className="absolute inset-0 bg-white border-2 border-gray-200 rounded-lg shadow-lg animate-bounce" style={{ animationDelay: '450ms', transform: 'translateY(-6px)' }}></div>
+            <div
+              className="absolute inset-0 bg-white border-2 border-gray-200 rounded-lg shadow-lg animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            ></div>
+            <div
+              className="absolute inset-0 bg-white border-2 border-gray-200 rounded-lg shadow-lg animate-bounce"
+              style={{ animationDelay: "150ms", transform: "translateY(-2px)" }}
+            ></div>
+            <div
+              className="absolute inset-0 bg-white border-2 border-gray-200 rounded-lg shadow-lg animate-bounce"
+              style={{ animationDelay: "300ms", transform: "translateY(-4px)" }}
+            ></div>
+            <div
+              className="absolute inset-0 bg-white border-2 border-gray-200 rounded-lg shadow-lg animate-bounce"
+              style={{ animationDelay: "450ms", transform: "translateY(-6px)" }}
+            ></div>
           </div>
           {/* Icône de document au centre */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -234,12 +272,23 @@ const ModernContractGrid: React.FC = () => {
           </div>
         </div>
         <div className="mt-8 text-center">
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">Chargement des contrats</h3>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            Chargement des contrats
+          </h3>
           <p className="text-gray-500">Préparation de vos documents...</p>
           <div className="mt-4 flex justify-center space-x-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            <div
+              className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+              style={{ animationDelay: "0ms" }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+              style={{ animationDelay: "150ms" }}
+            ></div>
+            <div
+              className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+              style={{ animationDelay: "300ms" }}
+            ></div>
           </div>
         </div>
       </div>
@@ -254,10 +303,14 @@ const ModernContractGrid: React.FC = () => {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="w-8 h-8 text-red-600" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">Erreur de chargement</h3>
-          <p className="text-gray-600 mb-6">Impossible de charger les contrats pour le moment.</p>
-          <Button 
-            variant="outline" 
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            Erreur de chargement
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Impossible de charger les contrats pour le moment.
+          </p>
+          <Button
+            variant="outline"
             onClick={() => refetch()}
             className="border-gray-300 text-gray-700 hover:bg-gray-50"
           >
@@ -307,14 +360,16 @@ const ModernContractGrid: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           {/* Filtres */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Type de contrat :</span>
+              <span className="text-sm font-medium text-gray-700">
+                Type de contrat :
+              </span>
             </div>
-            
+
             <Select value={selectedType} onValueChange={setSelectedType}>
               <SelectTrigger className="w-64">
                 <SelectValue placeholder="Tous les types de contrats" />
@@ -340,19 +395,27 @@ const ModernContractGrid: React.FC = () => {
                 <span className="text-sm font-medium text-blue-800">
                   Filtres actifs :
                   {selectedType !== "all" && (
-                    <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 bg-blue-100 text-blue-800"
+                    >
                       Type: {selectedType}
                     </Badge>
                   )}
                   {searchQuery && (
-                    <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 bg-blue-100 text-blue-800"
+                    >
                       Recherche: "{searchQuery}"
                     </Badge>
                   )}
                 </span>
               </div>
               <div className="text-sm text-blue-600">
-                {filteredContrats.length} contrat{filteredContrats.length > 1 ? 's' : ''} trouvé{filteredContrats.length > 1 ? 's' : ''}
+                {filteredContrats.length} contrat
+                {filteredContrats.length > 1 ? "s" : ""} trouvé
+                {filteredContrats.length > 1 ? "s" : ""}
               </div>
             </div>
           </div>
@@ -366,17 +429,25 @@ const ModernContractGrid: React.FC = () => {
               <Card
                 key={contrat.id_contrat}
                 className={`overflow-hidden hover:shadow-lg transition-all duration-200 group relative border border-gray-200 hover:border-blue-300 bg-white ${
-                  deletingContractId === contrat.id_contrat ? 'opacity-50 scale-95' : ''
+                  deletingContractId === contrat.id_contrat
+                    ? "opacity-50 scale-95"
+                    : ""
                 }`}
               >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="font-semibold text-gray-800 line-clamp-2 max-w-xs" title={contrat.nom_contrat}>
+                      <h3
+                        className="font-semibold text-gray-800 line-clamp-2 max-w-xs"
+                        title={contrat.nom_contrat}
+                      >
                         {contrat.nom_contrat}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        Partenaire : <span className="font-medium text-gray-700">{getPartenaireNom(contrat.id_partenaire)}</span>
+                        Partenaire :{" "}
+                        <span className="font-medium text-gray-700">
+                          {getPartenaireNom(contrat.id_partenaire)}
+                        </span>
                       </p>
                     </div>
                     <DropdownMenu>
@@ -392,14 +463,18 @@ const ModernContractGrid: React.FC = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem
-                          onClick={() => handleClickVoirContrat(contrat.id_contrat)}
+                          onClick={() =>
+                            handleClickVoirContrat(contrat.id_contrat)
+                          }
                           className="cursor-pointer"
                         >
                           <Eye size={16} className="mr-2" />
                           Voir détails
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleClickEditerContrat(contrat.id_contrat)}
+                          onClick={() =>
+                            handleClickEditerContrat(contrat.id_contrat)
+                          }
                           className="cursor-pointer"
                         >
                           <Edit size={16} className="mr-2" />
@@ -417,7 +492,9 @@ const ModernContractGrid: React.FC = () => {
                           disabled={deletingContractId === contrat.id_contrat}
                         >
                           <Trash2 size={16} className="mr-2" />
-                          {deletingContractId === contrat.id_contrat ? "Suppression..." : "Supprimer"}
+                          {deletingContractId === contrat.id_contrat
+                            ? "Suppression..."
+                            : "Supprimer"}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -427,9 +504,13 @@ const ModernContractGrid: React.FC = () => {
                       <Clock size={14} className="text-gray-400 mr-2" />
                       <div>
                         <p className="text-xs text-gray-500">Durée</p>
-                        <p className="text-sm">{
-                          contrat.duree_contrat || calculateDuration(contrat.date_debut, contrat.date_fin)
-                        }</p>
+                        <p className="text-sm">
+                          {contrat.duree_contrat ||
+                            calculateDuration(
+                              contrat.date_debut,
+                              contrat.date_fin
+                            )}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center">
@@ -437,7 +518,13 @@ const ModernContractGrid: React.FC = () => {
                       <div>
                         <p className="text-xs text-gray-500">Période</p>
                         <p className="text-sm">
-                          {format(new Date(contrat.date_debut), "dd MMM yyyy", { locale: fr })} - {format(new Date(contrat.date_fin), "dd MMM yyyy", { locale: fr })}
+                          {format(new Date(contrat.date_debut), "dd MMM yyyy", {
+                            locale: fr,
+                          })}{" "}
+                          -{" "}
+                          {format(new Date(contrat.date_fin), "dd MMM yyyy", {
+                            locale: fr,
+                          })}
                         </p>
                       </div>
                     </div>
@@ -450,7 +537,9 @@ const ModernContractGrid: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Statut</p>
-                      <Badge className={`mt-1 font-normal ${contractStatus.color}`}>
+                      <Badge
+                        className={`mt-1 font-normal ${contractStatus.color}`}
+                      >
                         {contractStatus.label}
                       </Badge>
                     </div>
@@ -492,22 +581,30 @@ const ModernContractGrid: React.FC = () => {
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Aucun résultat trouvé</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Aucun résultat trouvé
+              </h3>
               <p className="text-gray-600 mb-6">
                 {selectedType !== "all" && searchQuery ? (
-                  <>Aucun contrat de type "{selectedType}" ne correspond à votre recherche "{searchQuery}"</>
+                  <>
+                    Aucun contrat de type "{selectedType}" ne correspond à votre
+                    recherche "{searchQuery}"
+                  </>
                 ) : selectedType !== "all" ? (
                   <>Aucun contrat de type "{selectedType}" trouvé</>
                 ) : searchQuery ? (
-                  <>Aucun contrat ne correspond à votre recherche "{searchQuery}"</>
+                  <>
+                    Aucun contrat ne correspond à votre recherche "{searchQuery}
+                    "
+                  </>
                 ) : (
                   "Aucun contrat disponible"
                 )}
               </p>
               <div className="flex gap-2 justify-center">
                 {(selectedType !== "all" || searchQuery) && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setSearchQuery("");
                       setSelectedType("all");
@@ -524,7 +621,10 @@ const ModernContractGrid: React.FC = () => {
       </div>
 
       {/* Dialogue de confirmation de suppression */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-red-600">
@@ -539,7 +639,7 @@ const ModernContractGrid: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
+            <AlertDialogCancel
               onClick={handleCancelDelete}
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
@@ -555,8 +655,6 @@ const ModernContractGrid: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-
     </div>
   );
 };

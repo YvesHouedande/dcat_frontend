@@ -187,14 +187,14 @@ export const InterventionsListPage: React.FC = () => {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => navigate("/technique/interventions")}
+              onClick={() => navigate("/gestion-des-interventions/interventions")}
             >
               <Home className="mr-2 h-4 w-4" />
               Tableau de bord
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate("/technique/interventions/rapports")}
+              onClick={() => navigate("/gestion-des-interventions/interventions/rapports")}
             >
               <BarChart3 className="mr-2 h-4 w-4" />
               Rapports

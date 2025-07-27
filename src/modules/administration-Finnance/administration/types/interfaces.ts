@@ -1,4 +1,5 @@
-export interface Employe {// Table employes - version harmonisée avec le SQL
+export interface Employe {
+  // Table employes - version harmonisée avec le SQL
   id_employes: number;
   nom_employes: string;
   prenom_employes: string;
@@ -12,8 +13,19 @@ export interface Employe {// Table employes - version harmonisée avec le SQL
   id_fonction: number; // Clé étrangère vers la table fonction
 }
 
-export interface Fonction {// Table Fonction
-  id_fonction: number;  
+export interface EmployeResponse {
+  data: Employe[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface Fonction {
+  // Table Fonction
+  id_fonction: number;
   nom_fonction: string;
 }
 
@@ -38,15 +50,32 @@ export interface Partenaires {
   statut: string;
   id_entite: number; // Clé étrangère vers la table Entite
   interlocuteurs?: Interlocuteur[]; // Ajout de la propriété interlocuteurs
+  entites?: Entite[];
 }
 
+export interface PartenaireResponse {
+  data: Partenaires[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
 
-export interface Entite {// Table Entité
-  id_entite: number;              // Renommé de Id_Entité pour cohérence
+export interface Entite {
+  // Table Entité
+  id_entite: number; // Renommé de Id_Entité pour cohérence
   denomination: string;
+  abreviation_nom: string;
+  contact: string;
+  adresse_postal: string;
+  localisation: string;
+  id_partenaire: number;
 }
 
-export interface NatureDocument {//Table nature_document  
+export interface NatureDocument {
+  //Table nature_document
   id_nature_document: number;
   libelle: string; // Utilisé pour compatibilité avec l'API et le frontend
 }
@@ -60,7 +89,7 @@ export interface DemandeDocument {
   id_nature_document: number; // Clé étrangère vers NatureDocument (maintenue car les documents ont une nature)
 }
 
-//les demandes 
+//les demandes
 export interface Demande {
   id_demandes: number;
   date_absence: string;
@@ -70,9 +99,28 @@ export interface Demande {
   type_demande: string;
   duree: string;
   heure_debut: string;
-  heure_fin: string ;
+  heure_fin: string;
   id_employes: number;
   documents: DemandeDocument[];
+}
+
+export interface DemandeResponse {
+  data: Demande[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface FilterParams {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+  type?: string;
+  employeId?: number;
 }
 
 //les contrats
@@ -86,7 +134,13 @@ export interface Contrat {
   statut: string; // Harmonisé avec l'API
   id_partenaire?: number;
   duree_contrat: string; // Ajout de la durée du contrat
-  documents?: ContratDocument | ContratDocument[]; // Documents associés au contrat (peut être un objet unique ou un tableau)
+  documents?: ContratDocument | ContratDocument[];
+  nom_interlocuteur: string;
+  contact_interlocuteur: string;
+  contenu_contrat: string;
+  cout: number;
+  modalite_paiement: string;
+  // Documents associés au contrat (peut être un objet unique ou un tableau)
 }
 
 export interface EmployeDocument {
@@ -97,7 +151,7 @@ export interface EmployeDocument {
   etat_document?: string; // Optionnel
   date_document: string; // ISO date string
   id_nature_document: number;
-  id_contrat?:number;
+  id_contrat?: number;
 }
 
 // Interface pour les documents de contrat
@@ -145,18 +199,27 @@ export interface ApiResponse<T> {
 }
 
 export interface ContratResponse extends Contrat {
-  id_contrat: number;
+  data: Contrat[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 // Types pour les mutations
-export interface CreateContratData extends Omit<Contrat, 'id_contrat' | 'duree_contrat'> {
+export interface CreateContratData
+  extends Omit<Contrat, "id_contrat" | "duree_contrat"> {
   duree_contrat?: string;
 }
 
-export interface UpdateContratData extends Partial<Omit<Contrat, 'id_contrat'>> {
+export interface UpdateContratData
+  extends Partial<Omit<Contrat, "id_contrat">> {
   duree_contrat?: string;
 }
 
-export interface CreateDocumentData extends Omit<ContratDocument, 'id_documents' | 'id_contrat'> {
+export interface CreateDocumentData
+  extends Omit<ContratDocument, "id_documents" | "id_contrat"> {
   file: File;
 }

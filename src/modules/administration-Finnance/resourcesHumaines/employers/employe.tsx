@@ -3,14 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import {
-  Search,
-  Filter,
-  MoreHorizontal,
-  Eye,
-  Mail,
-  Phone,
-} from "lucide-react";
+import { Search, Filter, MoreHorizontal, Eye, Mail, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -19,9 +12,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
-import { Employe } from "../../types/interfaces";
-import { fetchEmployes } from "../../../services/employeService";
-import { fetchFonctionById } from "../../../services/fonctionService";
+import { Employe } from "../../administration/types/interfaces";
+import { useEmployesApi } from "../../services/employeService";
+import { fetchFonctionById } from "../../services/fonctionService";
 
 const ModernProfileGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,58 +23,83 @@ const ModernProfileGrid: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [jobTitles, setJobTitles] = useState<Record<number, string>>({});
   const navigate = useNavigate();
-
+  const { fetchEmployes } = useEmployesApi();
   useEffect(() => {
     const loadEmployes = async () => {
       try {
+        console.log("Début du chargement des employés..."); // Debug log
         const data = await fetchEmployes();
+        console.log("Employés chargés avec succès:", data); // Debug log
         setEmployes(data);
-        
+
         // Charger les titres des postes pour chaque employé
         const titles: Record<number, string> = {};
-        await Promise.all(
-          data.map(async (employe) => {
-            if (employe.id_fonction) {
-              try {
-                const fonctionData = await fetchFonctionById(employe.id_fonction);
-                titles[employe.id_fonction] = fonctionData.nom_fonction;
-              } catch {
-                titles[employe.id_fonction] = "Non spécifié";
+        try {
+          console.log("Début du chargement des fonctions..."); // Debug log
+          await Promise.all(
+            data.map(async (employe) => {
+              if (employe.id_fonction) {
+                try {
+                  const fonctionData = await fetchFonctionById(
+                    employe.id_fonction
+                  );
+                  titles[employe.id_fonction] = fonctionData.nom_fonction;
+                } catch (error) {
+                  console.warn(
+                    `Erreur lors du chargement de la fonction ${employe.id_fonction}:`,
+                    error
+                  );
+                  titles[employe.id_fonction] = "Non spécifié";
+                }
               }
-            }
-          })
-        );
+            })
+          );
+          console.log("Fonctions chargées avec succès:", titles); // Debug log
+        } catch (error) {
+          console.warn(
+            "Erreur lors du chargement des fonctions, mais on continue:",
+            error
+          );
+          // On ne fait pas échouer tout le processus si les fonctions ne se chargent pas
+        }
+
         setJobTitles(titles);
-        
         setLoading(false);
-      } catch {
+        console.log("Chargement terminé avec succès"); // Debug log
+      } catch (error) {
+        console.error("Erreur lors du chargement des employés:", error); // Debug log
         setError("Erreur lors du chargement des employés");
         setLoading(false);
       }
     };
 
     loadEmployes();
-  }, []);
+  }, [fetchEmployes]);
 
   // Filter profiles based on search query
   const filteredProfiles = searchQuery
     ? employes.filter(
         (profile) =>
-          profile.nom_employes.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          profile.prenom_employes.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          profile.email_employes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          profile.adresse_employes?.toLowerCase().includes(searchQuery.toLowerCase())
+          profile.nom_employes
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          profile.prenom_employes
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          profile.email_employes
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          profile.adresse_employes
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase())
       )
     : employes;
 
-  const handleClickVoirProfile = (id_employes: number) => {
-    console.log("Navigation vers le profil - ID employé:", id_employes); // Debug log
+  const handleClickVoirProfile = (id_employes: number) => {// Debug log
     if (!id_employes || isNaN(id_employes)) {
-      console.error("ID employé invalide pour la navigation:", id_employes);
       return;
     }
-    const profileUrl = `/administration/employers/profil/${id_employes}`;
-    console.log("URL de navigation:", profileUrl); // Debug log
+    const profileUrl = `/resources-humaines/employes/${id_employes}`;
     navigate(profileUrl);
   };
 
@@ -128,11 +146,19 @@ const ModernProfileGrid: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center min-h-screen">Chargement...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        Chargement...
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="flex justify-center items-center min-h-screen text-red-500">{error}</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen text-red-500">
+        {error}
+      </div>
+    );
   }
 
   return (
@@ -183,21 +209,29 @@ const ModernProfileGrid: React.FC = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start">
                     <Avatar
-                      className={`h-10 w-10 ${getAvatarColor(profile.id_employes)}`}
+                      className={`h-10 w-10 ${getAvatarColor(
+                        profile.id_employes
+                      )}`}
                     >
                       <AvatarFallback>
-                        {profile.nom_employes.charAt(0) + profile.prenom_employes.charAt(0)}
+                        {profile.nom_employes.charAt(0) +
+                          profile.prenom_employes.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="ml-3 max-w-full overflow-hidden">
                       <h3
-                        onClick={() => handleClickVoirProfile(profile.id_employes)}
+                        onClick={() =>
+                          handleClickVoirProfile(profile.id_employes)
+                        }
                         className="font-semibold text-gray-800 cursor-pointer hover:underline truncate max-w-full"
                         title={`${profile.nom_employes} ${profile.prenom_employes}`}
                       >
                         {profile.nom_employes} {profile.prenom_employes}
                       </h3>
-                      <p className="text-xs text-gray-500 truncate max-w-full" title={profile.email_employes}>
+                      <p
+                        className="text-xs text-gray-500 truncate max-w-full"
+                        title={profile.email_employes}
+                      >
                         {profile.email_employes}
                       </p>
                     </div>
@@ -221,21 +255,31 @@ const ModernProfileGrid: React.FC = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           key={`view-${profile.id_employes}`}
-                          onClick={() => handleClickVoirProfile(profile.id_employes)}
+                          onClick={() =>
+                            handleClickVoirProfile(profile.id_employes)
+                          }
                           className="cursor-pointer"
                         >
                           <Eye size={16} className="mr-2" />
                           Voir profil
                         </DropdownMenuItem>
-                        <DropdownMenuItem key={`email-${profile.id_employes}`} className="cursor-pointer">
+                        <DropdownMenuItem
+                          key={`email-${profile.id_employes}`}
+                          className="cursor-pointer"
+                        >
                           <Mail size={16} className="mr-2" />
                           <Link to={`mailto:${profile.email_employes}`}>
                             Envoyer un email
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem key={`phone-${profile.id_employes}`} className="cursor-pointer">
+                        <DropdownMenuItem
+                          key={`phone-${profile.id_employes}`}
+                          className="cursor-pointer"
+                        >
                           <Phone size={16} className="mr-2" />
-                          <Link to={`tel:${profile.contact_employes}`}>Appeler</Link>
+                          <Link to={`tel:${profile.contact_employes}`}>
+                            Appeler
+                          </Link>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -245,7 +289,10 @@ const ModernProfileGrid: React.FC = () => {
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Adresse</p>
-                    <p className="text-sm truncate" title={profile.adresse_employes}>
+                    <p
+                      className="text-sm truncate"
+                      title={profile.adresse_employes}
+                    >
                       {profile.adresse_employes}
                     </p>
                   </div>
@@ -265,7 +312,10 @@ const ModernProfileGrid: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">Poste</p>
-                    <p className="text-sm truncate" title={jobTitles[profile.id_fonction] || "Non spécifié"}>
+                    <p
+                      className="text-sm truncate"
+                      title={jobTitles[profile.id_fonction] || "Non spécifié"}
+                    >
                       {jobTitles[profile.id_fonction] || "Non spécifié"}
                     </p>
                   </div>
@@ -290,7 +340,9 @@ const ModernProfileGrid: React.FC = () => {
                     className="text-blue-600 text-xs p-1 h-8"
                   >
                     <Mail size={14} className="mr-1" />
-                    <Link to={`mailto:${profile.email_employes}`}>Contacter</Link>
+                    <Link to={`mailto:${profile.email_employes}`}>
+                      Contacter
+                    </Link>
                   </Button>
                 </div>
               </CardFooter>

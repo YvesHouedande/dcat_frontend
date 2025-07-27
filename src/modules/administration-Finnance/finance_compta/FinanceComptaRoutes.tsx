@@ -4,23 +4,33 @@ import FinanceComptaGrid from "./finance_compta";
 import AddFinanceCompta from "./addFinanceCompta";
 import DetailFinanceCompta from "./detailFinanceCompta";
 import EditFinanceCompta from "./editFinanceCompta";
+import DocFinanceComptabilite from "@/modules/dashboard/pages/administrationFinance/financeComptabilité";
+import NotFound from "@/pages/NotFound";
+import AdministrationLayout from "../administration/pages/administrationLayout";
 
 const FinanceComptaRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Route principale avec type (finance ou comptabilite) */}
-      <Route path="/:type" element={<FinanceComptaGrid />} />
-      
-      {/* Route pour ajouter un document */}
-      <Route path="/:type/nouveau" element={<AddFinanceCompta />} />
-      
-      {/* Route pour voir les détails d'un document */}
-      <Route path="/:type/:id/details" element={<DetailFinanceCompta />} />
-      
-      {/* Route pour modifier un document */}
-      <Route path="/:type/:id/modifier" element={<EditFinanceCompta />} />
+      <Route path="/" element={<DocFinanceComptabilite />} />
+      <Route path="/" element={<AdministrationLayout />}>
+        <Route path="/finance" element={<FinanceComptaGrid />} />
+        <Route path="/finance/nouveau" element={<AddFinanceCompta />} />
+        <Route path="/finance/:id/details" element={<DetailFinanceCompta />} />
+        <Route path="/finance/:id/modifier" element={<EditFinanceCompta />} />
+        <Route path="/comptabilite" element={<FinanceComptaGrid />} />
+        <Route path="/comptabilite/nouveau" element={<AddFinanceCompta />} />
+        <Route
+          path="/comptabilite/:id/modifier"
+          element={<EditFinanceCompta />}
+        />
+        <Route
+          path="/comptabilite/:id/details"
+          element={<DetailFinanceCompta />}
+        />
+      </Route>
+      <Route path="/*" element={<NotFound />} />
     </Routes>
   );
 };
 
-export default FinanceComptaRoutes; 
+export default FinanceComptaRoutes;

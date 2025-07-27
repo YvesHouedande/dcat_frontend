@@ -9,7 +9,7 @@ function DocFinanceComptabilite() {
       <div className="w-full h-full flex flex-col p-4 md:p-6">
         <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-6 items-center">
           <button
-            onClick={() => onNavigate("/documentsFinanciers")}
+            onClick={() => onNavigate("/finance-et-compatibilite/finance")}
             className={`cursor-pointer w-full h-1/2 p-4 flex flex-col items-center justify-center text-center font-semibold text-white rounded-lg shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 hover:shadow-xl hover:scale-105 transform transition-all duration-300 ease-in-out`}
           >
             <FolderArchive className="h-12 w-12 mb-4" />
@@ -17,7 +17,7 @@ function DocFinanceComptabilite() {
           </button>
 
           <button
-            onClick={() => onNavigate("/documentsCompta")}
+            onClick={() => onNavigate("/finance-et-compatibilite/comptabilite")}
             className={`cursor-pointer w-full h-1/2 p-4 flex flex-col items-center justify-center text-center font-semibold text-white rounded-lg shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 hover:shadow-xl hover:scale-105 transform transition-all duration-300 ease-in-out`}
           >
             <FolderArchive className="h-12 w-12 mb-4" />

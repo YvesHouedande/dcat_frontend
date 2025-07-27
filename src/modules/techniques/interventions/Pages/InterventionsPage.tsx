@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,17 +16,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import { Intervention } from '../interface/interface';
-import { InterventionForm } from '../components/InterventionForm';
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { Intervention } from "../interface/interface";
+import { InterventionForm } from "../components/InterventionForm";
 import {
   createIntervention,
   deleteIntervention,
   getInterventions,
-} from '../api/intervention';
-import Layout from '@/components/Layout';
-import axios from 'axios';
+} from "../api/intervention";
+import Layout from "@/components/Layout";
+import axios from "axios";
 import {
   BarChart,
   Bar,
@@ -38,10 +38,10 @@ import {
   PieChart,
   Pie,
   Cell,
-  ResponsiveContainer
-} from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { format, subDays} from 'date-fns';
+  ResponsiveContainer,
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format, subDays } from "date-fns";
 import {
   Table,
   TableBody,
@@ -49,17 +49,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Trash2, Plus, FileText, BarChart3 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+} from "@/components/ui/table";
+import { Trash2, Plus, FileText, BarChart3 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const InterventionsPage: React.FC = () => {
   const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedIntervention, setSelectedIntervention] = useState<Intervention | null>(
-    null
-  );
+  const [selectedIntervention, setSelectedIntervention] =
+    useState<Intervention | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
 
@@ -69,12 +68,16 @@ export const InterventionsPage: React.FC = () => {
         const response = await getInterventions();
         // Limiter à 2 interventions les plus récentes
         const recentInterventions = (response.data || [])
-          .sort((a, b) => new Date(b.date_intervention).getTime() - new Date(a.date_intervention).getTime())
+          .sort(
+            (a, b) =>
+              new Date(b.date_intervention).getTime() -
+              new Date(a.date_intervention).getTime()
+          )
           .slice(0, 2);
         setInterventions(recentInterventions);
       } catch (error) {
-        console.error('Erreur lors du chargement des interventions:', error);
-        toast.error('Erreur lors du chargement des interventions');
+        console.error("Erreur lors du chargement des interventions:", error);
+        toast.error("Erreur lors du chargement des interventions");
       }
     };
     fetchInterventions();
@@ -89,19 +92,20 @@ export const InterventionsPage: React.FC = () => {
 
     // 1. Interventions des 30 derniers jours
     const recentInterventions = interventions.filter(
-      int => new Date(int.date_intervention) >= last30Days
+      (int) => new Date(int.date_intervention) >= last30Days
     );
 
     // 2. Temps moyen d'intervention
-    const avgDuration = recentInterventions.reduce((acc, curr) => {
-      const matches = curr.duree.match(/(\d+)h(?:(\d+))?/);
-      if (matches) {
-        const hours = parseInt(matches[1]) || 0;
-        const minutes = parseInt(matches[2]) || 0;
-        return acc + (hours * 60 + minutes);
-      }
-      return acc;
-    }, 0) / recentInterventions.length;
+    const avgDuration =
+      recentInterventions.reduce((acc, curr) => {
+        const matches = curr.duree.match(/(\d+)h(?:(\d+))?/);
+        if (matches) {
+          const hours = parseInt(matches[1]) || 0;
+          const minutes = parseInt(matches[2]) || 0;
+          return acc + (hours * 60 + minutes);
+        }
+        return acc;
+      }, 0) / recentInterventions.length;
 
     // 3. Types de défaillances les plus courants
     const defaillanceCount = recentInterventions.reduce((acc, curr) => {
@@ -111,7 +115,7 @@ export const InterventionsPage: React.FC = () => {
 
     // 4. Tendance des interventions par jour
     const dailyInterventions = recentInterventions.reduce((acc, curr) => {
-      const date = format(new Date(curr.date_intervention), 'dd/MM');
+      const date = format(new Date(curr.date_intervention), "dd/MM");
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -124,35 +128,47 @@ export const InterventionsPage: React.FC = () => {
 
     return {
       totalInterventions: recentInterventions.length,
-      avgDurationFormatted: `${Math.floor(avgDuration / 60)}h${Math.round(avgDuration % 60)}`,
-      interventionsParJour: Object.entries(dailyInterventions).map(([date, count]) => ({
-        date,
-        interventions: count
-      })),
+      avgDurationFormatted: `${Math.floor(avgDuration / 60)}h${Math.round(
+        avgDuration % 60
+      )}`,
+      interventionsParJour: Object.entries(dailyInterventions).map(
+        ([date, count]) => ({
+          date,
+          interventions: count,
+        })
+      ),
       defaillances: Object.entries(defaillanceCount).map(([name, value]) => ({
         name,
-        value
+        value,
       })),
       lieux: Object.entries(lieuDistribution).map(([name, value]) => ({
         name,
-        value
+        value,
       })),
-      tauxUrgence: (recentInterventions.filter(int => 
-        int.mode_intervention?.toLowerCase().includes('urgence')
-      ).length / recentInterventions.length * 100).toFixed(1)
+      tauxUrgence: (
+        (recentInterventions.filter((int) =>
+          int.mode_intervention?.toLowerCase().includes("urgence")
+        ).length /
+          recentInterventions.length) *
+        100
+      ).toFixed(1),
     };
   }, [interventions]);
 
-  const COLORS = ['#2563eb', '#16a34a', '#ea580c', '#8b5cf6', '#db2777'];
+  const COLORS = ["#2563eb", "#16a34a", "#ea580c", "#8b5cf6", "#db2777"];
 
   // Type pour les données du formulaire
   type FormData = {
     date_intervention: string;
     id_partenaire: number;
     probleme_signale: string;
-    type_intervention: 'Corrective' | 'Préventive';
-    type_defaillance: 'Électrique' | 'Matérielle' | 'Logiciel';
-    cause_defaillance: 'Usure normale' | 'Défaut utilisateur' | 'Défaut produit' | 'Autre';
+    type_intervention: "Corrective" | "Préventive";
+    type_defaillance: "Électrique" | "Matérielle" | "Logiciel";
+    cause_defaillance:
+      | "Usure normale"
+      | "Défaut utilisateur"
+      | "Défaut produit"
+      | "Autre";
     detail_cause?: string;
     rapport_intervention: string;
     recommandation: string;
@@ -169,7 +185,7 @@ export const InterventionsPage: React.FC = () => {
     try {
       // Validation des champs requis
       if (!data.id_partenaire || data.id_partenaire === 0) {
-        throw new Error('Le client est requis');
+        throw new Error("Le client est requis");
       }
 
       // S'assurer que les valeurs numériques sont bien des nombres
@@ -177,7 +193,7 @@ export const InterventionsPage: React.FC = () => {
 
       // Fonction pour tronquer le texte à une longueur maximale
       const truncateText = (text: string, maxLength: number) => {
-        if (!text) return '';
+        if (!text) return "";
         return text.trim().substring(0, maxLength);
       };
 
@@ -189,78 +205,86 @@ export const InterventionsPage: React.FC = () => {
         type_intervention: truncateText(data.type_intervention, 50),
         type_defaillance: truncateText(data.type_defaillance, 50),
         cause_defaillance: truncateText(data.cause_defaillance, 50),
-        detail_cause: data.detail_cause || '',
+        detail_cause: data.detail_cause || "",
         rapport_intervention: truncateText(data.rapport_intervention, 50),
         recommandation: truncateText(data.recommandation, 50),
         duree: truncateText(data.duree, 50),
         lieu: truncateText(data.lieu, 50),
-        mode_intervention: truncateText(data.mode_intervention || 'Standard', 50),
+        mode_intervention: truncateText(
+          data.mode_intervention || "Standard",
+          50
+        ),
         type: truncateText(data.type_intervention, 50),
         id_contrat: data.id_contrat ?? null, // Correction : on prend la valeur du formulaire
         employes: data.employes, // Correction : on envoie les employés sélectionnés
         superviseur: data.superviseur, // Correction : on envoie le superviseur sélectionné
-        statut_intervention: 'à faire'
+        statut_intervention: "à faire",
       };
 
       // Vérification que tous les champs requis sont présents et non vides
       const requiredFields = [
-        'date_intervention',
-        'type_intervention',
-        'type_defaillance',
-        'cause_defaillance',
-        'lieu',
-        'duree'
+        "date_intervention",
+        "type_intervention",
+        "type_defaillance",
+        "cause_defaillance",
+        "lieu",
+        "duree",
       ] as const;
 
-      const missingFields = requiredFields.filter(field => !formattedData[field as keyof typeof formattedData]);
+      const missingFields = requiredFields.filter(
+        (field) => !formattedData[field as keyof typeof formattedData]
+      );
       if (missingFields.length > 0) {
-        throw new Error(`Les champs suivants sont requis : ${missingFields.join(', ')}`);
+        throw new Error(
+          `Les champs suivants sont requis : ${missingFields.join(", ")}`
+        );
       }
 
       // Log des données avant envoi
-      console.log('Données brutes du formulaire:', data);
-      console.log('Données formatées envoyées à l\'API:', formattedData);
+      console.log("Données brutes du formulaire:", data);
+      console.log("Données formatées envoyées à l'API:", formattedData);
 
       try {
         const response = await createIntervention(formattedData);
-        console.log('Réponse de l\'API:', response);
-        
+        console.log("Réponse de l'API:", response);
+
         if (response.success === false) {
-          throw new Error(response.message || 'Erreur lors de la création de l\'intervention');
+          throw new Error(
+            response.message || "Erreur lors de la création de l'intervention"
+          );
         }
 
         setIsCreateDialogOpen(false);
-        toast.success('L\'intervention a été créée avec succès.');
-        
+        toast.success("L'intervention a été créée avec succès.");
+
         // Recharger la liste des interventions
         window.location.reload();
-        
       } catch (apiError) {
-        console.error('Erreur détaillée de l\'API:', apiError);
+        console.error("Erreur détaillée de l'API:", apiError);
         if (axios.isAxiosError(apiError) && apiError.response) {
-          console.log('Status:', apiError.response.status);
-          console.log('Headers:', apiError.response.headers);
-          console.log('Data:', apiError.response.data);
+          console.log("Status:", apiError.response.status);
+          console.log("Headers:", apiError.response.headers);
+          console.log("Data:", apiError.response.data);
         }
         throw apiError;
       }
-      
     } catch (error) {
-      console.error('Erreur lors de la création de l\'intervention:', error);
+      console.error("Erreur lors de la création de l'intervention:", error);
       if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.message || 
-                           error.response?.data?.error || 
-                           'Une erreur est survenue lors de la création de l\'intervention';
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Une erreur est survenue lors de la création de l'intervention";
         toast.error(errorMessage);
-        console.log('Réponse d\'erreur de l\'API:', {
+        console.log("Réponse d'erreur de l'API:", {
           status: error.response?.status,
           statusText: error.response?.statusText,
-          data: error.response?.data
+          data: error.response?.data,
         });
       } else if (error instanceof Error) {
         toast.error(error.message);
       } else {
-        toast.error('Une erreur inattendue est survenue');
+        toast.error("Une erreur inattendue est survenue");
       }
     } finally {
       setIsLoading(false);
@@ -273,11 +297,13 @@ export const InterventionsPage: React.FC = () => {
     try {
       await deleteIntervention(selectedIntervention.id_intervention);
       setIsDeleteDialogOpen(false);
-      toast.success('L\'intervention a été supprimée avec succès.');
+      toast.success("L'intervention a été supprimée avec succès.");
       window.location.reload();
     } catch (error) {
-      console.error('Erreur lors de la suppression de l\'intervention:', error);
-      toast.error('Une erreur est survenue lors de la suppression de l\'intervention.');
+      console.error("Erreur lors de la suppression de l'intervention:", error);
+      toast.error(
+        "Une erreur est survenue lors de la suppression de l'intervention."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -299,11 +325,21 @@ export const InterventionsPage: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/technique/interventions/liste')}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                navigate("/gestion-des-interventions/interventions/liste")
+              }
+            >
               <FileText className="mr-2 h-4 w-4" />
               Voir toutes les interventions
             </Button>
-            <Button variant="outline" onClick={() => navigate('/technique/interventions/rapports')}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                navigate("/gestion-des-interventions/interventions/rapports")
+              }
+            >
               <BarChart3 className="mr-2 h-4 w-4" />
               Rapports
             </Button>
@@ -326,7 +362,9 @@ export const InterventionsPage: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dashboardData.totalInterventions}</div>
+                  <div className="text-2xl font-bold">
+                    {dashboardData.totalInterventions}
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -336,7 +374,9 @@ export const InterventionsPage: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dashboardData.avgDurationFormatted}</div>
+                  <div className="text-2xl font-bold">
+                    {dashboardData.avgDurationFormatted}
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -346,7 +386,9 @@ export const InterventionsPage: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dashboardData.tauxUrgence}%</div>
+                  <div className="text-2xl font-bold">
+                    {dashboardData.tauxUrgence}%
+                  </div>
                 </CardContent>
               </Card>
               <Card>
@@ -357,10 +399,15 @@ export const InterventionsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {interventions.filter(int => 
-                      format(new Date(int.date_intervention), 'yyyy-MM-dd') === 
-                      format(new Date(), 'yyyy-MM-dd')
-                    ).length}
+                    {
+                      interventions.filter(
+                        (int) =>
+                          format(
+                            new Date(int.date_intervention),
+                            "yyyy-MM-dd"
+                          ) === format(new Date(), "yyyy-MM-dd")
+                      ).length
+                    }
                   </div>
                 </CardContent>
               </Card>
@@ -368,7 +415,6 @@ export const InterventionsPage: React.FC = () => {
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
               {/* Distribution par type de défaillance */}
               <Card>
                 <CardHeader>
@@ -383,13 +429,18 @@ export const InterventionsPage: React.FC = () => {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                          label={({ name, percent }) =>
+                            `${name} (${(percent * 100).toFixed(0)}%)`
+                          }
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
                         >
                           {dashboardData.defaillances.map((_entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
                           ))}
                         </Pie>
                         <Tooltip />
@@ -439,7 +490,12 @@ export const InterventionsPage: React.FC = () => {
           <TableBody>
             {interventions.map((intervention) => (
               <TableRow key={intervention.id_intervention}>
-                <TableCell>{format(new Date(intervention.date_intervention), 'dd/MM/yyyy')}</TableCell>
+                <TableCell>
+                  {format(
+                    new Date(intervention.date_intervention),
+                    "dd/MM/yyyy"
+                  )}
+                </TableCell>
                 <TableCell>{intervention.type_intervention}</TableCell>
                 <TableCell>{intervention.type_defaillance}</TableCell>
                 <TableCell>{intervention.cause_defaillance}</TableCell>
@@ -447,7 +503,11 @@ export const InterventionsPage: React.FC = () => {
                 <TableCell>{intervention.rapport_intervention}</TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
-                    <Button size="icon" variant="outline" onClick={() => handleDeleteClick(intervention)}>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => handleDeleteClick(intervention)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -466,24 +526,30 @@ export const InterventionsPage: React.FC = () => {
                 Créez une nouvelle fiche d'intervention
               </DialogDescription>
             </DialogHeader>
-            <InterventionForm onSubmit={handleCreateSubmit} isLoading={isLoading} />  
+            <InterventionForm
+              onSubmit={handleCreateSubmit}
+              isLoading={isLoading}
+            />
           </DialogContent>
         </Dialog>
 
         {/* Dialog de confirmation de suppression */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
               <AlertDialogDescription>
-                Êtes-vous sûr de vouloir supprimer cette intervention ? Cette action
-                est irréversible.
+                Êtes-vous sûr de vouloir supprimer cette intervention ? Cette
+                action est irréversible.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annuler</AlertDialogCancel>
               <AlertDialogAction onClick={handleDelete} disabled={isLoading}>
-                {isLoading ? 'Suppression...' : 'Supprimer'}
+                {isLoading ? "Suppression..." : "Supprimer"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -491,4 +557,4 @@ export const InterventionsPage: React.FC = () => {
       </div>
     </Layout>
   );
-}; 
+};

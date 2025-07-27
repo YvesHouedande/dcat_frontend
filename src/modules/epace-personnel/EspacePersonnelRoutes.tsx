@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import MonEsapce from "./pages/monesapce";
 import EspacePersonnelLayout from "./Layout";
-import NouvelleDemandePage from "../administration-Finnance/administration/pages/demandes/nouveau";
+import NouvelleDemandePage from "../administration-Finnance/resourcesHumaines/demandes/nouveau";
 import DemandesAnnuaire from "./pages/demandes";
 // import NotFound from '@/pages/NotFound';
 

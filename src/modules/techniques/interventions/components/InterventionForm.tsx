@@ -30,9 +30,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Intervention, Partenaire, Employe } from '../interface/interface';
-import { getPartenaires } from '../../projects/projet/api/partenaires';
-import { getEmployes } from '../../projects/projet/api/employes';
-import { fetchContrats } from '@/modules/administration-Finnance/services/contratService';
+import { usePartenairesApi } from '../../projects/projet/api/partenaires';
+import { useEmployesApi } from '../../projects/projet/api/employes';
+import { useContratsApi } from '@/modules/administration-Finnance/services/contratService';
 import { Contrat } from '@/modules/administration-Finnance/administration/types/interfaces';
 
 // Schéma de validation du formulaire
@@ -70,7 +70,9 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
   const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [contrats, setContrats] = useState<Contrat[]>([]);
-
+  const { fetchContrats } = useContratsApi();
+  const { getPartenaires } = usePartenairesApi();
+  const { getEmployes } = useEmployesApi();
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -96,9 +98,9 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
     const loadData = async () => {
       try {
         const [partenairesList, employesList, contratsList] = await Promise.all([
-          getPartenaires(),
-          getEmployes(),
-          fetchContrats(),
+          getPartenaires({limit: 100, page: 1}),
+          getEmployes({limit: 100, page: 1}),
+          fetchContrats({limit: 100, page: 1}),
         ]);
         setPartenaires(partenairesList);
         setEmployes(employesList);
@@ -108,7 +110,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
       }
     };
     loadData();
-  }, []);
+  }, [fetchContrats, getPartenaires, getEmployes]);
 
   return (
     <Form {...form}>

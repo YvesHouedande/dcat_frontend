@@ -1,260 +1,224 @@
-import axios, { AxiosError } from 'axios';
-import { Contrat} from '../../administration-Finnance/administration/types/interfaces';
-import { EmployeDocument } from "../administration/types/interfaces";
+import { useCallback } from "react";
+import { useApi } from "@/api/api";
+import { Contrat } from "@/modules/administration-Finnance/administration/types/interfaces";
+import { EmployeDocument } from "@/modules/administration-Finnance/administration/types/interfaces";
 
-const API_URL = import.meta.env.VITE_APP_API_URL;
+export const useContratsApi = () => {
+  const api = useApi();
 
-// Services for contracts
-export const fetchContrats = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/contrats`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching contracts:", error);
-    throw error;
-  }
-};
+  const fetchContrats = useCallback(async () => {
+    const res = await api.get("/administration/contrats");
+    return res.data;
+  }, [api]);
 
-export const fetchContratById = async (id: string | number) => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/contrats/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching contract by ID:", error);
-    throw error;
-  }
-};
+  const fetchContratById = useCallback(
+    async (id: string | number) => {
+      const res = await api.get(`/administration/contrats/${id}`);
+      return res.data;
+    },
+    [api]
+  );
 
-export const addContrat = async (contratData: Omit<Contrat, 'id_contrat'>, documentFile?: File) => {
-  try {
-    let response;
+  const addContrat = useCallback(
+    async (contratData: Omit<Contrat, "id_contrat">, documentFile?: File) => {
+      if (documentFile) {
+        const formData = new FormData();
+        Object.entries(contratData).forEach(([key, value]) => {
+          if (value !== undefined) {
+            formData.append(key, value.toString());
+          }
+        });
+        formData.append("document", documentFile);
 
-    if (documentFile) {
+        const res = await api.post("/administration/contrats", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        return res.data;
+      } else {
+        const res = await api.post("/administration/contrats", contratData);
+        return res.data;
+      }
+    },
+    [api]
+  );
+
+  const updateContrat = useCallback(
+    async (
+      id: string | number,
+      contratData: Partial<Contrat>,
+      documentFile?: File
+    ) => {
+      if (documentFile) {
+        const formData = new FormData();
+        Object.entries(contratData).forEach(([key, value]) => {
+          if (value !== undefined) {
+            formData.append(key, value.toString());
+          }
+        });
+        formData.append("document", documentFile);
+
+        const res = await api.put(`/administration/contrats/${id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        return res.data;
+      } else {
+        const res = await api.put(
+          `/administration/contrats/${id}`,
+          contratData
+        );
+        return res.data;
+      }
+    },
+    [api]
+  );
+
+  const deleteContrat = useCallback(
+    async (id: string | number) => {
+      const res = await api.delete(`/administration/contrats/${id}`);
+      return res.data;
+    },
+    [api]
+  );
+
+  const fetchNaturesDocument = useCallback(async () => {
+    const res = await api.get("/administration/natures");
+    return res.data;
+  }, [api]);
+
+  const fetchDocuments = useCallback(async () => {
+    const res = await api.get("/administration/documents");
+    return res.data;
+  }, [api]);
+
+  const fetchDocumentById = useCallback(
+    async (id: number) => {
+      const res = await api.get(`/administration/documents/${id}`);
+      return res.data;
+    },
+    [api]
+  );
+
+  const addDocument = useCallback(
+    async (documentData: Omit<Document, "id_document">, file: File) => {
       const formData = new FormData();
-      Object.keys(contratData).forEach((key) => {
-        const value = contratData[key as keyof Omit<Contrat, 'id_contrat'>];
+      Object.entries(documentData).forEach(([key, value]) => {
         if (value !== undefined) {
-          formData.append(key, value.toString());
+          formData.append(key, value ? value.toString() : "");
         }
       });
-      formData.append('document', documentFile);
+      formData.append("file", file);
 
-      response = await axios.post(`${API_URL}/administration/contrats`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const res = await api.post("/administration/documents", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-    } else {
-      response = await axios.post(`${API_URL}/administration/contrats`, contratData);
-    }
+      return res.data;
+    },
+    [api]
+  );
 
-    return response.data;
-  } catch (error) {
-    console.error("Error adding contract:", error);
-    throw error;
-  }
-};
-
-export const updateContrat = async (id: string | number, contratData: Partial<Contrat>, documentFile?: File) => {
-  try {
-    let response;
-
-    if (documentFile) {
+  const updateDocument = useCallback(
+    async (
+      id: string | number,
+      updates: Partial<Document>,
+      file?: File
+    ): Promise<Document> => {
       const formData = new FormData();
-      Object.keys(contratData).forEach((key) => {
-        const value = contratData[key as keyof Partial<Contrat>];
+      Object.entries(updates).forEach(([key, value]) => {
         if (value !== undefined) {
-          formData.append(key, value.toString());
+          formData.append(key, value ? value.toString() : "");
         }
       });
-      formData.append('document', documentFile);
+      if (file) {
+        formData.append("file", file);
+      }
 
-      response = await axios.put(`${API_URL}/administration/contrats/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const res = await api.put(`/administration/documents/${id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-    } else {
-      response = await axios.put(`${API_URL}/administration/contrats/${id}`, contratData);
-    }
+      return res.data;
+    },
+    [api]
+  );
 
-    return response.data;
-  } catch (error) {
-    console.error("Error updating contract:", error);
-    throw error;
-  }
-};
+  const deleteDocument = useCallback(
+    async (id: string | number, contratId?: string | number): Promise<void> => {
+      const url = contratId
+        ? `/administration/contrats/${contratId}/documents/${id}`
+        : `/administration/documents/${id}`;
+      await api.delete(url);
+    },
+    [api]
+  );
 
-export const deleteContrat = async (id: string | number) => {
-  try {
-    const response = await axios.delete(`${API_URL}/administration/contrats/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting contract:", error);
-    throw error;
-  }
-};
+  const fetchDocumentsByProjetId = useCallback(
+    async (id_projet: number) => {
+      const res = await api.get(
+        `/administration/documents/projet/${id_projet}`
+      );
+      return res.data;
+    },
+    [api]
+  );
 
-// Service for document types
-export const fetchNaturesDocument = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/natures`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching document types:", error);
-    throw error;
-  }
-};
+  const fetchEmployeDocuments = useCallback(
+    async (id_employes: number): Promise<EmployeDocument[]> => {
+      const res = await api.get(
+        `/administration/employes/${id_employes}/documents`
+      );
+      if (!res.data) throw new Error("Aucun document trouvé");
+      return res.data;
+    },
+    [api]
+  );
 
-// Services for documents
-export const fetchDocuments = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/documents`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching documents:", error);
-    throw error;
-  }
-};
+  const downloadDocument = useCallback(
+    async (id_document: string): Promise<Blob> => {
+      const res = await api.get(
+        `/administration/documents/${id_document}/download`,
+        {
+          responseType: "blob",
+        }
+      );
+      return res.data;
+    },
+    [api]
+  );
 
-export const fetchDocumentById = async (id: number) => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/documents/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching document by ID:", error);
-    throw error;
-  }
-};
+  const uploadDocument = useCallback(
+    async (
+      id_employes: number,
+      file: File,
+      type: string
+    ): Promise<Document> => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", type);
+      formData.append("id_employes", id_employes.toString());
 
-export const addDocument = async (documentData: Omit<Document, 'id_document'>, file: File) => {
-  try {
-    const formData = new FormData();
-    Object.keys(documentData).forEach((key) => {
-      const value = documentData[key as keyof Omit<Document, 'id_document'>];
-      if (value !== undefined) {
-        formData.append(key, value ? value.toString() : "");
-      }
-    });
-    formData.append('file', file);
-
-    const response = await axios.post(`${API_URL}/administration/documents`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error adding document:", error);
-    throw error;
-  }
-};
-
-// Unified update document function
-export const updateDocument = async (id: string | number, updates: Partial<Document>, file?: File): Promise<Document> => {
-  try {
-    const formData = new FormData();
-    Object.keys(updates).forEach((key) => {
-      const value = updates[key as keyof Partial<Document>];
-      if (value !== undefined) {
-        formData.append(key, value ? value.toString() : "");
-      }
-    });
-    if (file) {
-      formData.append('file', file);
-    }
-
-    const response = await axios.put(`${API_URL}/administration/documents/${id}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error updating document:", error);
-    throw error;
-  }
-};
-
-// Unified delete document function
-export const deleteDocument = async (id: string | number, contratId?: string | number): Promise<void> => {
-  try {
-    const url = contratId 
-      ? `${API_URL}/administration/contrats/${contratId}/documents/${id}`
-      : `${API_URL}/administration/documents/${id}`;
-    
-    await axios.delete(url);
-  } catch (error) {
-    console.error("Error deleting document:", error);
-    throw error;
-  }
-};
-
-export const fetchDocumentsByProjetId = async (id_projet: number) => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/documents/projet/${id_projet}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching documents by projet ID:", error);
-    throw error;
-  }
-};
-
-// Récupérer tous les documents d'un employé
-export const fetchEmployeDocuments = async (id_employes: number): Promise<EmployeDocument[]> => {
-  try {
-    console.log(`Appel API: GET ${API_URL}/administration/employes/${id_employes}/documents`);
-    const response = await axios.get(`${API_URL}/administration/employes/${id_employes}/documents`);
-    
-    if (!response.data) {
-      throw new Error("Aucun document trouvé");
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error("Erreur lors de la récupération des documents:", error);
-    if (error instanceof AxiosError) {
-      console.error("Détails de l'erreur Axios:", {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url
+      const res = await api.post("/administration/documents/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-    }
-    throw error;
-  }
-};
 
-// Télécharger un document
-export const downloadDocument = async (id_document: string): Promise<Blob> => {
-  try {
-    const response = await axios.get(`${API_URL}/administration/documents/${id_document}/download`, {
-      responseType: 'blob'
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Erreur lors du téléchargement du document:", error);
-    throw error;
-  }
-};
+      return res.data;
+    },
+    [api]
+  );
 
-// Uploader un document
-export const uploadDocument = async (id_employes: number, file: File, type: string): Promise<Document> => {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-    formData.append('id_employes', id_employes.toString());
-
-    const response = await axios.post(`${API_URL}/administration/documents/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error("Erreur lors de l'upload du document:", error);
-    throw error;
-  }
+  return {
+    fetchContrats,
+    fetchContratById,
+    addContrat,
+    updateContrat,
+    deleteContrat,
+    fetchNaturesDocument,
+    fetchDocuments,
+    fetchDocumentById,
+    addDocument,
+    updateDocument,
+    deleteDocument,
+    fetchDocumentsByProjetId,
+    fetchEmployeDocuments,
+    downloadDocument,
+    uploadDocument,
+  };
 };

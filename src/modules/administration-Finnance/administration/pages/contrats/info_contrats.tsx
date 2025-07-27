@@ -18,46 +18,51 @@ import {
   Trash2,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchContratById } from '../../../services/contratService';
-import { fetchPartnerById } from '../../../services/partenaireService';
-import { ApiError, MutationError } from '../../types/interfaces';
-import { deleteDocumentFromContrat } from '../../../services/contratService';
-import { toast } from 'sonner';
-import DocumentSheet from './DocumentSheet';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useContratsApi } from "../../../services/contratService";
+import { usePartenaireApi } from "../../../services/partenaireService";
+import { ApiError, MutationError } from "../../types/interfaces";
+import { toast } from "sonner";
+import DocumentSheet from "./DocumentSheet";
 
 const InfoContract: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const queryClient = useQueryClient();
   const [showFilePreview, setShowFilePreview] = useState(false);
-
+  const { fetchContratById, deleteDocumentFromContrat } = useContratsApi();
+  const { fetchPartnerById } = usePartenaireApi();
   // Récupération du contrat
-  const { data: contrat, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['contrat', id],
+  const {
+    data: contrat,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["contrat", id],
     queryFn: () => fetchContratById(id!),
     enabled: !!id,
   });
 
-
-  
   // Fonction pour calculer la durée si elle n'existe pas
   const calculateDuration = (dateDebut: string, dateFin: string) => {
     if (!dateDebut || !dateFin) return "Non calculée";
-    
+
     const debut = new Date(dateDebut);
     const fin = new Date(dateFin);
-    
-    if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return "Dates invalides";
-    
+
+    if (isNaN(debut.getTime()) || isNaN(fin.getTime()))
+      return "Dates invalides";
+
     const diffTime = Math.abs(fin.getTime() - debut.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const diffMonths = Math.ceil(diffDays / 30);
     const diffYears = Math.floor(diffMonths / 12);
     const remainingMonths = diffMonths % 12;
-    
+
     if (diffYears > 0) {
-      let result = `${diffYears} an${diffYears > 1 ? 's' : ''}`;
+      let result = `${diffYears} an${diffYears > 1 ? "s" : ""}`;
       if (remainingMonths > 0) {
         result += ` et ${remainingMonths} mois`;
       }
@@ -69,8 +74,11 @@ const InfoContract: React.FC = () => {
 
   // Récupération du partenaire associé
   const { data: partenaire } = useQuery({
-    queryKey: ['partenaire', contrat?.id_partenaire],
-    queryFn: () => contrat?.id_partenaire ? fetchPartnerById(contrat.id_partenaire) : Promise.resolve(undefined),
+    queryKey: ["partenaire", contrat?.id_partenaire],
+    queryFn: () =>
+      contrat?.id_partenaire
+        ? fetchPartnerById(contrat.id_partenaire)
+        : Promise.resolve(undefined),
     enabled: !!contrat?.id_partenaire,
   });
 
@@ -78,12 +86,12 @@ const InfoContract: React.FC = () => {
   const deleteDocumentMutation = useMutation({
     mutationFn: (documentId: number) => deleteDocumentFromContrat(documentId),
     onSuccess: () => {
-      toast.success('Document supprimé avec succès');
-      queryClient.invalidateQueries({ queryKey: ['contrat', id] });
+      toast.success("Document supprimé avec succès");
+      queryClient.invalidateQueries({ queryKey: ["contrat", id] });
     },
     onError: (error: MutationError) => {
-      toast.error('Erreur lors de la suppression du document', {
-        description: error.message || 'Une erreur inattendue s\'est produite',
+      toast.error("Erreur lors de la suppression du document", {
+        description: error.message || "Une erreur inattendue s'est produite",
       });
     },
   });
@@ -102,13 +110,13 @@ const InfoContract: React.FC = () => {
     ? API_BASE_URL.slice(0, -4) // Remove '/api' from the end
     : API_BASE_URL; // Otherwise, use it as is
 
-
-
   // Loader global
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg text-gray-600 animate-pulse">Chargement du contrat...</div>
+        <div className="text-lg text-gray-600 animate-pulse">
+          Chargement du contrat...
+        </div>
       </div>
     );
   }
@@ -118,9 +126,16 @@ const InfoContract: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <p className="text-red-600 mb-4">
-          {is404 ? "Contrat introuvable (404)." : "Erreur lors du chargement du contrat."}
+          {is404
+            ? "Contrat introuvable (404)."
+            : "Erreur lors du chargement du contrat."}
         </p>
-        <Button variant="outline" onClick={() => is404 ? navigate('/administration/contrats') : refetch()}>
+        <Button
+          variant="outline"
+          onClick={() =>
+            is404 ? navigate("/administration/contrats") : refetch()
+          }
+        >
           {is404 ? "Retour à la liste des contrats" : "Réessayer"}
         </Button>
       </div>
@@ -172,16 +187,16 @@ const InfoContract: React.FC = () => {
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold">
-                    {contrat.nom_contrat}
-                  </h1>
+                  <h1 className="text-2xl font-bold">{contrat.nom_contrat}</h1>
                   <p className="text-emerald-100">
                     Référence: {contrat.reference || contrat.id_contrat}
                   </p>
                 </div>
                 <Badge
                   variant="outline"
-                  className={`mt-2 md:mt-0 border-emerald-200 self-center ${getStatusColor(contrat.statut)}`}
+                  className={`mt-2 md:mt-0 border-emerald-200 self-center ${getStatusColor(
+                    contrat.statut
+                  )}`}
                 >
                   {contrat.statut}
                 </Badge>
@@ -197,7 +212,11 @@ const InfoContract: React.FC = () => {
                 </div>
                 <div className="flex items-center">
                   <Clock size={18} className="mr-2 text-emerald-200" />
-                  <span>Durée: {contrat.duree_contrat || calculateDuration(contrat.date_debut, contrat.date_fin)}</span>
+                  <span>
+                    Durée:{" "}
+                    {contrat.duree_contrat ||
+                      calculateDuration(contrat.date_debut, contrat.date_fin)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -237,7 +256,11 @@ const InfoContract: React.FC = () => {
                       variant="outline"
                       size="sm"
                       className="text-gray-500 cursor-pointer"
-                      onClick={() => navigate(`/administration/contrats/${contrat.id_contrat}/editer`)}
+                      onClick={() =>
+                        navigate(
+                          `/administration/contrats/${contrat.id_contrat}/editer`
+                        )
+                      }
                     >
                       <Edit size={16} className="mr-2" />
                       Modifier
@@ -250,9 +273,7 @@ const InfoContract: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Nom du contrat</p>
-                        <p className="font-medium">
-                          {contrat.nom_contrat}
-                        </p>
+                        <p className="font-medium">{contrat.nom_contrat}</p>
                       </div>
                     </div>
                     <div className="flex items-center">
@@ -261,7 +282,9 @@ const InfoContract: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Référence</p>
-                        <p className="font-medium">{contrat.reference || contrat.id_contrat}</p>
+                        <p className="font-medium">
+                          {contrat.reference || contrat.id_contrat}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center">
@@ -289,7 +312,11 @@ const InfoContract: React.FC = () => {
                       <div>
                         <p className="text-sm text-gray-500">Durée</p>
                         <p className="font-medium">
-                          {contrat.duree_contrat || calculateDuration(contrat.date_debut, contrat.date_fin)}
+                          {contrat.duree_contrat ||
+                            calculateDuration(
+                              contrat.date_debut,
+                              contrat.date_fin
+                            )}
                         </p>
                       </div>
                     </div>
@@ -299,9 +326,7 @@ const InfoContract: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Type de contrat</p>
-                        <p className="font-medium">
-                          {contrat.type_de_contrat}
-                        </p>
+                        <p className="font-medium">{contrat.type_de_contrat}</p>
                       </div>
                     </div>
                   </div>
@@ -317,7 +342,11 @@ const InfoContract: React.FC = () => {
                       <Button
                         variant="outline"
                         className="w-full flex items-center justify-between text-left p-4 mb-4"
-                        onClick={() => navigate(`/administration/partenaires/profil/${partenaire.id_partenaire}`)}
+                        onClick={() =>
+                          navigate(
+                            `/administration/partenaires/profil/${partenaire.id_partenaire}`
+                          )
+                        }
                       >
                         <div className="flex items-center">
                           <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-3">
@@ -335,7 +364,9 @@ const InfoContract: React.FC = () => {
                         <ChevronRight size={16} className="text-gray-400" />
                       </Button>
                     ) : (
-                      <div className="text-gray-400 italic">Aucun partenaire associé</div>
+                      <div className="text-gray-400 italic">
+                        Aucun partenaire associé
+                      </div>
                     )}
                   </div>
                   <h2 className="text-xl font-bold text-gray-800 mb-4">
@@ -367,89 +398,111 @@ const InfoContract: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
-                      </TabsContent>
-            <TabsContent value="documents" className="p-6">
-              <div className="space-y-6">
-                {/* En-tête avec bouton d'ajout */}
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-gray-800">Documents du contrat</h2>
-                  <DocumentSheet
-                    contratId={parseInt(id!)}
-                    onDocumentAdded={() => {
-                      queryClient.invalidateQueries({ queryKey: ['contrat', id] });
-                    }}
-                    trigger={
-                      <Button className="bg-blue-600 hover:bg-blue-700">
-                        <Plus size={16} className="mr-2" />
-                        Ajouter un document
-                      </Button>
-                    }
-                  />
-                </div>
+          </TabsContent>
+          <TabsContent value="documents" className="p-6">
+            <div className="space-y-6">
+              {/* En-tête avec bouton d'ajout */}
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-800">
+                  Documents du contrat
+                </h2>
+                <DocumentSheet
+                  contratId={parseInt(id!)}
+                  onDocumentAdded={() => {
+                    queryClient.invalidateQueries({
+                      queryKey: ["contrat", id],
+                    });
+                  }}
+                  trigger={
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      <Plus size={16} className="mr-2" />
+                      Ajouter un document
+                    </Button>
+                  }
+                />
+              </div>
 
+              {/* Liste des documents existants */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-medium text-gray-700 mb-4">
+                    Documents existants
+                  </h3>
 
-
-                {/* Liste des documents existants */}
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-medium text-gray-700 mb-4">Documents existants</h3>
-                    
-                    {contrat?.documents && Array.isArray(contrat.documents) && contrat.documents.length > 0 ? (
-                      <div className="space-y-3">
-                        {contrat.documents.map((doc) => (
-                          <div key={doc.id_documents} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                              <FileText className="h-6 w-6 text-blue-500" />
-                              <div>
-                                <p className="font-medium text-gray-900">{doc.libelle_document}</p>
-                                <p className="text-sm text-gray-500">{doc.classification_document}</p>
-                                <p className="text-xs text-gray-400">
-                                  Ajouté le {new Date(doc.date_document).toLocaleDateString('fr-FR')}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex space-x-2">
-                              {doc.lien_document && (
-                                <a
-                                  href={`${STATIC_FILES_BASE_URL}/${doc.lien_document}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors px-3 py-2 rounded-md hover:bg-blue-50"
-                                  download
-                                >
-                                  <Download size={16} className="mr-2" />
-                                  Télécharger
-                                </a>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteDocument(doc.id_documents)}
-                                disabled={deleteDocumentMutation.isLoading}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 size={16} className="mr-2" />
-                                {deleteDocumentMutation.isLoading ? 'Suppression...' : 'Supprimer'}
-                              </Button>
+                  {contrat?.documents &&
+                  Array.isArray(contrat.documents) &&
+                  contrat.documents.length > 0 ? (
+                    <div className="space-y-3">
+                      {contrat.documents.map((doc) => (
+                        <div
+                          key={doc.id_documents}
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <FileText className="h-6 w-6 text-blue-500" />
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {doc.libelle_document}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {doc.classification_document}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                Ajouté le{" "}
+                                {new Date(doc.date_document).toLocaleDateString(
+                                  "fr-FR"
+                                )}
+                              </p>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                        <p className="text-gray-500">Aucun document associé à ce contrat</p>
-                        <p className="text-sm text-gray-400 mt-2">
-                          Cliquez sur "Ajouter un document" pour commencer
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+                          <div className="flex space-x-2">
+                            {doc.lien_document && (
+                              <a
+                                href={`${STATIC_FILES_BASE_URL}/${doc.lien_document}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors px-3 py-2 rounded-md hover:bg-blue-50"
+                                download
+                              >
+                                <Download size={16} className="mr-2" />
+                                Télécharger
+                              </a>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleDeleteDocument(doc.id_documents)
+                              }
+                              disabled={deleteDocumentMutation.isLoading}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 size={16} className="mr-2" />
+                              {deleteDocumentMutation.isLoading
+                                ? "Suppression..."
+                                : "Supprimer"}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                      <p className="text-gray-500">
+                        Aucun document associé à ce contrat
+                      </p>
+                      <p className="text-sm text-gray-400 mt-2">
+                        Cliquez sur "Ajouter un document" pour commencer
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
       {/* Modal pour la prévisualisation du fichier (simulé) */}
       {showFilePreview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -470,9 +523,7 @@ const InfoContract: React.FC = () => {
               <div className="bg-white h-full w-full flex items-center justify-center border shadow">
                 <div className="text-center p-8">
                   <FileText size={64} className="mx-auto text-gray-300 mb-4" />
-                  <p className="text-gray-500">
-                    Aperçu du contrat
-                  </p>
+                  <p className="text-gray-500">Aperçu du contrat</p>
                   <p className="text-gray-400 text-sm mt-2">
                     Dans une application réelle, le PDF serait affiché ici
                   </p>

@@ -5,7 +5,7 @@ import TacheForm from './TacheForm';
 import { Employe, CreateTachePayload, Operation } from '../../types/types'; // Projet retiré de l'import
 import { createTache, assignEmployeToTache } from '../api/taches';
 // import { fetchAllProjets } from '../../projet/api/projets'; // Import de fetchAllProjets retiré
-import { getEmployes } from '../../projet/api/employes';
+import { useEmployesApi } from '../../projet/api/employes';
 import { getAllOperations } from '../../operation/api/operation'; // NOUVEAU : Import de la fonction pour récupérer les opérations
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
@@ -18,13 +18,14 @@ const NouvelleTachePage = () => {
     const [operations, setOperations] = useState<Operation[]>([]); // NOUVEAU : État pour les opérations
     const [loading, setLoading] = useState(true);
     const [selectedOperationId, setSelectedOperationId] = useState<number | null>(null);
+    const { getEmployes } = useEmployesApi();
 
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
             try {
                 // Chargement des employés
-                const employesData = await getEmployes();
+                const employesData = await getEmployes({limit: 100, page: 1});
                 setEmployes(employesData);
                 const operationsResponse = await getAllOperations(); 
                 const operationsData = operationsResponse.data || []; // Extraction des données de l'ApiResponse

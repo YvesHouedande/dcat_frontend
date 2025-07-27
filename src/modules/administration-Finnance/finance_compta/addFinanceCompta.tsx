@@ -14,8 +14,7 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Upload, Save, X } from "lucide-react";
 import { NatureDocument } from "../administration/types/interfaces";
-import { getAllNatureDocuments, createDocument } from "../services/finance_comptaService";
-
+import useDocumentsApi from "../services/finance_comptaService";
 const AddFinanceCompta: React.FC = () => {
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
@@ -33,11 +32,12 @@ const AddFinanceCompta: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
+  const { getAllNatureDocument, createDocument } = useDocumentsApi();
 
   useEffect(() => {
     const fetchNatures = async () => {
       try {
-        const naturesData = await getAllNatureDocuments();
+        const naturesData = await getAllNatureDocument();
         setNatures(naturesData);
         
         // Pré-sélectionner la nature selon le type (finance ou comptabilite)
@@ -135,7 +135,7 @@ const AddFinanceCompta: React.FC = () => {
       toast.success("Document ajouté avec succès");
 
       // Rediriger vers la liste
-      navigate(`/administration/finance-compta/${type}`);
+      navigate(`/finance-et-compatibilite/${type}`);
     } catch (error: unknown) {
       console.error("Erreur lors de l'ajout du document:", error);
       if (typeof error === 'object' && error !== null && 'response' in error) {
@@ -162,7 +162,7 @@ const AddFinanceCompta: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/administration/finance-compta/${type}`)}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2"
           >
             <ArrowLeft size={16} />
@@ -294,7 +294,7 @@ const AddFinanceCompta: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(`/administration/finance-compta/${type}`)}
+                  onClick={() => navigate(`/finance-et-compatibilite/${type}`)}
                   disabled={loading}
                 >
                   Annuler

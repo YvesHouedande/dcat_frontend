@@ -2,7 +2,10 @@
 import { useState, useEffect, useRef } from "react";
 import { ExemplaireProduitTable } from "../tables/ExemplaireProduitTable";
 import { ExemplaireProduitForm } from "../forms/ExemplaireProduitForm";
-import { useExemplaireProduits } from "../../hooks/useExemplaireProduits";
+import {
+  useExemplaireDelete,
+  useExemplaireProduits,
+} from "../../hooks/useExemplaireProduits";
 import { PaginationParams } from "../../types";
 import {
   Dialog,
@@ -45,21 +48,15 @@ export function ExemplaireProduitDashboard({
     useState<Partial<ExemplaireProduitFormValues> | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
-  // const [idsSelected, setIdsSelected] = useState<string | number>();
-  // const [dialogOutOpen, setOutDialogOpen] = useState(false);
-  // const [searchTerm, setSearchTerm] = useState("");
+  const [infoId, setInfoId] = useState<string | number | null>(null);
   const [paginationParams, setPaginationParams] = useState<PaginationParams>({
     page: 1,
     limit: ExemplaireLimit,
   });
 
-  const {
-    ExemplaireProduits,
-    pagination,
-    loading,
-    fetchExemplaireProduits,
-    deleteExemplaireProduit,
-  } = useExemplaireProduits(String(produitId));
+  const { ExemplaireProduits, pagination, loading, fetchExemplaireProduits } =
+    useExemplaireProduits(String(produitId));
+  const { deleteExemplaireProduit } = useExemplaireDelete();
 
   const handlePageChange = (page: number) => {
     setPaginationParams((prev) => ({ ...prev, page }));
@@ -225,7 +222,10 @@ export function ExemplaireProduitDashboard({
           onEdit={openEditForm}
           onDelete={openDeleteDialog}
           onAdd={openAddForm}
-          onInfo={setInfoOpen}
+          onInfo={(open, id) => {
+            setInfoOpen(open);
+            setInfoId(id);
+          }}
           onOutEdit={() => {
             toast.info(
               "La fonctionnalité de sortie n'est pas encore implémentée."
@@ -271,10 +271,14 @@ export function ExemplaireProduitDashboard({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeDeleteDialog}>
+            <AlertDialogCancel
+              disabled={deleteExemplaireProduit.isLoading}
+              onClick={closeDeleteDialog}
+            >
               Annuler
             </AlertDialogCancel>
             <AlertDialogAction
+              disabled={deleteExemplaireProduit.isLoading}
               className="bg-red-600 hover:bg-red-600"
               onClick={handleDelete}
             >
@@ -283,7 +287,13 @@ export function ExemplaireProduitDashboard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <ExemplaireInformation open={infoOpen} onOpenChange={setInfoOpen} />
+      {infoOpen && infoId && (
+        <ExemplaireInformation
+          id={infoId}
+          open={infoOpen}
+          onOpenChange={setInfoOpen}
+        />
+      )}
     </div>
   );
 }

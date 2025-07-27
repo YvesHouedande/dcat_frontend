@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -30,12 +30,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Calendar as CalendarIcon, Save, X, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { useCreateDemande, useEmployes } from "../../../hooks/useDemandes";
-import { CreateDemandeData } from "../../../services/demandeService";
+import { useCreateDemande, useEmployes } from "../../hooks/useDemandes";
+import { CreateDemandeData } from "../../services/demandeService";
 
 // Type strict pour le formulaire local
 interface DemandeFormData {
@@ -74,10 +78,32 @@ const NouvelleDemandePage: React.FC = () => {
   const createDemande = useCreateDemande();
   const { data: employes, isLoading: loadingEmployes } = useEmployes();
 
-  const handleChange = <K extends FormField>(field: K, value: DemandeFormData[K]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Fonction pour extraire le nombre de jours depuis la durée
+  const extractDaysFromDuration = (duration: string): number => {
+    if (!duration) return 0;
+    const match = duration.match(/(\d+)\s*jour[s]?/i);
+    return match ? parseInt(match[1]) : 0;
+  };
+
+  // Calculer automatiquement la date de retour basée sur la durée
+  useEffect(() => {
+    if (formData.date_absence && formData.duree) {
+      const days = extractDaysFromDuration(formData.duree);
+      if (days > 0) {
+        const returnDate = new Date(formData.date_absence);
+        returnDate.setDate(returnDate.getDate() + days);
+        setFormData((prev) => ({ ...prev, date_retour: returnDate }));
+      }
+    }
+  }, [formData.date_absence, formData.duree]);
+
+  const handleChange = <K extends FormField>(
+    field: K,
+    value: DemandeFormData[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (formErrors[field]) {
-      setFormErrors(prev => {
+      setFormErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
@@ -87,10 +113,45 @@ const NouvelleDemandePage: React.FC = () => {
 
   const validateForm = (): boolean => {
     const errors: FormErrors = {};
-    if (!formData.type_demande) errors.type_demande = "Le type de demande est obligatoire.";
-    if (!formData.id_employes) errors.id_employes = "L'employé concerné est obligatoire.";
-    if (!formData.motif || formData.motif.trim() === "") errors.motif = "Le motif est obligatoire.";
-    if (!formData.date_absence) errors.date_absence = "La date d'absence est obligatoire.";
+    if (!formData.type_demande)
+      errors.type_demande = "Le type de demande est obligatoire.";
+    if (!formData.id_employes)
+      errors.id_employes = "L'employé concerné est obligatoire.";
+    if (!formData.motif || formData.motif.trim() === "")
+      errors.motif = "Le motif est obligatoire.";
+    if (!formData.date_absence)
+      errors.date_absence = "La date d'absence est obligatoire.";
+
+    // Validation des heures pour les absences d'une journée (0 jour)
+    if (formData.duree && extractDaysFromDuration(formData.duree) === 0) {
+      const now = new Date();
+      const currentTime =
+        now.getHours().toString().padStart(2, "0") +
+        ":" +
+        now.getMinutes().toString().padStart(2, "0");
+      const isToday =
+        formData.date_absence &&
+        formData.date_absence.toDateString() === now.toDateString();
+
+      if (
+        formData.heure_debut &&
+        isToday &&
+        formData.heure_debut < currentTime
+      ) {
+        errors.heure_debut =
+          "L'heure de début ne peut pas être antérieure à l'heure actuelle pour une absence aujourd'hui.";
+      }
+
+      if (
+        formData.heure_debut &&
+        formData.heure_fin &&
+        formData.heure_fin <= formData.heure_debut
+      ) {
+        errors.heure_fin =
+          "L'heure de fin doit être postérieure à l'heure de début.";
+      }
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -102,10 +163,14 @@ const NouvelleDemandePage: React.FC = () => {
     try {
       const demandeData: CreateDemandeData = {
         motif: formData.motif,
-        date_absence: formData.date_absence ? format(formData.date_absence, "yyyy-MM-dd") : "",
+        date_absence: formData.date_absence
+          ? format(formData.date_absence, "yyyy-MM-dd")
+          : "",
         heure_debut: formData.heure_debut || "",
         heure_fin: formData.heure_fin || "",
-        date_retour: formData.date_retour ? format(formData.date_retour, "yyyy-MM-dd") : "",
+        date_retour: formData.date_retour
+          ? format(formData.date_retour, "yyyy-MM-dd")
+          : "",
         duree: formData.duree || "",
         type_demande: formData.type_demande,
         status: formData.status,
@@ -118,15 +183,21 @@ const NouvelleDemandePage: React.FC = () => {
     }
   };
 
-
   const isFormComplete = (): boolean => {
-    return !!(
+    const baseComplete = !!(
       formData.type_demande &&
       formData.motif &&
       formData.motif.trim() !== "" &&
       formData.id_employes &&
       formData.date_absence
     );
+
+    // Si la durée est "0 jour", vérifier que les heures sont renseignées
+    if (formData.duree && extractDaysFromDuration(formData.duree) === 0) {
+      return baseComplete && !!(formData.heure_debut && formData.heure_fin);
+    }
+
+    return baseComplete;
   };
 
   const handleCancel = () => {
@@ -162,7 +233,7 @@ const NouvelleDemandePage: React.FC = () => {
               <Label htmlFor="type_demande">Type de demande *</Label>
               <Select
                 value={formData.type_demande}
-                onValueChange={(value) => handleChange('type_demande', value)}
+                onValueChange={(value) => handleChange("type_demande", value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionnez un type" />
@@ -176,7 +247,9 @@ const NouvelleDemandePage: React.FC = () => {
                 </SelectContent>
               </Select>
               {formErrors.type_demande && (
-                <p className="text-sm text-red-500">{formErrors.type_demande}</p>
+                <p className="text-sm text-red-500">
+                  {formErrors.type_demande}
+                </p>
               )}
             </div>
             {/* Employé */}
@@ -184,15 +257,26 @@ const NouvelleDemandePage: React.FC = () => {
               <Label htmlFor="id_employes">Employé concerné *</Label>
               <Select
                 value={formData.id_employes ? String(formData.id_employes) : ""}
-                onValueChange={(value) => handleChange('id_employes', Number(value))}
+                onValueChange={(value) =>
+                  handleChange("id_employes", Number(value))
+                }
                 disabled={loadingEmployes}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingEmployes ? "Chargement..." : "Sélectionnez un employé"} />
+                  <SelectValue
+                    placeholder={
+                      loadingEmployes
+                        ? "Chargement..."
+                        : "Sélectionnez un employé"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {employes?.map((employe) => (
-                    <SelectItem key={employe.id_employes} value={String(employe.id_employes)}>
+                    <SelectItem
+                      key={employe.id_employes}
+                      value={String(employe.id_employes)}
+                    >
                       {employe.prenom_employes} {employe.nom_employes}
                     </SelectItem>
                   ))}
@@ -208,7 +292,7 @@ const NouvelleDemandePage: React.FC = () => {
               <Textarea
                 id="motif"
                 value={formData.motif}
-                onChange={(e) => handleChange('motif', e.target.value)}
+                onChange={(e) => handleChange("motif", e.target.value)}
                 placeholder="Décrivez le motif de votre demande..."
                 rows={3}
               />
@@ -237,23 +321,38 @@ const NouvelleDemandePage: React.FC = () => {
                   <Calendar
                     mode="single"
                     selected={formData.date_absence}
-                    onSelect={(date) => handleChange('date_absence', date)}
+                    onSelect={(date) => handleChange("date_absence", date)}
                     initialFocus
+                    fromDate={new Date()}
                   />
                 </PopoverContent>
               </Popover>
               {formErrors.date_absence && (
-                <p className="text-sm text-red-500">{formErrors.date_absence}</p>
+                <p className="text-sm text-red-500">
+                  {formErrors.date_absence}
+                </p>
               )}
             </div>
             {/* Date de retour */}
             <div className="space-y-2">
-              <Label htmlFor="date_retour">Date de retour</Label>
+              <Label htmlFor="date_retour">
+                Date de retour
+                {formData.duree &&
+                  extractDaysFromDuration(formData.duree) > 0 && (
+                    <span className="text-xs text-blue-600 ml-2">
+                      (calculée automatiquement)
+                    </span>
+                  )}
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
+                    disabled={Boolean(
+                      formData.duree &&
+                        extractDaysFromDuration(formData.duree) > 0
+                    )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {formData.date_retour ? (
@@ -267,32 +366,18 @@ const NouvelleDemandePage: React.FC = () => {
                   <Calendar
                     mode="single"
                     selected={formData.date_retour}
-                    onSelect={(date) => handleChange('date_retour', date)}
+                    onSelect={(date) => handleChange("date_retour", date)}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-            </div>
-            {/* Heures début/fin */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="heure_debut">Heure de début</Label>
-                <Input
-                  id="heure_debut"
-                  type="time"
-                  value={formData.heure_debut}
-                  onChange={(e) => handleChange('heure_debut', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="heure_fin">Heure de fin</Label>
-                <Input
-                  id="heure_fin"
-                  type="time"
-                  value={formData.heure_fin}
-                  onChange={(e) => handleChange('heure_fin', e.target.value)}
-                />
-              </div>
+              {formData.duree &&
+                extractDaysFromDuration(formData.duree) > 0 && (
+                  <p className="text-xs text-blue-600">
+                    Date calculée automatiquement basée sur la durée de{" "}
+                    {extractDaysFromDuration(formData.duree)} jour(s)
+                  </p>
+                )}
             </div>
             {/* Durée */}
             <div className="space-y-2">
@@ -300,16 +385,62 @@ const NouvelleDemandePage: React.FC = () => {
               <Input
                 id="duree"
                 value={formData.duree}
-                onChange={(e) => handleChange('duree', e.target.value)}
-                placeholder="ex: 2 jours, 1 semaine..."
+                onChange={(e) => handleChange("duree", e.target.value)}
+                placeholder="ex: 0 jour (pour une absence partielle), 2 jours, 1 semaine..."
               />
+              <p className="text-xs text-gray-500">
+                Si vous saisissez "0 jour", vous devrez préciser les heures de
+                début et fin. La date de retour sera calculée automatiquement
+                selon la durée.
+              </p>
+            </div>
+            {/* Heures début/fin */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="heure_debut">
+                  Heure de début
+                  {formData.duree &&
+                    extractDaysFromDuration(formData.duree) === 0 && (
+                      <span className="text-red-500"> *</span>
+                    )}
+                </Label>
+                <Input
+                  id="heure_debut"
+                  type="time"
+                  value={formData.heure_debut}
+                  onChange={(e) => handleChange("heure_debut", e.target.value)}
+                />
+                {formErrors.heure_debut && (
+                  <p className="text-sm text-red-500">
+                    {formErrors.heure_debut}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="heure_fin">
+                  Heure de fin
+                  {formData.duree &&
+                    extractDaysFromDuration(formData.duree) === 0 && (
+                      <span className="text-red-500"> *</span>
+                    )}
+                </Label>
+                <Input
+                  id="heure_fin"
+                  type="time"
+                  value={formData.heure_fin}
+                  onChange={(e) => handleChange("heure_fin", e.target.value)}
+                />
+                {formErrors.heure_fin && (
+                  <p className="text-sm text-red-500">{formErrors.heure_fin}</p>
+                )}
+              </div>
             </div>
             {/* Statut */}
             <div className="space-y-2">
               <Label htmlFor="status">Statut</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value) => handleChange('status', value)}
+                onValueChange={(value) => handleChange("status", value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -333,10 +464,7 @@ const NouvelleDemandePage: React.FC = () => {
               <X className="mr-2 h-4 w-4" />
               Annuler
             </Button>
-            <Button
-              type="submit"
-              disabled={!isFormComplete() || isLoading}
-            >
+            <Button type="submit" disabled={!isFormComplete() || isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -362,7 +490,11 @@ const NouvelleDemandePage: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => navigate("/administration/demandes")}>Retour à la liste</AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => navigate("/administration/demandes")}
+            >
+              Retour à la liste
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -372,12 +504,15 @@ const NouvelleDemandePage: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Annuler la création</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir annuler ? Toutes les données saisies seront perdues.
+              Êtes-vous sûr de vouloir annuler ? Toutes les données saisies
+              seront perdues.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Continuer l'édition</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCancel}>Annuler et quitter</AlertDialogAction>
+            <AlertDialogAction onClick={confirmCancel}>
+              Annuler et quitter
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

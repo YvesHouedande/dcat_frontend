@@ -30,8 +30,13 @@ const PartenaireService = () => {
   const api = useApi();
   return {
     fetchPartenaire: async (): Promise<Partenaires[]> => {
-      const response = await api.get(`administration/partenaires`);
-      return response.data;
+      const response = await api.get(`administration/partenaires`, {
+        params: {
+          page: 1,
+          limit: 100,
+        },
+      });
+      return response.data.data;
     },
   };
 };
@@ -49,10 +54,12 @@ const usePartenaire = () => {
     isLoading: partenaires.isLoading,
   };
 };
-export function PartenaireCombobox({ value, onChange }: PartenaireComboboxProps) {
+export function PartenaireCombobox({
+  value,
+  onChange,
+}: PartenaireComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
-
 
   const { partenaires: deliveries, isLoading } = usePartenaire();
 
@@ -82,7 +89,7 @@ export function PartenaireCombobox({ value, onChange }: PartenaireComboboxProps)
             ? deliveriesArray.find(
                 (partenaire) => String(partenaire.id_partenaire) === value
               )?.nom_partenaire
-            : "Sélectionner une partenaire..."}
+            : "Sélectionner un partenaire..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -106,11 +113,17 @@ export function PartenaireCombobox({ value, onChange }: PartenaireComboboxProps)
                     setOpen(false);
                   }}
                 >
-                 
                   <div className="flex flex-col">
-                    <span className="font-medium"> {partenaire.nom_partenaire}</span>
+                    <span className="font-medium">
+                      {" "}
+                      {partenaire.entites && partenaire.entites.length > 0
+                        ? partenaire.entites[0].denomination
+                        : ""}
+                      {partenaire.nom_partenaire}
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      {partenaire.email_partenaire} | {partenaire.telephone_partenaire}
+                      {partenaire.email_partenaire} |{" "}
+                      {partenaire.telephone_partenaire}
                     </span>
                   </div>
                   <Check
