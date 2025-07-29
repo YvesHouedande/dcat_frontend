@@ -45,6 +45,7 @@ export const SocialShareButton: React.FC<ProductShareProps> = ({
   };
 
   const shareMessage = createPromotionMessage();
+  const shareUrl = product?.url || window.location.href;
 
   // Instagram n'a pas d'API de partage direct, on propose de copier le lien
   const handleInstagramShare = () => {
