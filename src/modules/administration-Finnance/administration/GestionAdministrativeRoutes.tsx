@@ -15,11 +15,17 @@ import Contrats from "./pages/contrats/contrats";
 import NouveauContrat from "./pages/contrats/NouveauContrat";
 import InfoContract from "./pages/contrats/info_contrats";
 import EditerContrat from "./pages/contrats/editerContrat";
+import EntitesList from "./pages/entites/entites";
+import AddEntiteForm from "./pages/entites/ajouter_entite";
+import EditEntiteForm from "./pages/entites/editer_entite";
+import EntiteProfile from "./pages/entites/EntiteProfile";
 
 const GestionAdministrativeRoutes: React.FC = () => {
   return (
+
     <Routes>
       <Route path="/" element={<GestionAdminstrative />} />
+
       {/* Routes /partenaires */}
       <Route path="/partenaires" element={<AdministrationLayout />}>
         <Route index element={<ModernPartenaireGrid />} />
@@ -27,6 +33,7 @@ const GestionAdministrativeRoutes: React.FC = () => {
         <Route path=":id" element={<ModernPartnerProfile />} />
         <Route path=":id/editer" element={<EditPartnerForm />} />
       </Route>
+
       {/* Routes /contrats */}
       <Route path="/contrats" element={<AdministrationLayout />}>
         <Route index element={<Contrats />} />
@@ -42,8 +49,18 @@ const GestionAdministrativeRoutes: React.FC = () => {
         <Route path=":id/editer" element={<EditDocumentPage />} />
         <Route path="nouveau" element={<AddDocumentPage />} />
       </Route>
+
+      {/* Routes /entites */}
+      <Route path="/entites" element={<AdministrationLayout />}>
+        <Route index element={<EntitesList />} />
+        <Route path="ajouter" element={<AddEntiteForm />} />
+        <Route path=":id" element={<EntiteProfile />} />
+        <Route path=":id/editer" element={<EditEntiteForm />} />
+      </Route>
+
       <Route path="/*" element={<NotFound />} />
     </Routes>
+    
   );
 };
 

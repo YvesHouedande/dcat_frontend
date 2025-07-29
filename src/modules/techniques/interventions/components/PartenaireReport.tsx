@@ -167,7 +167,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     if (onViewIntervention) {
       onViewIntervention(intervention);
     } else {
-      navigate(`/technique/interventions/${intervention.id_intervention}`);
+      navigate(`/gestion-des-interventions/interventions/${intervention.id_intervention}`);
     }
   };
 

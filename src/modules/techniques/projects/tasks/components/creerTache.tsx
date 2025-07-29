@@ -65,12 +65,12 @@ const NouvelleTachePage = () => {
                 description: `Tâche associée à l'opération ID: ${formData.id_operation}`, 
                 action: {
                     label: 'Voir la tâche',
-                    onClick: () => navigate(`/technique/projets/taches/${nouvelleTache.id_tache}`)
+                    onClick: () => navigate(`/gestion-des-projets/projets/taches/${nouvelleTache.id_tache}`)
                 }
             });
 
             // Redirection après succès
-            navigate('/technique/projets/taches');
+            navigate('/gestion-des-projets/projets/taches');
 
         } catch (error) {
             console.error("Erreur création tâche:", error);
@@ -89,7 +89,7 @@ const NouvelleTachePage = () => {
                 onClick: () => {}
             }
         });
-        navigate('/technique/projets/taches');
+        navigate('/gestion-des-projets/projets/taches');
     };
 
     // Trouver l'opération sélectionnée pour limiter les dates
@@ -116,7 +116,7 @@ const NouvelleTachePage = () => {
                 <p className="text-gray-700">Veuillez créer des opérations avant de créer une tâche.</p>
                 {/* Assurez-vous que le chemin vers la page de gestion des opérations est correct */}
                 <button
-                    onClick={() => navigate('/technique/operations')} 
+                    onClick={() => navigate('/gestion-des-projets/projets/operations')} 
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
                     Gérer les opérations
@@ -137,7 +137,7 @@ const NouvelleTachePage = () => {
                 <h2 className="text-xl font-bold text-red-600">Aucun employé disponible</h2>
                 <p className="text-gray-700">Veuillez ajouter des employés avant de créer une tâche.</p>
                 <button
-                    onClick={() => navigate('/administration/employes')}
+                    onClick={() => navigate('/resources-humaines/employes')}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
                     Gérer les employés

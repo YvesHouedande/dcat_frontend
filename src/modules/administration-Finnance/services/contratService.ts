@@ -214,6 +214,27 @@ export const useContratsApi = () => {
     return response.data;
   }, [api]);
 
+  // Nouvelle méthode : Récupérer les contrats d'une entité
+  const fetchContratsByEntite = useCallback(
+    async (idEntite: number) => {
+      const response = await api.get(`/administration/contrats/entite/${idEntite}`);
+      if (Array.isArray(response.data)) return response.data;
+      if (response.data && Array.isArray(response.data.data))
+        return response.data.data;
+      return [];
+    },
+    [api]
+  );
+
+  // Nouvelle méthode : Récupérer les contrats sans entité
+  const fetchContratsSansEntite = useCallback(async () => {
+    const response = await api.get(`/administration/contrats/sans/sans-entite`);
+    if (Array.isArray(response.data)) return response.data;
+    if (response.data && Array.isArray(response.data.data))
+      return response.data.data;
+    return [];
+  }, [api]);
+
   return {
     fetchContrats,
     addContrat,
@@ -222,6 +243,8 @@ export const useContratsApi = () => {
     deleteContrat,
     fetchContratsByType,
     fetchContratsByPartenaire,
+    fetchContratsByEntite, // Nouvelle méthode
+    fetchContratsSansEntite, // Nouvelle méthode
     addDocumentToContrat,
     deleteDocumentFromContrat,
     fetchNaturesDocument,

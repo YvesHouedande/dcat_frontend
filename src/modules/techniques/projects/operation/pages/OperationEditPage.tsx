@@ -54,11 +54,11 @@ const OperationEditPage: React.FC = () => {
           variant="outline"
           onClick={() => {
             if (location.state && location.state.fromProject && location.state.projectId) {
-              navigate(`/technique/projets/${location.state.projectId}/details/operations`);
+              navigate(`/gestion-des-projets/projets/${location.state.projectId}/details/operations`);
             } else if (location.state && location.state.fromDetails) {
-              navigate('/technique/projets/operations');
+              navigate('/gestion-des-projets/projets/operations');
             } else {
-              navigate('/technique/projets/operations');
+              navigate('/gestion-des-projets/projets/operations');
             }
           }}
           className="mb-6 flex items-center"

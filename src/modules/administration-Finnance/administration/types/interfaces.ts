@@ -48,9 +48,8 @@ export interface Partenaires {
   localisation: string;
   type_partenaire: string;
   statut: string;
-  id_entite: number; // Clé étrangère vers la table Entite
   interlocuteurs?: Interlocuteur[]; // Ajout de la propriété interlocuteurs
-  entites?: Entite[];
+  id_entite?: number; // <-- Ajouté pour le lien avec l'entité
 }
 
 export interface PartenaireResponse {
@@ -71,7 +70,7 @@ export interface Entite {
   contact: string;
   adresse_postal: string;
   localisation: string;
-  id_partenaire: number;
+  id_partenaire: number; // Relation avec le partenaire
 }
 
 export interface NatureDocument {
@@ -125,22 +124,22 @@ export interface FilterParams {
 
 //les contrats
 export interface Contrat {
-  id_contrat: number; // Changed to number
+  id_contrat: number;
   nom_contrat: string;
   type_de_contrat: string;
   date_debut: string;
   date_fin: string;
-  reference: string; // Harmonisé avec l'API (minuscule)
-  statut: string; // Harmonisé avec l'API
-  id_partenaire?: number;
-  duree_contrat: string; // Ajout de la durée du contrat
+  reference: string;
+  statut: string;
+  duree_contrat: string;
   documents?: ContratDocument | ContratDocument[];
   nom_interlocuteur: string;
   contact_interlocuteur: string;
   contenu_contrat: string;
-  cout: number;
+  cout: string; // Changé en string pour correspondre à l'API
   modalite_paiement: string;
-  // Documents associés au contrat (peut être un objet unique ou un tableau)
+  id_entite: number; // Relation directe avec l'entité (0 si pas d'entité)
+  id_partenaire?: number;
 }
 
 export interface EmployeDocument {
@@ -164,6 +163,8 @@ export interface ContratDocument {
   etat_document?: string; // Optionnel
   id_nature_document: number;
   id_contrat: number;
+  id_dossier: number; // Ajout du champ dossier
+  id_employes: number; // Ajout du champ employé
 }
 
 // Types pour la gestion des erreurs

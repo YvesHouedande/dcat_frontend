@@ -257,7 +257,7 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
       <div className="flex flex-col items-center justify-center min-h-screen p-6 text-red-600 text-lg">
         <p>{error}</p>
         {!embedded && (
-          <Button onClick={() => navigate("/technique/projets/livrables")} className="mt-4">
+          <Button onClick={() => navigate("/gestion-des-projets/projets/livrables")} className="mt-4">
             Retour à la liste des livrables
           </Button>
         )}
@@ -270,7 +270,7 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
       <div className="flex flex-col items-center justify-center min-h-screen p-6 text-gray-600 text-lg">
         <p>Le livrable demandé n'existe pas.</p>
         {!embedded && (
-          <Button onClick={() => navigate("/technique/projets/livrables")} className="mt-4">
+          <Button onClick={() => navigate("/gestion-des-projets/projets/livrables")} className="mt-4">
             Retour à la liste des livrables
           </Button>
         )}
@@ -283,12 +283,12 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
       <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
         <div className="flex justify-between items-center mb-6">
           {!embedded && (
-            <Button onClick={() => navigate("/technique/projets/livrables")} variant="outline">
+            <Button onClick={() => navigate("/gestion-des-projets/projets/livrables")} variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" /> Retour
             </Button>
           )}
           {!embedded && (
-            <Button onClick={() => navigate(`/technique/projets/livrables/${livrable.id_livrable}/editer`)}>
+            <Button onClick={() => navigate(`/gestion-des-projets/projets/livrables/${livrable.id_livrable}/editer`)}>
               <Edit className="mr-2 h-4 w-4" /> Modifier
             </Button>
           )}

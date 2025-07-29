@@ -75,7 +75,14 @@ const FinanceComptaGrid: React.FC = () => {
       try {
         // Étape 1: Charger les natures de documents
         const natures = await getAllNatureDocument();
-
+        
+        // Vérification que natures est bien un tableau
+        if (!Array.isArray(natures)) {
+          console.error("La réponse de getAllNatureDocument n'est pas un tableau:", natures);
+          setError("Format de données incorrect pour les natures de documents");
+          return;
+        }
+        
         const financeNature = natures.find(
           (n) =>
             n.libelle &&
@@ -104,15 +111,17 @@ const FinanceComptaGrid: React.FC = () => {
           const response = await getDocumentsByNature(
             natureToUse.id_nature_document
           );
-          if (
+          
+          // Vérification que la réponse est bien un tableau
+          if (Array.isArray(response)) {
+            setDocuments(response);
+          } else if (
             response &&
             typeof response === "object" &&
             "success" in response &&
             Array.isArray((response as unknown as DocsApiResponse).data)
           ) {
             setDocuments((response as unknown as DocsApiResponse).data);
-          } else if (Array.isArray(response)) {
-            setDocuments(response);
           } else {
             console.error("Format de réponse API inattendu:", response);
             setDocuments([]);
@@ -142,6 +151,8 @@ const FinanceComptaGrid: React.FC = () => {
     fetchData();
   }, [activeTab]); // L'effet se déclenchera uniquement lorsque l'onglet change
 
+//fdfdgdfgdf
+  
   // Fonction pour extraire le type de fichier à partir de l'extension
   const getFileType = (filename: string): string => {
     const extension = filename.split(".").pop()?.toLowerCase() || "";

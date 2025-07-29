@@ -122,7 +122,7 @@ const OperationList: React.FC<OperationListProps> = ({ idProjet }) => {
 
   // Remplacer handleOpEditClick pour naviguer vers la page d'édition
   const handleOpEditClick = (op: Operation) => {
-    navigate(`/technique/projets/operations/${op.id_operation}/editer`);
+    navigate(`/gestion-des-projets/projets/operations/${op.id_operation}/editer`);
   };
 
   const handleDeleteOperation = async (op: Operation) => {

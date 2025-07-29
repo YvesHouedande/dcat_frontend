@@ -96,7 +96,7 @@ const EditerLivrablePage = () => {
       // car cette fonction est déclenchée pour une mise à jour d'un livrable existant.
       const updated = await updateLivrable(livrable.id_livrable, payload as UpdateLivrablePayload);
       toast.success(`Livrable "${updated.libelle_livrable}" mis à jour avec succès !`);
-      navigate('/technique/projets/livrables'); // Redirige après succès
+      navigate('/gestion-des-projets/projets/livrables'); // Redirige après succès
     } catch (err) {
       console.error("Erreur lors de la mise à jour du livrable :", err);
       toast.error("Échec de la mise à jour du livrable.");
@@ -124,7 +124,7 @@ const EditerLivrablePage = () => {
   };
 
   const handleCancel = () => {
-    navigate('/technique/projets/livrables'); // Redirige vers la liste des livrables en cas d'annulation
+    navigate('/gestion-des-projets/projets/livrables'); // Redirige vers la liste des livrables en cas d'annulation
   };
 
   if (loading) {

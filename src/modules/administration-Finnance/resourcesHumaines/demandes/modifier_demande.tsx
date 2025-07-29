@@ -177,12 +177,12 @@ const ModifierDemandePage: React.FC = () => {
     if (isFormComplete()) {
       setShowCancelDialog(true);
     } else {
-      navigate("/administration/demandes");
+      navigate("/resources-humaines/demandes");
     }
   };
 
   const confirmCancel = () => {
-    navigate("/administration/demandes");
+    navigate("/resources-humaines/demandes");
   };
 
   const isLoading =
@@ -434,7 +434,7 @@ const ModifierDemandePage: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction
-              onClick={() => navigate("/administration/demandes")}
+              onClick={() => navigate("/resources-humaines/demandes")}
             >
               Retour à la liste
             </AlertDialogAction>

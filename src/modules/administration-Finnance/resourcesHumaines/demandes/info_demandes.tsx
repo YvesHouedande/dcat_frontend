@@ -514,7 +514,7 @@ const InfoDemandePage: React.FC = () => {
                     <Button
                       variant="default"
                       onClick={() =>
-                        navigate(`/administration/demandes/${id}/modifier`)
+                        navigate(`/resources-humaines/demandes/${id}/modifier`)
                       }
                     >
                       Modifier

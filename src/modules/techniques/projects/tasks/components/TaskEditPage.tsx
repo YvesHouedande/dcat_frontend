@@ -104,7 +104,7 @@ const EditerTachePage = () => {
       await Promise.all([...assignPromises, ...removePromises]);
 
       toast.success("Tâche mise à jour avec succès !");
-      navigate('/technique/projets/taches'); // Rediriger après succès
+      navigate('/gestion-des-projets/projets/taches'); // Rediriger après succès
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Une erreur inconnue est survenue lors de la mise à jour.";
       toast.error(`Échec de la mise à jour: ${errorMessage}`);
@@ -133,7 +133,7 @@ const EditerTachePage = () => {
       <TacheForm
         initialData={tache}
         onSave={handleSaveTache}
-        onCancel={() => navigate('/technique/projets/taches')}
+        onCancel={() => navigate('/gestion-des-projets/projets/taches')}
         operationsDisponibles={operations} 
         employesDisponibles={employes}
         operationDates={operationDates}

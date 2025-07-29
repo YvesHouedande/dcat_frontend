@@ -250,3 +250,19 @@ export const getAllNatureDocuments = async (): Promise<Nature[]> => {
     throw error;
   }
 };
+
+/**
+ * Récupère tous les documents des interventions.
+ * @returns Promesse résolue avec un tableau de InterventionDocument.
+ */
+export const getAllInterventionDocuments = async (): Promise<ApiResponse<InterventionDocument[]>> => {
+  try {
+    console.log('[API Interventions] Tentative de récupération de tous les documents des interventions...');
+    const response = await axios.get(`${BASE_PATH}/documents`);
+    console.log('[API Interventions] Documents des interventions récupérés:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[API Interventions] Erreur lors de la récupération des documents des interventions:', error);
+    throw error;
+  }
+};

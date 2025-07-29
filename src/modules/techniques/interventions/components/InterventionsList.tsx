@@ -64,11 +64,11 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
   }, [currentPage]);
 
   const handleView = (intervention: Intervention) => {
-    navigate(`/technique/interventions/${intervention.id_intervention}`);
+    navigate(`/gestion-des-interventions/interventions/${intervention.id_intervention}`);
   };
 
   const handleEdit = (intervention: Intervention) => {
-    navigate(`/technique/interventions/${intervention.id_intervention}/edit`);
+    navigate(`/gestion-des-interventions/interventions/${intervention.id_intervention}/edit`);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

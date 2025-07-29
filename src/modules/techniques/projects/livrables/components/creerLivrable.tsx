@@ -86,12 +86,12 @@ const CreerLivrablePage = () => {
         const updatedLivrable = await updateLivrable(livrable.id_livrable, payload as UpdateLivrablePayload);
         setLivrable(updatedLivrable); // Update the state with the modified livrable
         toast.success(`Livrable "${updatedLivrable.libelle_livrable}" mis à jour avec succès !`);
-        navigate('/technique/projets/livrables'); // Also redirect on update for consistency
+        navigate('/gestion-des-projets/projets/livrables'); // Also redirect on update for consistency
       } else {
         // Otherwise, it's a creation operation
         const nouveauLivrable = await createLivrable(payload as CreateLivrablePayload);
         toast.success(`Livrable "${nouveauLivrable.libelle_livrable}" créé avec succès !`);
-        navigate('/technique/projets/livrables'); // Redirect to the main page after creation
+        navigate('/gestion-des-projets/projets/livrables'); // Redirect to the main page after creation
       }
     } catch (err) {
       console.error("Erreur lors de l'enregistrement du livrable :", err);
@@ -116,7 +116,7 @@ const CreerLivrablePage = () => {
   };
 
   const handleCancel = () => {
-    navigate('/technique/projets/livrables');
+    navigate('/gestion-des-projets/projets/livrables');
   };
 
   if (loading) {

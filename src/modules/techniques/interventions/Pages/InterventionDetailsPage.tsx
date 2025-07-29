@@ -21,12 +21,12 @@ export const InterventionDetailsPage: React.FC = () => {
         setIntervention(response.data);
       } else {
         toast.error('Intervention non trouvée');
-        navigate('/technique/interventions');
+        navigate('/gestion-des-interventions/interventions');
       }
     } catch (error) {
       console.error('Erreur lors du chargement de l\'intervention:', error);
       toast.error('Erreur lors du chargement de l\'intervention');
-      navigate('/technique/interventions');
+      navigate('/gestion-des-interventions/interventions');
     } finally {
       setIsLoading(false);
     }

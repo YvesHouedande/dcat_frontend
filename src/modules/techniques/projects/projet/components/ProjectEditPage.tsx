@@ -121,7 +121,7 @@ const EditerProjetPage = () => {
       }
 
       toast.success("Projet mis à jour avec succès !"); // Use toast for success
-      navigate('/technique/projets');
+      navigate('/gestion-des-projets/projets');
 
     } catch (err) {
       console.error("Erreur lors de la sauvegarde du projet ou de la gestion des partenaires:", err);
@@ -146,7 +146,7 @@ const EditerProjetPage = () => {
 
 
   const handleCancel = () => {
-    navigate('/technique/projets');
+    navigate('/gestion-des-projets/projets');
   };
 
   if (loading) {

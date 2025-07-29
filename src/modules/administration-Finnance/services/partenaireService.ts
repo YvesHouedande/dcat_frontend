@@ -2,7 +2,6 @@
 import {
   Interlocuteur,
   Partenaires,
-  Entite,
   PartenaireResponse,
 } from "../administration/types/interfaces";
 import { useCallback } from "react";
@@ -108,7 +107,10 @@ export const usePartenaireApi = () => {
 
   const fetchPartnerById = useCallback(
     async (id: string | number): Promise<Partenaires> => {
+      console.log("fetchPartnerById - Récupération du partenaire ID:", id);
       const response = await api.get(`/administration/partenaires/${id}`);
+      console.log("fetchPartnerById - Réponse du backend:", response.data);
+      console.log("fetchPartnerById - id_entite dans la réponse:", response.data?.id_entite);
       return response.data;
     },
     [api]
@@ -118,10 +120,13 @@ export const usePartenaireApi = () => {
     async (
       partnerData: Omit<Partenaires, "id_partenaire">
     ): Promise<Partenaires> => {
+      console.log("addPartner - Données envoyées au backend:", partnerData);
+      console.log("addPartner - id_entite envoyé:", partnerData.id_entite);
       const response = await api.post(
         `/administration/partenaires`,
         partnerData
       );
+      console.log("addPartner - Réponse du backend:", response.data);
       return response.data;
     },
     [api]
@@ -251,46 +256,7 @@ export const usePartenaireApi = () => {
     [api]
   );
 
-  // ENTITÉS
-  const fetchEntites = useCallback(async (): Promise<Entite[]> => {
-    const response = await api.get(`/administration/entites`);
-    return response.data;
-  }, [api]);
 
-  const fetchEntiteById = useCallback(
-    async (id: string | number): Promise<Entite> => {
-      const response = await api.get(`/administration/entites/${id}`);
-      return response.data;
-    },
-    [api]
-  );
-
-  const addEntite = useCallback(
-    async (entite: { denomination: string }): Promise<Entite> => {
-      const response = await api.post(`/administration/entites`, entite);
-      return response.data;
-    },
-    [api]
-  );
-
-  const updateEntite = useCallback(
-    async (
-      id: string | number,
-      entite: { denomination: string }
-    ): Promise<Entite> => {
-      const response = await api.put(`/administration/entites/${id}`, entite);
-      return response.data;
-    },
-    [api]
-  );
-
-  const deleteEntite = useCallback(
-    async (id: number): Promise<void> => {
-      const response = await api.delete(`/administration/entites/${id}`);
-      return response.data;
-    },
-    [api]
-  );
 
   // INTERVENTIONS
   const fetchInterventionsByPartenaire = useCallback(
@@ -319,12 +285,7 @@ export const usePartenaireApi = () => {
     deleteInterlocuteur,
     addMultipleInterlocuteurs,
 
-    // Entité
-    fetchEntites,
-    fetchEntiteById,
-    addEntite,
-    updateEntite,
-    deleteEntite,
+
 
     // Intervention
     fetchInterventionsByPartenaire,

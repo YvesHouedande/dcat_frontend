@@ -169,7 +169,7 @@ const NouveauProjetPage = () => {
       // or if the user chooses not to add documents immediately.
       // If we want to stay on the page to add documents, this navigation should be conditional.
       // For now, let's keep it here, as it's a "create" page.
-      navigate("/technique/projets");
+      navigate("/gestion-des-projets/projets");
     } catch (error) {
       console.error("Erreur complète lors de la sauvegarde du projet :", error);
       if (error instanceof Error) {
@@ -201,7 +201,7 @@ const NouveauProjetPage = () => {
   };
 
   const handleCancel = () => {
-    navigate("/technique/projets");
+    navigate("/gestion-des-projets/projets");
   };
 
   if (loading) {

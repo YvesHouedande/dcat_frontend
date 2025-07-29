@@ -135,7 +135,7 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
     if (onViewIntervention) {
       onViewIntervention(intervention);
     } else {
-      navigate(`/technique/interventions/${intervention.id_intervention}`);
+      navigate(`/gestion-des-interventions/interventions/${intervention.id_intervention}`);
     }
   };
 

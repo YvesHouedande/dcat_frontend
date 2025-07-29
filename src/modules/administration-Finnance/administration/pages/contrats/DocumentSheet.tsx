@@ -62,6 +62,8 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
     lien_document: "",
     etat_document: "actif",
     id_nature_document: 1,
+    id_dossier: 0, // Valeur par défaut
+    id_employes: 0, // Valeur par défaut
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -198,6 +200,8 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
         lien_document: "",
         etat_document: "actif",
         id_nature_document: 1,
+        id_dossier: 0,
+        id_employes: 0,
       });
       setSelectedFile(null);
       setErrors({});
@@ -233,6 +237,8 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
       lien_document: "",
       etat_document: "actif",
       id_nature_document: 1,
+      id_dossier: 0,
+      id_employes: 0,
     });
     setSelectedFile(null);
     setErrors({});

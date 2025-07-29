@@ -36,7 +36,7 @@ const dashboardConfig: Record<
   Department
 > = {
   daf: {
-    name: "Administration et Financier",
+    name: "ADMINISTRATION ET FINANCE",
     route: "/gestion-administrative",
     color: "bg-slate-700",
     sections: [

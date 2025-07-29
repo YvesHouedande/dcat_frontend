@@ -21,6 +21,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useContratsApi } from "../../../services/contratService";
 import { usePartenaireApi } from "../../../services/partenaireService";
+import { useEntiteApi } from '../../../services/entiteService';
 import { ApiError, MutationError } from "../../types/interfaces";
 import { toast } from "sonner";
 import DocumentSheet from "./DocumentSheet";
@@ -32,6 +33,7 @@ const InfoContract: React.FC = () => {
   const [showFilePreview, setShowFilePreview] = useState(false);
   const { fetchContratById, deleteDocumentFromContrat } = useContratsApi();
   const { fetchPartnerById } = usePartenaireApi();
+  const { fetchEntiteById } = useEntiteApi();
   // Récupération du contrat
   const {
     data: contrat,
@@ -80,6 +82,12 @@ const InfoContract: React.FC = () => {
         ? fetchPartnerById(contrat.id_partenaire)
         : Promise.resolve(undefined),
     enabled: !!contrat?.id_partenaire,
+  });
+
+  const { data: entiteAssociee } = useQuery({
+    queryKey: ['entite', contrat?.id_entite],
+    queryFn: () => contrat?.id_entite ? fetchEntiteById(contrat.id_entite) : Promise.resolve(undefined),
+    enabled: !!contrat?.id_entite,
   });
 
   // Mutation pour supprimer un document
@@ -133,7 +141,7 @@ const InfoContract: React.FC = () => {
         <Button
           variant="outline"
           onClick={() =>
-            is404 ? navigate("/administration/contrats") : refetch()
+            is404 ? navigate("/gestion-administrative/contrats") : refetch()
           }
         >
           {is404 ? "Retour à la liste des contrats" : "Réessayer"}
@@ -258,7 +266,7 @@ const InfoContract: React.FC = () => {
                       className="text-gray-500 cursor-pointer"
                       onClick={() =>
                         navigate(
-                          `/administration/contrats/${contrat.id_contrat}/editer`
+                          `/gestion-administrative/contrats/${contrat.id_contrat}/editer`
                         )
                       }
                     >
@@ -266,67 +274,85 @@ const InfoContract: React.FC = () => {
                       Modifier
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
-                        <FileText size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Nom du contrat</p>
-                        <p className="font-medium">{contrat.nom_contrat}</p>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+                    {/* Nom du contrat */}
+                    <div>
+                      <p className="text-sm text-gray-500">Nom du contrat</p>
+                      <p className="font-medium">{contrat.nom_contrat}</p>
                     </div>
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
-                        <FileSignature size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Référence</p>
-                        <p className="font-medium">
-                          {contrat.reference || contrat.id_contrat}
-                        </p>
-                      </div>
+                    {/* Référence */}
+                    <div>
+                      <p className="text-sm text-gray-500">Référence</p>
+                      <p className="font-medium">{contrat.reference}</p>
                     </div>
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
-                        <Calendar size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Date de début</p>
-                        <p className="font-medium">{contrat.date_debut}</p>
-                      </div>
+                    {/* Date de début */}
+                    <div>
+                      <p className="text-sm text-gray-500">Date de début</p>
+                      <p className="font-medium">{contrat.date_debut}</p>
                     </div>
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
-                        <Calendar size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Date de fin</p>
-                        <p className="font-medium">{contrat.date_fin}</p>
-                      </div>
+                    {/* Date de fin */}
+                    <div>
+                      <p className="text-sm text-gray-500">Date de fin</p>
+                      <p className="font-medium">{contrat.date_fin}</p>
                     </div>
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
-                        <Clock size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Durée</p>
-                        <p className="font-medium">
-                          {contrat.duree_contrat ||
-                            calculateDuration(
-                              contrat.date_debut,
-                              contrat.date_fin
+                    {/* Durée */}
+                    <div>
+                      <p className="text-sm text-gray-500">Durée</p>
+                      <p className="font-medium">{contrat.duree_contrat || calculateDuration(contrat.date_debut, contrat.date_fin)}</p>
+                    </div>
+                    {/* Type de contrat */}
+                    <div>
+                      <p className="text-sm text-gray-500">Type de contrat</p>
+                      <p className="font-medium">{contrat.type_de_contrat}</p>
+                    </div>
+                    {/* Entité associée (aérée et agréable) */}
+                    <div className="md:col-span-2 mt-2">
+                      <p className="text-sm text-gray-500 mb-1">Entité associée</p>
+                      {entiteAssociee ? (
+                        <>
+                          <div className="font-semibold text-emerald-700 text-base flex items-center">
+                            {entiteAssociee.denomination}
+                            {entiteAssociee.abreviation_nom && (
+                              <span className="ml-2 text-gray-500 font-normal">({entiteAssociee.abreviation_nom})</span>
                             )}
-                        </p>
-                      </div>
+                          </div>
+                          <div className="text-gray-700 text-sm mt-1 flex flex-wrap gap-x-6 gap-y-1">
+                            {entiteAssociee.contact && (
+                              <span className="flex items-center"><span className="mr-1">📞</span>{entiteAssociee.contact}</span>
+                            )}
+                            {entiteAssociee.adresse_postal && (
+                              <span className="flex items-center"><span className="mr-1">🏠</span>{entiteAssociee.adresse_postal}</span>
+                            )}
+                            {entiteAssociee.localisation && (
+                              <span className="flex items-center"><span className="mr-1">🌍</span>{entiteAssociee.localisation}</span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="font-medium">{contrat.id_entite && contrat.id_entite !== 0 ? `ID: ${contrat.id_entite}` : 'Aucune'}</p>
+                      )}
                     </div>
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mr-3">
-                        <Building size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Type de contrat</p>
-                        <p className="font-medium">{contrat.type_de_contrat}</p>
+                    {/* Interlocuteur */}
+                    <div>
+                      <p className="text-sm text-gray-500">Interlocuteur</p>
+                      <p className="font-medium">{contrat.nom_interlocuteur || 'Non renseigné'}</p>
+                      <p className="text-sm text-gray-500">Contact : {contrat.contact_interlocuteur || 'Non renseigné'}</p>
+                    </div>
+                    {/* Coût */}
+                    <div>
+                      <p className="text-sm text-gray-500">Coût</p>
+                      <p className="font-medium">{contrat.cout || 'Non renseigné'}</p>
+                    </div>
+                    {/* Modalités de paiement */}
+                    <div>
+                      <p className="text-sm text-gray-500">Modalités de paiement</p>
+                      <p className="font-medium">{contrat.modalite_paiement || 'Non renseigné'}</p>
+                    </div>
+                    {/* Contenu du contrat */}
+                    <div className="md:col-span-2">
+                      <p className="text-sm text-gray-500">Contenu du contrat</p>
+                      <div className="font-medium whitespace-pre-line bg-gray-50 rounded-md p-3 border border-gray-100">
+                        {contrat.contenu_contrat || 'Non renseigné'}
                       </div>
                     </div>
                   </div>
@@ -344,7 +370,7 @@ const InfoContract: React.FC = () => {
                         className="w-full flex items-center justify-between text-left p-4 mb-4"
                         onClick={() =>
                           navigate(
-                            `/administration/partenaires/profil/${partenaire.id_partenaire}`
+                            `/gestion-administrative/partenaires/profil/${partenaire.id_partenaire}`
                           )
                         }
                       >
