@@ -191,8 +191,10 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
 }) => {
   const { livrableId, id } = useParams<{ livrableId: string; id: string }>();
   const navigate = useNavigate();
+  const { getPartenaires } = usePartenairesApi();
   const [livrable, setLivrable] = useState<Livrable | null>(null);
   const [projet, setProjet] = useState<Projet | null>(null);
+  const [allPartenaires, setAllPartenaires] = useState<Partenaire[]>([]);
   const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,11 +216,12 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         }
 
         // Récupérer toutes les données nécessaires en parallèle
-        const [livrableData, projetData, natureDocumentsData] =
+        const [livrableData, projetData, natureDocumentsData, fetchedAllPartenaires] =
           await Promise.all([
             getLivrableById(livrableIdNum),
             getProjetById(projetId),
             getAllNatureDocuments(),
+            getPartenaires({ limit: 100, page: 1 }),
           ]);
 
         if (!livrableData) {
@@ -250,6 +253,7 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
           naturesToSet = natureDocumentsData;
         }
         setNatureDocuments(naturesToSet);
+        setAllPartenaires(fetchedAllPartenaires);
       } catch (err) {
         console.error("Erreur lors du chargement des données:", err);
         setError("Erreur lors du chargement des données");
@@ -259,7 +263,7 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
     };
 
     loadData();
-  }, [livrableId, id]);
+  }, [livrableId, id, getPartenaires]);
 
   if (loading) {
     return <div className="text-center py-8">Chargement du livrable...</div>;
@@ -697,7 +701,7 @@ const ProjetDetailsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, getPartenaires]);
 
   // Chargement des tâches et employés pour l'onglet Tâches
   useEffect(() => {
