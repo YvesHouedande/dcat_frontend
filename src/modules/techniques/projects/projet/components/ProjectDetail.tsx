@@ -308,6 +308,10 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         }}
         onCancel={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
         projetsDisponibles={[projet]}
+        partenairesDisponibles={allPartenaires.map(p => ({
+          id_partenaire: p.id_partenaire,
+          nom_partenaire: p.nom_partenaire
+        }))}
         natureDocumentsDisponibles={natureDocuments}
         onSaveDocument={async (livrableId, documentFile, textPayload) => {
           try {
@@ -2147,6 +2151,10 @@ const ProjetDetailsPage: React.FC = () => {
                       onSave={handleSaveLivrable}
                       onCancel={() => navigate(-1)}
                       projetsDisponibles={[projet]}
+                      partenairesDisponibles={allPartenaires.map(p => ({
+                        id_partenaire: p.id_partenaire,
+                        nom_partenaire: p.nom_partenaire
+                      }))}
                       onSaveDocument={handleSaveDocument}
                       natureDocumentsDisponibles={natureDocuments}
                       embedded={true}

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { LivrableForm } from '../components/LivrableForm';
-import { Livrable, Projet, CreateLivrablePayload, UpdateLivrablePayload, CreateDocumentTextPayload, ApiResponse, Nature } from '../../types/types';
-import { createLivrable, addDocumentToLivrable, getLivrableById, getAllNatureDocuments, updateLivrable } from '../api/livrables';
+import { Livrable, Projet, CreateLivrablePayload, ApiResponse, Nature } from '../../types/types';
+import { createLivrable, getAllNatureDocuments } from '../api/livrables';
 import { fetchAllProjets } from '../../projet/api/projets';
 import { usePartenairesApi } from '../../projet/api/partenaires';
 import { Partenaires } from "@/modules/administration-Finnance/administration/types/interfaces";
@@ -20,7 +20,6 @@ const CreerLivrablePage = () => {
   const queryClient = useQueryClient();
   const { getPartenaires } = usePartenairesApi();
 
-  const [livrable, setLivrable] = useState<Livrable | undefined>(undefined);
   const [projets, setProjets] = useState<Projet[]>([]);
   const [partenaires, setPartenaires] = useState<PartenaireOption[]>([]);
   const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
@@ -28,7 +27,7 @@ const CreerLivrablePage = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Fonction pour charger les données avec cache clearing
-  const loadData = async (forceFresh = false) => {
+  const loadData = useCallback(async (forceFresh = false) => {
     setLoading(true);
     setError(null);
     
@@ -53,38 +52,12 @@ const CreerLivrablePage = () => {
         const apiResponse = fetchedProjetsRaw as ApiResponse<Projet[]>; 
         if (apiResponse.data && Array.isArray(apiResponse.data)) {
           projectsToSet = apiResponse.data;
-          console.log("[CreerLivrablePage] Projets récupérés via ApiResponse.data:", projectsToSet);
-          
-          // Debug détaillé des projets avec leurs partenaires
-          projectsToSet.forEach((projet, index) => {
-            console.log(`[CreerLivrablePage] Projet ${index + 1}:`, {
-              id_projet: projet.id_projet,
-              nom_projet: projet.nom_projet,
-              id_partenaire: projet.id_partenaire,
-              type_id_partenaire: typeof projet.id_partenaire,
-              is_array: Array.isArray(projet.id_partenaire),
-              length: Array.isArray(projet.id_partenaire) ? projet.id_partenaire.length : 'N/A'
-            });
-          });
         } else {
           console.warn("Structure d'ApiResponse inattendue pour la récupération des projets, données manquantes ou mal placées:", fetchedProjetsRaw);
           toast.warning("Impossible de charger les projets. Données de l'API inattendues.");
         }
       } else if (Array.isArray(fetchedProjetsRaw)) {
         projectsToSet = fetchedProjetsRaw;
-        console.log("[CreerLivrablePage] Projets récupérés directement sous forme de tableau:", projectsToSet);
-        
-        // Debug détaillé des projets avec leurs partenaires (cas tableau direct)
-        projectsToSet.forEach((projet, index) => {
-          console.log(`[CreerLivrablePage] Projet ${index + 1} (tableau):`, {
-            id_projet: projet.id_projet,
-            nom_projet: projet.nom_projet,
-            id_partenaire: projet.id_partenaire,
-            type_id_partenaire: typeof projet.id_partenaire,
-            is_array: Array.isArray(projet.id_partenaire),
-            length: Array.isArray(projet.id_partenaire) ? projet.id_partenaire.length : 'N/A'
-          });
-        });
       } else {
         console.warn("Structure de réponse inattendue pour la récupération des projets: ni ApiResponse ni un tableau direct.", fetchedProjetsRaw);
         toast.warning("Impossible de charger les projets. Structure de réponse inattendue.");
@@ -97,7 +70,6 @@ const CreerLivrablePage = () => {
         nom_partenaire: p.nom_partenaire
       }));
       setPartenaires(partenairesOptions);
-      console.log("[CreerLivrablePage] Partenaires récupérés:", partenairesOptions);
 
       // Handle NatureDocument response
       let naturesToSet: Nature[] = [];
@@ -105,14 +77,12 @@ const CreerLivrablePage = () => {
           const apiResponse = fetchedNatureDocumentsResponse as ApiResponse<Nature[]>;
           if (apiResponse.data && Array.isArray(apiResponse.data)) {
               naturesToSet = apiResponse.data;
-              console.log("[CreerLivrablePage] Natures de document récupérées via ApiResponse.data:", naturesToSet);
           } else {
               console.warn("Structure d'ApiResponse inattendue pour la récupération des natures de document, données manquantes:", fetchedNatureDocumentsResponse);
               toast.warning("Impossible de charger les natures de document. Données de l'API inattendues.");
           }
       } else if (Array.isArray(fetchedNatureDocumentsResponse)) {
           naturesToSet = fetchedNatureDocumentsResponse;
-          console.log("[CreerLivrablePage] Natures de document récupérées directement sous forme de tableau:", naturesToSet);
       } else {
           console.warn("Structure de réponse inattendue pour la récupération des natures de document: ni ApiResponse ni un tableau direct.", fetchedNatureDocumentsResponse);
           toast.warning("Impossible de charger les natures de document. Structure de réponse inattendue.");
@@ -126,63 +96,47 @@ const CreerLivrablePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [queryClient, getPartenaires]);
 
   useEffect(() => {
     loadData(true); // Charger avec des données fraîches au montage
-  }, []);
+  }, [loadData]);
 
   // Fonction pour rafraîchir les données manuellement
   const refreshData = async () => {
     await loadData(true);
   };
 
-  const handleSaveLivrable = async (payload: CreateLivrablePayload | UpdateLivrablePayload) => {
+  const handleSaveLivrable = async (payload: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">>) => {
     try {
-      console.log("[CreerLivrablePage] Payload reçu pour création:", payload);
-      const newLivrable = await createLivrable(payload as CreateLivrablePayload);
-      console.log("[CreerLivrablePage] Livrable créé avec succès:", newLivrable);
+      await createLivrable(payload as CreateLivrablePayload);
       toast.success("Livrable créé avec succès !");
-      navigate("/gestion-des-projets/projets/livrables");
-    } catch (error) {
-      console.error("[CreerLivrablePage] Erreur lors de la création du livrable:", error);
-      toast.error("Erreur lors de la création du livrable.");
+      navigate('/gestion-des-projets/projets/livrables');
+    } catch (err) {
+      console.error("Erreur lors de la création du livrable:", err);
+      toast.error("Erreur lors de la création du livrable");
     }
   };
 
   const handleCancel = () => {
-    navigate("/gestion-des-projets/projets/livrables");
-  };
-
-  const handleSaveDocument = async (
-    livrableId: number,
-    documentFile: File,
-    textPayload: CreateDocumentTextPayload
-  ) => {
-    try {
-      await addDocumentToLivrable(livrableId, documentFile, textPayload);
-      console.log("[CreerLivrablePage] Document ajouté avec succès au livrable:", livrableId);
-    } catch (error) {
-      console.error("[CreerLivrablePage] Erreur lors de l'ajout du document:", error);
-      throw error;
-    }
+    navigate('/gestion-des-projets/projets/livrables');
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        Chargement des données du formulaire...
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-lg">Chargement...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-screen text-red-500 text-lg font-bold text-center">
-        Erreur lors du chargement des données. 
+      <div className="flex flex-col justify-center items-center min-h-screen">
+        <div className="text-lg text-red-600 mb-4">{error}</div>
         <button 
           onClick={refreshData}
-          className="ml-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
           Réessayer
         </button>
@@ -190,25 +144,13 @@ const CreerLivrablePage = () => {
     );
   }
 
-  if (projets.length === 0) {
-    return (
-      <div className="flex justify-center items-center h-screen text-orange-500 text-lg font-bold text-center">
-        Impossible de créer un livrable : aucun projet disponible.
-        <br/>
-        Veuillez créer des projets avant de pouvoir ajouter un livrable.
-      </div>
-    );
-  }
-
   return (
     <LivrableForm
-      initialData={livrable}
       onSave={handleSaveLivrable}
       onCancel={handleCancel}
       projetsDisponibles={projets}
-      onSaveDocument={handleSaveDocument}
-      natureDocumentsDisponibles={natureDocuments || []}
       partenairesDisponibles={partenaires}
+      natureDocumentsDisponibles={natureDocuments}
     />
   );
 };

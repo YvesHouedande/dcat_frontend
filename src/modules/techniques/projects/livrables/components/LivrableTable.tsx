@@ -102,6 +102,12 @@ export const LivrableTable: React.FC<LivrableTableProps> = ({
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
+      
+      // Handle undefined values
+      if (aVal === undefined && bVal === undefined) return 0;
+      if (aVal === undefined) return sortOrder === "asc" ? 1 : -1;
+      if (bVal === undefined) return sortOrder === "asc" ? -1 : 1;
+      
       if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
       if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
       return 0;

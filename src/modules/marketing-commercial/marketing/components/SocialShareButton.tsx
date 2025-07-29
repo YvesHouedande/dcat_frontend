@@ -35,7 +35,6 @@ export const SocialShareButton: React.FC<ProductShareProps> = ({
   // Support des deux formats (ancien et nouveau)
   const name = product?.name || productName || "";
   const description = product?.description || "";
-  const url = product?.url || window.location.href;
 
   // Créer un message pour les promotions
   const createPromotionMessage = () => {
@@ -49,43 +48,39 @@ export const SocialShareButton: React.FC<ProductShareProps> = ({
 
   // Instagram n'a pas d'API de partage direct, on propose de copier le lien
   const handleInstagramShare = () => {
-    const textToCopy = `${shareMessage}\n${url}`;
+    const textToCopy = `${shareMessage}\n${shareUrl}`;
     navigator.clipboard.writeText(textToCopy);
     toast.success("Message copié pour Instagram !");
   };
 
   return (
     <div className="flex flex-wrap gap-2 items-center justify-center">
-      <FacebookShareButton 
-        url={url} 
-        hashtag={promotionalPrice ? "#Promotion" : "#Produit"}
-        quote={shareMessage}
+      <FacebookShareButton
+        url={shareUrl}
+        hashtag={`#Promotion`}
       >
-        <FacebookIcon size={36} round />
+        <FacebookIcon size={32} round />
       </FacebookShareButton>
       
-      <TwitterShareButton 
-        url={url} 
+      <TwitterShareButton
+        url={shareUrl}
         title={shareMessage}
-        hashtags={promotionalPrice ? ["promotion", "bonplan"] : ["produit"]}
       >
-        <TwitterIcon size={36} round />
+        <TwitterIcon size={32} round />
       </TwitterShareButton>
-      
+
       <LinkedinShareButton
-        url={url}
-        title={name}
-        summary={shareMessage}
-        source="Notre Boutique"
-      >
-        <LinkedinIcon size={36} round />
-      </LinkedinShareButton>
-      
-      <WhatsappShareButton 
-        url={url} 
+        url={shareUrl}
         title={shareMessage}
       >
-        <WhatsappIcon size={36} round />
+        <LinkedinIcon size={32} round />
+      </LinkedinShareButton>
+
+      <WhatsappShareButton
+        url={shareUrl}
+        title={shareMessage}
+      >
+        <WhatsappIcon size={32} round />
       </WhatsappShareButton>
       
       <button

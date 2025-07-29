@@ -38,11 +38,9 @@ import {
   Livrable,
   Projet,
   CreateLivrablePayload,
-  UpdateLivrablePayload,
   CreateDocumentTextPayload,
   Nature, // Using 'Nature' now as per updated types
   TypeLivrable,
-  LivrableFormData,
   isFullLivrableType,
 } from "../../types/types";
 import Layout from "@/components/Layout"; // Assuming Layout handles global layout
@@ -54,22 +52,20 @@ interface PartenaireOption {
 }
 
 interface LivrableFormProps {
-  initialData?: Livrable; // For existing livrables
-  // onSave now expects a payload type, not the full Livrable object
+  initialData?: Livrable; // Pour l'édition
   onSave: (
-    livrable: CreateLivrablePayload | UpdateLivrablePayload
-  ) => Promise<void>; // Make it return a Promise<void> for async handling
+    livrable: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">>
+  ) => Promise<void>;
   onCancel: () => void;
-  projetsDisponibles: Projet[]; // List of available projects for selection
-  partenairesDisponibles: PartenaireOption[]; // Liste de tous les partenaires
-  // New prop for document save (will be handled by parent page's API calls)
+  projetsDisponibles: Projet[];
   onSaveDocument?: (
     livrableId: number,
     documentFile: File,
     textPayload: CreateDocumentTextPayload
   ) => Promise<void>;
-  natureDocumentsDisponibles: Nature[]; // New prop for available document natures - using 'Nature'
-  embedded?: boolean; // Nouvelle prop pour mode intégré
+  natureDocumentsDisponibles: Nature[]; // Using 'Nature' now as per updated types
+  partenairesDisponibles: PartenaireOption[]; // Liste de tous les partenaires
+  embedded?: boolean; // Indique si le formulaire est intégré dans une autre page
 }
 
 export const LivrableForm: React.FC<LivrableFormProps> = ({
@@ -126,36 +122,17 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
 
   // Filtrer les partenaires selon le projet sélectionné
   React.useEffect(() => {
-    console.log("🔍 [LivrableForm] Debug useEffect partenaires:");
-    console.log("  formData.id_projet:", formData.id_projet);
-    console.log("  projetsDisponibles:", projetsDisponibles);
-    console.log("  partenairesDisponibles:", partenairesDisponibles);
-    
     if (formData.id_projet > 0 && projetsDisponibles && Array.isArray(projetsDisponibles)) {
       const projetSelectionne = projetsDisponibles.find(p => p.id_projet === formData.id_projet);
-      console.log("  projetSelectionne:", projetSelectionne);
-      
-      if (projetSelectionne) {
-        console.log("  projetSelectionne.id_partenaire:", projetSelectionne.id_partenaire);
-        console.log("  Type de id_partenaire:", typeof projetSelectionne.id_partenaire);
-        console.log("  Is Array:", Array.isArray(projetSelectionne.id_partenaire));
-        console.log("  Longueur:", Array.isArray(projetSelectionne.id_partenaire) ? projetSelectionne.id_partenaire.length : 'N/A');
-      }
       
       if (projetSelectionne && projetSelectionne.id_partenaire && Array.isArray(projetSelectionne.id_partenaire) && projetSelectionne.id_partenaire.length > 0) {
-        console.log("  ✅ Conditions remplies, filtrage des partenaires...");
-        const partenairesFiltrés = (partenairesDisponibles || []).filter(partenaire => {
-          const included = projetSelectionne.id_partenaire.includes(partenaire.id_partenaire);
-          console.log(`    Partenaire ${partenaire.nom_partenaire} (ID: ${partenaire.id_partenaire}) inclus:`, included);
-          return included;
-        });
-        
-        console.log("  partenairesFiltrés:", partenairesFiltrés);
+        const partenairesFiltrés = (partenairesDisponibles || []).filter(partenaire =>
+          projetSelectionne.id_partenaire.includes(partenaire.id_partenaire)
+        );
         setPartenairesProjet(partenairesFiltrés);
         
         // Auto-sélectionner si un seul partenaire
         if (partenairesFiltrés.length === 1 && !formData.client) {
-          console.log("  Auto-sélection du partenaire unique:", partenairesFiltrés[0]);
           setFormData(prev => ({
             ...prev,
             client: String(partenairesFiltrés[0].id_partenaire)
@@ -163,55 +140,41 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
         }
       } else if (projetSelectionne && (!projetSelectionne.id_partenaire || !Array.isArray(projetSelectionne.id_partenaire))) {
         // Si id_partenaire n'est pas défini ou n'est pas un tableau, récupérer via API
-        console.log("  🔄 id_partenaire manquant, récupération via API séparée...");
         
         // Import dynamique pour éviter les dépendances circulaires
         import('../../projet/api/projets').then(({ getProjetAssociatedPartenaires }) => {
           getProjetAssociatedPartenaires(projetSelectionne.id_projet)
             .then((partenairesIds: number[]) => {
-              console.log("  📡 Partenaires récupérés via API:", partenairesIds);
-              
               if (partenairesIds && partenairesIds.length > 0) {
                 const partenairesFiltrés = (partenairesDisponibles || []).filter(partenaire =>
                   partenairesIds.includes(partenaire.id_partenaire)
                 );
                 
-                console.log("  ✅ Partenaires filtrés via API:", partenairesFiltrés);
                 setPartenairesProjet(partenairesFiltrés);
                 
                 // Auto-sélectionner si un seul partenaire
                 if (partenairesFiltrés.length === 1 && !formData.client) {
-                  console.log("  Auto-sélection du partenaire unique (via API):", partenairesFiltrés[0]);
                   setFormData(prev => ({
                     ...prev,
                     client: String(partenairesFiltrés[0].id_partenaire)
                   }));
                 }
               } else {
-                console.log("  ⚠️ Aucun partenaire associé à ce projet via API");
                 setPartenairesProjet([]);
                 setFormData(prev => ({ ...prev, client: "" }));
               }
             })
             .catch((error) => {
-              console.error("  ❌ Erreur lors de la récupération des partenaires via API:", error);
+              console.error("Erreur lors de la récupération des partenaires via API:", error);
               setPartenairesProjet([]);
               setFormData(prev => ({ ...prev, client: "" }));
             });
         });
       } else {
-        console.log("  ❌ Conditions non remplies - aucun partenaire disponible");
-        if (projetSelectionne) {
-          console.log("    Raisons possibles:");
-          console.log("    - id_partenaire manquant:", !projetSelectionne.id_partenaire);
-          console.log("    - id_partenaire pas un tableau:", !Array.isArray(projetSelectionne.id_partenaire));
-          console.log("    - tableau vide:", Array.isArray(projetSelectionne.id_partenaire) && projetSelectionne.id_partenaire.length === 0);
-        }
         setPartenairesProjet([]);
         setFormData(prev => ({ ...prev, client: "" }));
       }
     } else {
-      console.log("  ❌ Conditions initiales non remplies");
       setPartenairesProjet([]);
       setFormData(prev => ({ ...prev, client: "" }));
     }
@@ -313,7 +276,7 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     }
 
     // Prepare the payload based on whether it's a new livrable or an update
-    const payload: CreateLivrablePayload | UpdateLivrablePayload = {
+    const payload: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">> = {
       libelle_livrable: formData.libelle_livrable,
       date: formData.date,
       realisations: formData.realisations,
@@ -324,8 +287,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       client: formData.client,
       id_projet: formData.id_projet,
     };
-
-    console.log("[LivrableForm] Payload envoyé:", payload);
 
     try {
       await onSave(payload); // Call the onSave prop from the parent
