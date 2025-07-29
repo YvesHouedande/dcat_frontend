@@ -87,11 +87,13 @@ export interface ApiResponse<T> {
 export interface Livrable {
   id_livrable: number; // ID du livrable (ex: Id_Livrable en SQL)
   libelle_livrable: string; // Libellé du livrable (confirmé par l'API)
-  date: string; // Date du livrable (ex: Date_ en SQL)
-  realisations: string; // Réalisations du livrable
-  reserves: string; // Réserves du livrable
-  approbation: "en attente" | "approuvé" | "rejeté" | "révisions requises" | string; // Statut d'approbation
-  recommandation: string; // Recommandation (ex: _Recommandation en SQL)
+  date?: string; // Date du livrable (optionnel selon le type de livrable)
+  realisations?: string; // Réalisations du livrable (optionnel selon le type de livrable)
+  reserves?: string; // Réserves du livrable (optionnel selon le type de livrable)
+  approbation?: "en attente" | "approuvé" | "rejeté" | "révisions requises" | string; // Statut d'approbation (optionnel selon le type de livrable)
+  recommandation?: string; // Recommandation (optionnel selon le type de livrable)
+  type_livrable: "Procès-verbal de réalisation" | "Rapport de réalisation" | "Attestation de bonne exécution"; // Type de livrable
+  client: string; // ID du partenaire (stocké comme string dans la DB)
   id_projet: number; // ID du projet parent (clé étrangère)
   // created_at et updated_at ont été retirés selon la demande de l'utilisateur
   documents: Document[]; // Liste des documents inclus directement dans les réponses de Livrable
@@ -117,6 +119,39 @@ export interface Document {
 }
 
 export type CreateLivrablePayload = Omit<Livrable, 'id_livrable' | 'documents'>;
+
+// Types utilitaires pour les livrables
+export type TypeLivrable = "Procès-verbal de réalisation" | "Rapport de réalisation" | "Attestation de bonne exécution";
+
+// Interface pour les champs requis selon le type de livrable
+export interface LivrableFormData {
+  libelle_livrable: string;
+  type_livrable: TypeLivrable;
+  client: string; // ID du partenaire
+  id_projet: number;
+  // Champs conditionnels pour "Procès-verbal de réalisation"
+  date?: string;
+  realisations?: string;
+  reserves?: string;
+  approbation?: string;
+  recommandation?: string;
+}
+
+// Fonction utilitaire pour déterminer si tous les champs sont requis
+export const isFullLivrableType = (type: TypeLivrable): boolean => {
+  return type === "Procès-verbal de réalisation";
+};
+
+// Fonction utilitaire pour obtenir les champs requis selon le type
+export const getRequiredFields = (type: TypeLivrable): string[] => {
+  const baseFields = ["libelle_livrable", "type_livrable", "client", "id_projet"];
+  
+  if (isFullLivrableType(type)) {
+    return [...baseFields, "date", "realisations", "reserves", "approbation", "recommandation"];
+  }
+  
+  return baseFields;
+};
 
 // Payload pour la mise à jour d'un Livrable (méthode PUT)
 // Le backend s'attend à l'objet complet même si seule une partie est modifiée,

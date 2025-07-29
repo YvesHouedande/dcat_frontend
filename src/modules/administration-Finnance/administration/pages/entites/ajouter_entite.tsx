@@ -1,5 +1,5 @@
 // src/components/AddEntiteForm.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,10 +28,17 @@ const AddEntiteForm: React.FC = () => {
   const { addEntite } = useEntiteApi();
   const { fetchPartners } = usePartenaireApi();
 
+  // Invalider le cache des partenaires quand on revient sur la page
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["partenaires"] });
+  }, [queryClient]);
+
   // Charger les partenaires pour la sélection
   const { data: partenairesData, isLoading: loadingPartenaires } = useQuery({
     queryKey: ["partenaires"],
     queryFn: () => fetchPartners(1, 1000), // Récupérer tous les partenaires
+    refetchOnMount: true, // Recharger à chaque montage
+    refetchOnWindowFocus: true, // Recharger quand la fenêtre reprend le focus
   });
 
   const partenaires = partenairesData?.data || [];

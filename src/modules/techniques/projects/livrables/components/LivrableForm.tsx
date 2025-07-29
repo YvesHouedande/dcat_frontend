@@ -41,8 +41,17 @@ import {
   UpdateLivrablePayload,
   CreateDocumentTextPayload,
   Nature, // Using 'Nature' now as per updated types
+  TypeLivrable,
+  LivrableFormData,
+  isFullLivrableType,
 } from "../../types/types";
 import Layout from "@/components/Layout"; // Assuming Layout handles global layout
+
+// Ajout d'une interface pour les partenaires
+interface PartenaireOption {
+  id_partenaire: number;
+  nom_partenaire: string;
+}
 
 interface LivrableFormProps {
   initialData?: Livrable; // For existing livrables
@@ -52,6 +61,7 @@ interface LivrableFormProps {
   ) => Promise<void>; // Make it return a Promise<void> for async handling
   onCancel: () => void;
   projetsDisponibles: Projet[]; // List of available projects for selection
+  partenairesDisponibles: PartenaireOption[]; // Liste de tous les partenaires
   // New prop for document save (will be handled by parent page's API calls)
   onSaveDocument?: (
     livrableId: number,
@@ -67,12 +77,16 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
   onSave,
   onCancel,
   projetsDisponibles,
+  partenairesDisponibles,
   onSaveDocument,
   natureDocumentsDisponibles, // Destructure new prop
   embedded = false, // Par défaut false
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDocumentSheet, setShowDocumentSheet] = useState(false); // State for sheet visibility
+  
+  // État pour les partenaires filtrés selon le projet sélectionné
+  const [partenairesProjet, setPartenairesProjet] = useState<PartenaireOption[]>([]);
 
   // Form data for the Livrable itself
   const [formData, setFormData] = useState<Livrable>(
@@ -84,6 +98,8 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       reserves: "",
       approbation: "en attente", // Default status
       recommandation: "",
+      type_livrable: "Procès-verbal de réalisation", // Valeur par défaut
+      client: "", // ID du partenaire
       id_projet: 0, // Default to 0, expecting user selection
       documents: [], // Ensure documents array is present, but will be omitted for payload
     }
@@ -100,13 +116,106 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
 
   // Pré-remplir id_projet si un seul projet est disponible
   React.useEffect(() => {
-    if (projetsDisponibles.length === 1) {
+    if (projetsDisponibles && projetsDisponibles.length === 1) {
       setFormData((prev) => ({
         ...prev,
         id_projet: projetsDisponibles[0].id_projet,
       }));
     }
   }, [projetsDisponibles]);
+
+  // Filtrer les partenaires selon le projet sélectionné
+  React.useEffect(() => {
+    console.log("🔍 [LivrableForm] Debug useEffect partenaires:");
+    console.log("  formData.id_projet:", formData.id_projet);
+    console.log("  projetsDisponibles:", projetsDisponibles);
+    console.log("  partenairesDisponibles:", partenairesDisponibles);
+    
+    if (formData.id_projet > 0 && projetsDisponibles && Array.isArray(projetsDisponibles)) {
+      const projetSelectionne = projetsDisponibles.find(p => p.id_projet === formData.id_projet);
+      console.log("  projetSelectionne:", projetSelectionne);
+      
+      if (projetSelectionne) {
+        console.log("  projetSelectionne.id_partenaire:", projetSelectionne.id_partenaire);
+        console.log("  Type de id_partenaire:", typeof projetSelectionne.id_partenaire);
+        console.log("  Is Array:", Array.isArray(projetSelectionne.id_partenaire));
+        console.log("  Longueur:", Array.isArray(projetSelectionne.id_partenaire) ? projetSelectionne.id_partenaire.length : 'N/A');
+      }
+      
+      if (projetSelectionne && projetSelectionne.id_partenaire && Array.isArray(projetSelectionne.id_partenaire) && projetSelectionne.id_partenaire.length > 0) {
+        console.log("  ✅ Conditions remplies, filtrage des partenaires...");
+        const partenairesFiltrés = (partenairesDisponibles || []).filter(partenaire => {
+          const included = projetSelectionne.id_partenaire.includes(partenaire.id_partenaire);
+          console.log(`    Partenaire ${partenaire.nom_partenaire} (ID: ${partenaire.id_partenaire}) inclus:`, included);
+          return included;
+        });
+        
+        console.log("  partenairesFiltrés:", partenairesFiltrés);
+        setPartenairesProjet(partenairesFiltrés);
+        
+        // Auto-sélectionner si un seul partenaire
+        if (partenairesFiltrés.length === 1 && !formData.client) {
+          console.log("  Auto-sélection du partenaire unique:", partenairesFiltrés[0]);
+          setFormData(prev => ({
+            ...prev,
+            client: String(partenairesFiltrés[0].id_partenaire)
+          }));
+        }
+      } else if (projetSelectionne && (!projetSelectionne.id_partenaire || !Array.isArray(projetSelectionne.id_partenaire))) {
+        // Si id_partenaire n'est pas défini ou n'est pas un tableau, récupérer via API
+        console.log("  🔄 id_partenaire manquant, récupération via API séparée...");
+        
+        // Import dynamique pour éviter les dépendances circulaires
+        import('../../projet/api/projets').then(({ getProjetAssociatedPartenaires }) => {
+          getProjetAssociatedPartenaires(projetSelectionne.id_projet)
+            .then((partenairesIds: number[]) => {
+              console.log("  📡 Partenaires récupérés via API:", partenairesIds);
+              
+              if (partenairesIds && partenairesIds.length > 0) {
+                const partenairesFiltrés = (partenairesDisponibles || []).filter(partenaire =>
+                  partenairesIds.includes(partenaire.id_partenaire)
+                );
+                
+                console.log("  ✅ Partenaires filtrés via API:", partenairesFiltrés);
+                setPartenairesProjet(partenairesFiltrés);
+                
+                // Auto-sélectionner si un seul partenaire
+                if (partenairesFiltrés.length === 1 && !formData.client) {
+                  console.log("  Auto-sélection du partenaire unique (via API):", partenairesFiltrés[0]);
+                  setFormData(prev => ({
+                    ...prev,
+                    client: String(partenairesFiltrés[0].id_partenaire)
+                  }));
+                }
+              } else {
+                console.log("  ⚠️ Aucun partenaire associé à ce projet via API");
+                setPartenairesProjet([]);
+                setFormData(prev => ({ ...prev, client: "" }));
+              }
+            })
+            .catch((error) => {
+              console.error("  ❌ Erreur lors de la récupération des partenaires via API:", error);
+              setPartenairesProjet([]);
+              setFormData(prev => ({ ...prev, client: "" }));
+            });
+        });
+      } else {
+        console.log("  ❌ Conditions non remplies - aucun partenaire disponible");
+        if (projetSelectionne) {
+          console.log("    Raisons possibles:");
+          console.log("    - id_partenaire manquant:", !projetSelectionne.id_partenaire);
+          console.log("    - id_partenaire pas un tableau:", !Array.isArray(projetSelectionne.id_partenaire));
+          console.log("    - tableau vide:", Array.isArray(projetSelectionne.id_partenaire) && projetSelectionne.id_partenaire.length === 0);
+        }
+        setPartenairesProjet([]);
+        setFormData(prev => ({ ...prev, client: "" }));
+      }
+    } else {
+      console.log("  ❌ Conditions initiales non remplies");
+      setPartenairesProjet([]);
+      setFormData(prev => ({ ...prev, client: "" }));
+    }
+  }, [formData.id_projet, projetsDisponibles, partenairesDisponibles]);
 
   // --- Livrable Form Handlers ---
 
@@ -211,8 +320,12 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       reserves: formData.reserves,
       approbation: formData.approbation,
       recommandation: formData.recommandation,
+      type_livrable: formData.type_livrable,
+      client: formData.client,
       id_projet: formData.id_projet,
     };
+
+    console.log("[LivrableForm] Payload envoyé:", payload);
 
     try {
       await onSave(payload); // Call the onSave prop from the parent
@@ -430,6 +543,27 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {/* Type de livrable */}
+                    <div className="space-y-2">
+                      <Label htmlFor="type_livrable">
+                        Type de livrable <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        onValueChange={(value: TypeLivrable) => handleSelectChange("type_livrable", value)}
+                        value={formData.type_livrable}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez un type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Procès-verbal de réalisation">Procès-verbal de réalisation</SelectItem>
+                          <SelectItem value="Rapport de réalisation">Rapport de réalisation</SelectItem>
+                          <SelectItem value="Attestation de bonne exécution">Attestation de bonne exécution</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {/* Select Projet Parent */}
                     <div className="space-y-2">
                       <Label htmlFor="id_projet">
@@ -439,13 +573,13 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                         onValueChange={(value) => handleSelectChange("id_projet", value)}
                         value={formData.id_projet ? String(formData.id_projet) : ""}
                         required
-                        disabled={projetsDisponibles.length === 1} // Désactive si un seul projet
+                        disabled={(projetsDisponibles || []).length === 1} // Désactive si un seul projet
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionnez un projet" />
                         </SelectTrigger>
                         <SelectContent>
-                          {projetsDisponibles.map((projet) => (
+                          {(projetsDisponibles || []).map((projet) => (
                             <SelectItem
                               key={projet.id_projet}
                               value={String(projet.id_projet)}
@@ -456,109 +590,150 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
 
-                    {/* Date of Livrable */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {/* Client/Partenaire */}
                     <div className="space-y-2">
-                      <Label htmlFor="date">
-                        Date du livrable <span className="text-red-500">*</span>
+                      <Label htmlFor="client">
+                        Client/Partenaire <span className="text-red-500">*</span>
                       </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formData.date ? (
-                              format(parseISO(formData.date), "dd MMMM yyyy", { // Corrected format string
-                                locale: fr,
-                              })
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={formData.date ? parseISO(formData.date) : undefined}
-                            onSelect={(date) =>
-                              handleDateChange("date", date)
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Select
+                        onValueChange={(value) => handleSelectChange("client", value)}
+                        value={formData.client}
+                        required
+                        disabled={(partenairesProjet || []).length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            formData.id_projet === 0 
+                              ? "Sélectionnez d'abord un projet"
+                              : (partenairesProjet || []).length === 0
+                              ? "Aucun partenaire pour ce projet"
+                              : "Sélectionnez un partenaire"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(partenairesProjet || []).map((partenaire) => (
+                            <SelectItem
+                              key={partenaire.id_partenaire}
+                              value={String(partenaire.id_partenaire)}
+                            >
+                              {partenaire.nom_partenaire}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Date du livrable - Seulement pour Procès-verbal */}
+                    {isFullLivrableType(formData.type_livrable) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="date">
+                          Date du livrable <span className="text-red-500">*</span>
+                        </Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formData.date ? (
+                                format(parseISO(formData.date), "dd MMMM yyyy", { // Corrected format string
+                                  locale: fr,
+                                })
+                              ) : (
+                                <span>Sélectionner une date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={formData.date ? parseISO(formData.date) : undefined}
+                              onSelect={(date) =>
+                                handleDateChange("date", date)
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Approbation Select - Seulement pour Procès-verbal */}
+                  {isFullLivrableType(formData.type_livrable) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="approbation">
+                        Approbation <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          handleSelectChange("approbation", value)
+                        }
+                        value={formData.approbation}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez un statut d'approbation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en attente">En attente</SelectItem>
+                          <SelectItem value="approuvé">Approuvé</SelectItem>
+                          <SelectItem value="rejeté">Rejeté</SelectItem>
+                          <SelectItem value="révisions requises">Révisions requises</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Detailed Information - Seulement pour Procès-verbal */}
+                {isFullLivrableType(formData.type_livrable) && (
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-medium text-gray-700 border-b pb-2">
+                      Détails du livrable
+                    </h2>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="realisations">Réalisations</Label>
+                      <Textarea
+                        id="realisations"
+                        name="realisations"
+                        placeholder="Décrivez les réalisations de ce livrable..."
+                        rows={4}
+                        value={formData.realisations}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="reserves">Réserves</Label>
+                      <Textarea
+                        id="reserves"
+                        name="reserves"
+                        placeholder="Décrivez les réserves ou points en suspens..."
+                        rows={4}
+                        value={formData.reserves}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="recommandation">Recommandation</Label>
+                      <Textarea
+                        id="recommandation"
+                        name="recommandation"
+                        placeholder="Entrez des recommandations pour le livrable..."
+                        rows={4}
+                        value={formData.recommandation}
+                        onChange={handleInputChange}
+                      />
                     </div>
                   </div>
-
-                  {/* Approbation Select */}
-                  <div className="space-y-2">
-                    <Label htmlFor="approbation">
-                      Approbation <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      onValueChange={(value) =>
-                        handleSelectChange("approbation", value)
-                      }
-                      value={formData.approbation}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez un statut d'approbation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en attente">En attente</SelectItem>
-                        <SelectItem value="approuvé">Approuvé</SelectItem>
-                        <SelectItem value="rejeté">Rejeté</SelectItem>
-                        <SelectItem value="révisions requises">Révisions requises</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Detailed Information */}
-                <div className="space-y-4">
-                  <h2 className="text-lg font-medium text-gray-700 border-b pb-2">
-                    Détails du livrable
-                  </h2>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="realisations">Réalisations</Label>
-                    <Textarea
-                      id="realisations"
-                      name="realisations"
-                      placeholder="Décrivez les réalisations de ce livrable..."
-                      rows={4}
-                      value={formData.realisations}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="reserves">Réserves</Label>
-                    <Textarea
-                      id="reserves"
-                      name="reserves"
-                      placeholder="Décrivez les réserves ou points en suspens..."
-                      rows={4}
-                      value={formData.reserves}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="recommandation">Recommandation</Label>
-                    <Textarea
-                      id="recommandation"
-                      name="recommandation"
-                      placeholder="Entrez des recommandations pour le livrable..."
-                      rows={4}
-                      value={formData.recommandation}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>

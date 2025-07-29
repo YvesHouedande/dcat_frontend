@@ -159,6 +159,11 @@ const NouveauContrat: React.FC = () => {
       }
       // Invalider le cache pour rafraîchir la liste
       queryClient.invalidateQueries({ queryKey: ["contrats"] });
+      
+      // Redirection automatique vers la liste des contrats après 1.5 secondes
+      setTimeout(() => {
+        navigate("/gestion-administrative/contrats");
+      }, 1500);
     },
     onError: (error: MutationError) => {
       toast.error("Erreur lors de la création du contrat", {
@@ -459,7 +464,7 @@ const NouveauContrat: React.FC = () => {
                       )}
                       
                       {/* Affichage des informations de l'interlocuteur sélectionné */}
-                      {formData.nom_interlocuteur && formData.contact_interlocuteur && (
+                      {formData.nom_interlocuteur && formData.contact_interlocuteur && interlocuteurs.length > 1 && (
                         <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
                           <p className="text-sm text-green-800">
                             <strong>Interlocuteur sélectionné :</strong> {formData.nom_interlocuteur}

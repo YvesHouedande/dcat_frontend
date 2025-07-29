@@ -2,88 +2,122 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { LivrableForm } from '../components/LivrableForm'; // Chemin correct vers votre LivrableForm
 import { Livrable, Projet, CreateLivrablePayload, UpdateLivrablePayload, CreateDocumentTextPayload, ApiResponse, Nature } from '../../types/types'; // Import Nature type
 import { getLivrableById, updateLivrable, addDocumentToLivrable, getAllNatureDocuments } from '../api/livrables'; // Import getAllNatureDocuments
 import { fetchAllProjets } from '../../projet/api/projets'; // Assumant que c'est le chemin correct pour l'API des projets
+import { usePartenairesApi } from '../../projet/api/partenaires';
+import { Partenaires } from "@/modules/administration-Finnance/administration/types/interfaces";
 import { toast } from 'sonner'; // Importation de toast pour les messages
+
+// Interface pour adapter les partenaires au format attendu par LivrableForm
+interface PartenaireOption {
+  id_partenaire: number;
+  nom_partenaire: string;
+}
 
 const EditerLivrablePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { getPartenaires } = usePartenairesApi();
 
   const [livrable, setLivrable] = useState<Livrable | undefined>(undefined);
   const [projets, setProjets] = useState<Projet[]>([]);
+  const [partenaires, setPartenaires] = useState<PartenaireOption[]>([]);
   const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]); // Changed to Nature[]
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const livrableId = Number(id);
-        if (isNaN(livrableId)) {
-          setError("ID de livrable invalide dans l'URL.");
-          setLoading(false);
-          toast.error("Erreur: ID de livrable invalide."); // Utilisation de toast pour le feedback utilisateur
-          return;
-        }
-
-        // Exécution des appels API en parallèle
-        const [fetchedLivrable, fetchedProjetsRaw, fetchedNatureDocumentsRaw] = await Promise.all([
-          getLivrableById(livrableId), // Appelle l'API réelle, retourne Promise<Livrable | undefined>
-          fetchAllProjets(), // Appelle l'API réelle, peut retourner Promise<ApiResponse<Projet[]>> ou Promise<Projet[]>
-          getAllNatureDocuments(), // Now returns Promise<Nature[]> directly
-        ]);
-
-        setLivrable(fetchedLivrable);
-
-        let projectsToSet: Projet[] = [];
-
-        // Extraction des projets de la réponse de l'API
-        if (fetchedProjetsRaw && typeof fetchedProjetsRaw === 'object' && ('data' in fetchedProjetsRaw || 'success' in fetchedProjetsRaw)) {
-          const apiResponse = fetchedProjetsRaw as ApiResponse<Projet[]>; 
-          if (apiResponse.data && Array.isArray(apiResponse.data)) {
-            projectsToSet = apiResponse.data;
-            console.log("[EditerLivrablePage] Projets récupérés via ApiResponse.data:", projectsToSet);
-          } else {
-            console.warn("Structure d'ApiResponse inattendue pour la récupération des projets, données manquantes:", fetchedProjetsRaw);
-            toast.warning("Impossible de charger les projets. Données de l'API inattendues.");
-          }
-        } else if (Array.isArray(fetchedProjetsRaw)) {
-          projectsToSet = fetchedProjetsRaw;
-          console.log("[EditerLivrablePage] Projets récupérés directement sous forme de tableau:", projectsToSet);
-        } else {
-          console.warn("Structure de réponse inattendue pour la récupération des projets: ni ApiResponse ni un tableau direct.", fetchedProjetsRaw);
-          toast.warning("Impossible de charger les projets. Structure de réponse inattendue.");
-        }
-        setProjets(projectsToSet);
-
-        // Handle Nature response - expecting a direct array of Nature objects
-        if (Array.isArray(fetchedNatureDocumentsRaw)) {
-            setNatureDocuments(fetchedNatureDocumentsRaw);
-            console.log("[EditerLivrablePage] Natures de document récupérées directement sous forme de tableau:", fetchedNatureDocumentsRaw);
-        } else {
-            console.warn("Structure de réponse inattendue pour la récupération des natures de document: n'est pas un tableau direct.", fetchedNatureDocumentsRaw);
-            toast.warning("Impossible de charger les natures de document. Structure de réponse inattendue.");
-        }
-
-        if (!fetchedLivrable) {
-          setError(`Livrable introuvable ! L'ID ${id} ne correspond à aucun livrable existant.`);
-          toast.error(`Livrable introuvable ! L'ID ${id} ne correspond à aucun livrable existant.`);
-        }
-      } catch (err) {
-        console.error("Erreur lors du chargement des données du livrable :", err);
-        setError("Une erreur est survenue lors du chargement des données. Veuillez réessayer.");
-        toast.error("Erreur de chargement: " + (err instanceof Error ? err.message : "Erreur inconnue"));
-      } finally {
+  // Fonction pour charger les données avec cache clearing
+  const loadData = async (forceFresh = false) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const livrableId = Number(id);
+      if (isNaN(livrableId)) {
+        setError("ID de livrable invalide dans l'URL.");
         setLoading(false);
+        toast.error("Erreur: ID de livrable invalide."); // Utilisation de toast pour le feedback utilisateur
+        return;
       }
-    };
-    loadData();
-  }, [id]); // Dépendance à 'id' pour recharger si l'ID change
+
+      // Invalider le cache avant de charger si on veut des données fraîches
+      if (forceFresh) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['partenaires'] }),
+          queryClient.invalidateQueries({ queryKey: ['projets'] }),
+        ]);
+      }
+
+      // Exécution des appels API en parallèle
+      const [fetchedLivrable, fetchedProjetsRaw, fetchedPartenaires, fetchedNatureDocumentsRaw] = await Promise.all([
+        getLivrableById(livrableId), // Appelle l'API réelle, retourne Promise<Livrable | undefined>
+        fetchAllProjets(1, 1000), // Récupérer jusqu'à 1000 projets (page 1, limite 1000)
+        getPartenaires({ limit: 1000, page: 1 }), // Charger tous les partenaires
+        getAllNatureDocuments(), // Now returns Promise<Nature[]> directly
+      ]);
+
+      setLivrable(fetchedLivrable);
+
+      let projectsToSet: Projet[] = [];
+
+      // Extraction des projets de la réponse de l'API
+      if (fetchedProjetsRaw && typeof fetchedProjetsRaw === 'object' && ('data' in fetchedProjetsRaw || 'success' in fetchedProjetsRaw)) {
+        const apiResponse = fetchedProjetsRaw as ApiResponse<Projet[]>; 
+        if (apiResponse.data && Array.isArray(apiResponse.data)) {
+          projectsToSet = apiResponse.data;
+          console.log("[EditerLivrablePage] Projets récupérés via ApiResponse.data:", projectsToSet);
+        } else {
+          console.warn("Structure d'ApiResponse inattendue pour la récupération des projets, données manquantes:", fetchedProjetsRaw);
+          toast.warning("Impossible de charger les projets. Données de l'API inattendues.");
+        }
+      } else if (Array.isArray(fetchedProjetsRaw)) {
+        projectsToSet = fetchedProjetsRaw;
+        console.log("[EditerLivrablePage] Projets récupérés directement sous forme de tableau:", projectsToSet);
+      } else {
+        console.warn("Structure de réponse inattendue pour la récupération des projets: ni ApiResponse ni un tableau direct.", fetchedProjetsRaw);
+        toast.warning("Impossible de charger les projets. Structure de réponse inattendue.");
+      }
+      setProjets(projectsToSet);
+
+      // Handle Partenaires response
+      const partenairesOptions: PartenaireOption[] = fetchedPartenaires.map((p: Partenaires) => ({
+        id_partenaire: p.id_partenaire,
+        nom_partenaire: p.nom_partenaire
+      }));
+      setPartenaires(partenairesOptions);
+      console.log("[EditerLivrablePage] Partenaires récupérés:", partenairesOptions);
+
+      // Handle Nature response - expecting a direct array of Nature objects
+      if (Array.isArray(fetchedNatureDocumentsRaw)) {
+          setNatureDocuments(fetchedNatureDocumentsRaw);
+          console.log("[EditerLivrablePage] Natures de document récupérées directement sous forme de tableau:", fetchedNatureDocumentsRaw);
+      } else {
+          console.warn("Structure de réponse inattendue pour la récupération des natures de document: n'est pas un tableau direct.", fetchedNatureDocumentsRaw);
+          toast.warning("Impossible de charger les natures de document. Structure de réponse inattendue.");
+          setNatureDocuments([]);
+      }
+
+    } catch (err) {
+      console.error("Erreur lors du chargement des données pour le livrable :", err);
+      setError("Une erreur est survenue lors du chargement des données. Veuillez réessayer.");
+      toast.error("Erreur de chargement: " + (err instanceof Error ? err.message : "Erreur inconnue"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData(true); // Charger avec des données fraîches au montage
+  }, [id]);
+
+  // Fonction pour rafraîchir les données manuellement
+  const refreshData = async () => {
+    await loadData(true);
+  };
 
   // Gère la sauvegarde du livrable (appelé depuis LivrableForm)
   const handleSaveLivrable = async (payload: CreateLivrablePayload | UpdateLivrablePayload) => {
@@ -137,8 +171,14 @@ const EditerLivrablePage = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-screen text-red-500 text-lg font-bold text-center">
+      <div className="flex justify-center items-center h-screen text-red-500 text-lg font-bold text-center flex-col gap-4">
         {error}
+        <button 
+          onClick={refreshData}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Réessayer
+        </button>
       </div>
     );
   }
@@ -160,6 +200,7 @@ const EditerLivrablePage = () => {
       onSave={handleSaveLivrable}
       onCancel={handleCancel}
       projetsDisponibles={projets}
+      partenairesDisponibles={partenaires}
       onSaveDocument={handleSaveDocument} // Passe le nouveau gestionnaire pour l'ajout de document
       natureDocumentsDisponibles={natureDocuments} // Pass natures of documents
     />
