@@ -42,11 +42,11 @@ const PartenaireService = () => {
 };
 
 const usePartenaire = () => {
-  // Query pour les livraisons
-  const partenaireServie = PartenaireService();
+  // Query pour les partenaires
+  const partenaireService = PartenaireService();
   const partenaires = useQuery({
-    queryKey: ["livraisons"],
-    queryFn: partenaireServie.fetchPartenaire,
+    queryKey: ["partenaires"],
+    queryFn: partenaireService.fetchPartenaire,
     staleTime: 15 * 60 * 1000, // 15 minutes (optionnel)
   });
   return {
@@ -54,6 +54,7 @@ const usePartenaire = () => {
     isLoading: partenaires.isLoading,
   };
 };
+
 export function PartenaireCombobox({
   value,
   onChange,
@@ -61,19 +62,19 @@ export function PartenaireCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
 
-  const { partenaires: deliveries, isLoading } = usePartenaire();
+  const { partenaires, isLoading } = usePartenaire();
 
-  const deliveriesArray = React.useMemo(
-    () => (Array.isArray(deliveries) ? deliveries : []),
-    [deliveries]
+  const partenairesArray = React.useMemo(
+    () => (Array.isArray(partenaires) ? partenaires : []),
+    [partenaires]
   );
 
-  const filteredDeliveries = React.useMemo(() => {
-    if (!searchTerm) return deliveriesArray;
-    return deliveriesArray.filter((partenaire) =>
+  const filteredPartenaires = React.useMemo(() => {
+    if (!searchTerm) return partenairesArray;
+    return partenairesArray.filter((partenaire) =>
       partenaire.nom_partenaire.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [deliveriesArray, searchTerm]);
+  }, [partenairesArray, searchTerm]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -86,7 +87,7 @@ export function PartenaireCombobox({
           disabled={isLoading}
         >
           {value
-            ? deliveriesArray.find(
+            ? partenairesArray.find(
                 (partenaire) => String(partenaire.id_partenaire) === value
               )?.nom_partenaire
             : "Sélectionner un partenaire..."}
@@ -96,15 +97,15 @@ export function PartenaireCombobox({
       <PopoverContent className="w-full p-0">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Rechercher une partenaire..."
+            placeholder="Rechercher un partenaire..."
             className="h-9"
             value={searchTerm}
             onValueChange={setSearchTerm}
           />
           <CommandList>
-            <CommandEmpty>Aucune référence trouvée.</CommandEmpty>
+            <CommandEmpty>Aucun partenaire trouvé.</CommandEmpty>
             <CommandGroup className="max-h-60 overflow-y-auto">
-              {filteredDeliveries.map((partenaire) => (
+              {filteredPartenaires.map((partenaire) => (
                 <CommandItem
                   key={partenaire.id_partenaire}
                   value={String(partenaire.id_partenaire)}
@@ -115,21 +116,20 @@ export function PartenaireCombobox({
                 >
                   <div className="flex flex-col">
                     <span className="font-medium">
-                      {" "}
-                      {partenaire.entites && partenaire.entites.length > 0
-                        ? partenaire.entites[0].denomination
-                        : ""}
                       {partenaire.nom_partenaire}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {partenaire.email_partenaire} |{" "}
                       {partenaire.telephone_partenaire}
                     </span>
+                    <span className="text-xs text-muted-foreground">
+                      {partenaire.specialite} - {partenaire.localisation}
+                    </span>
                   </div>
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",
-                      value === String(partenaire.nom_partenaire)
+                      value === String(partenaire.id_partenaire)
                         ? "opacity-100"
                         : "opacity-0"
                     )}
