@@ -91,7 +91,6 @@ const ModernPartenaireGrid: React.FC = () => {
   const partenaires = data?.pages.flatMap((page) => page.data);
 
 
-
   // Mutation pour supprimer un partenaire
   const { mutate: deletePartenaire, isLoading: deleting } = useMutation({
     mutationFn: deletePartner,

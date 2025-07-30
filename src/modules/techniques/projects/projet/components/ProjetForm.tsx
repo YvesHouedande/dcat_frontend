@@ -17,6 +17,7 @@ import {
   Plus,
   Home,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { format, addMonths, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -50,9 +51,19 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+// Interface pour les documents temporaires en attente d'association
+interface PendingDocument {
+  id: string; // ID temporaire unique
+  file: File;
+  textPayload: CreateDocumentTextPayload;
+}
+
 interface ProjetFormProps {
   initialData?: Projet;
-  onSave: (projet: Projet) => void;
+  onSave: (
+    projet: Projet,
+    pendingDocuments?: PendingDocument[] // Documents à associer après création
+  ) => void;
   onCancel: () => void;
   partenairesDisponibles: Partenaire[];
   famillesDisponibles: Famille[];
@@ -77,6 +88,9 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDocumentSheet, setShowDocumentSheet] = useState(false);
+  
+  // État pour les documents temporaires (pendant la création)
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
 
   const navigate = useNavigate();
 
@@ -294,7 +308,8 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
 
     console.log("Données envoyées au backend:", projetToSave);
 
-    onSave(projetToSave);
+    // Passer les documents temporaires au parent (pour le mode création)
+    onSave(projetToSave, initialData ? undefined : pendingDocuments);
     setIsSubmitting(false);
   };
 
@@ -368,13 +383,6 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!initialData?.id_projet) {
-      toast.error(
-        "Le projet doit être enregistré avant d'ajouter des documents."
-      );
-      return;
-    }
-
     if (!documentFormData.file) {
       toast.error("Veuillez sélectionner un fichier à télécharger.");
       return;
@@ -394,7 +402,8 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
       return;
     }
 
-    if (onSaveDocument) {
+    // Si le projet existe déjà (mode édition), utiliser l'ancienne logique
+    if (initialData?.id_projet && onSaveDocument) {
       try {
         await onSaveDocument(initialData.id_projet, documentFormData.file, {
           libelle_document: documentFormData.libelle_document,
@@ -404,6 +413,7 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
         });
         toast.success("Document ajouté avec succès !");
         setShowDocumentSheet(false);
+        // Reset document form data
         setDocumentFormData({
           libelle_document: "",
           classification_document: "",
@@ -416,10 +426,37 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
         toast.error("Échec de l'ajout du document.");
       }
     } else {
-      toast.error(
-        "La fonction d'enregistrement du document n'est pas disponible."
-      );
+      // Mode création : ajouter le document à la liste temporaire
+      const newPendingDocument: PendingDocument = {
+        id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // ID temporaire unique
+        file: documentFormData.file,
+        textPayload: {
+          libelle_document: documentFormData.libelle_document,
+          classification_document: documentFormData.classification_document,
+          date_document: documentFormData.date_document,
+          id_nature_document: documentFormData.id_nature_document,
+        }
+      };
+
+      setPendingDocuments(prev => [...prev, newPendingDocument]);
+      toast.success("Document ajouté temporairement ! Il sera associé au projet lors de la sauvegarde.");
+      setShowDocumentSheet(false);
+      
+      // Reset document form data
+      setDocumentFormData({
+        libelle_document: "",
+        classification_document: "",
+        date_document: "",
+        id_nature_document: 0,
+        file: null,
+      });
     }
+  };
+
+  // Fonction pour supprimer un document temporaire
+  const removePendingDocument = (documentId: string) => {
+    setPendingDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    toast.success("Document retiré de la liste temporaire.");
   };
 
   return (
@@ -460,19 +497,19 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Rapports
                 </Button> */}
-                {initialData && (
-                  <Sheet
-                    open={showDocumentSheet}
-                    onOpenChange={setShowDocumentSheet}
-                  >
-                    <SheetTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex items-center gap-2"
-                      >
-                        <Plus className="h-4 w-4" /> Associer un document
-                      </Button>
-                    </SheetTrigger>
+                <Sheet
+                  open={showDocumentSheet}
+                  onOpenChange={setShowDocumentSheet}
+                >
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" /> 
+                      {initialData ? "Associer un document" : "Ajouter un document"}
+                    </Button>
+                  </SheetTrigger>
                     <SheetContent
                       side="right"
                       className="w-full sm:max-w-md overflow-y-auto"
@@ -607,11 +644,10 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
                             <Save className="mr-2 h-4 w-4" /> Enregistrer
                             Document
                           </Button>
-                        </SheetFooter>
-                      </form>
-                    </SheetContent>
-                  </Sheet>
-                )}
+                                              </SheetFooter>
+                    </form>
+                  </SheetContent>
+                </Sheet>
               </div>
             </div>
           </div>
@@ -987,6 +1023,58 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
                 </div>
               </div>
             </CardContent>
+
+            {/* Documents temporaires (mode création uniquement) */}
+            {!initialData && pendingDocuments.length > 0 && (
+              <div className="mt-6 bg-white p-6 rounded-lg shadow-sm border">
+                <div className="space-y-4">
+                  <h2 className="text-lg font-medium text-gray-700 border-b pb-2">
+                    Documents en attente d'association ({pendingDocuments.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {pendingDocuments.map((doc) => {
+                      const natureName = natureDocumentsDisponibles.find(
+                        n => n.id_nature_document === doc.textPayload.id_nature_document
+                      )?.libelle || "Nature inconnue";
+                      
+                      return (
+                        <div key={doc.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <FileText className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <p className="font-medium text-gray-900">{doc.textPayload.libelle_document}</p>
+                                <p className="text-sm text-gray-600">
+                                  {doc.file.name} • {natureName}
+                                  {doc.textPayload.date_document && (
+                                    <> • {format(parseISO(doc.textPayload.date_document), "dd/MM/yyyy", { locale: fr })}</>
+                                  )}
+                                </p>
+                                {doc.textPayload.classification_document && (
+                                  <p className="text-xs text-gray-500">Classification: {doc.textPayload.classification_document}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePendingDocument(doc.id)}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                    💡 Ces documents seront automatiquement associés au projet après sa création.
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mt-6 flex justify-end gap-4">
               <Button type="button" variant="outline" onClick={onCancel}>

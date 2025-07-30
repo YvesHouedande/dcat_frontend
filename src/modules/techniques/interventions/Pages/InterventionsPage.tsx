@@ -18,12 +18,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Intervention } from "../interface/interface";
+import { Intervention, Nature, CreateInterventionDocumentTextPayload } from "../interface/interface";
 import { InterventionForm } from "../components/InterventionForm";
 import {
   createIntervention,
   deleteIntervention,
   getInterventions,
+  addDocumentToIntervention,
+  getAllNatureDocuments,
 } from "../api/intervention";
 import Layout from "@/components/Layout";
 import axios from "axios";
@@ -53,6 +55,13 @@ import {
 import { Trash2, Plus, FileText, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+// Interface pour les documents temporaires en attente d'association
+interface PendingDocument {
+  id: string; // ID temporaire unique
+  file: File;
+  textPayload: CreateInterventionDocumentTextPayload;
+}
+
 export const InterventionsPage: React.FC = () => {
   const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -61,26 +70,39 @@ export const InterventionsPage: React.FC = () => {
     useState<Intervention | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
+  const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
+
+  const refreshData = async () => {
+    try {
+      const [interventionsResponse, naturesResponse] = await Promise.all([
+        getInterventions(),
+        getAllNatureDocuments(),
+      ]);
+      
+      // Limiter à 2 interventions les plus récentes
+      const recentInterventions = (interventionsResponse.data || [])
+        .sort(
+          (a, b) =>
+            new Date(b.date_intervention).getTime() -
+            new Date(a.date_intervention).getTime()
+        )
+        .slice(0, 2);
+      setInterventions(recentInterventions);
+
+      // Charger les natures de documents
+      if (Array.isArray(naturesResponse)) {
+        setNatureDocuments(naturesResponse);
+      } else if (naturesResponse && Array.isArray(naturesResponse.data)) {
+        setNatureDocuments(naturesResponse.data);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des données:", error);
+      toast.error("Erreur lors du chargement des données");
+    }
+  };
 
   useEffect(() => {
-    const fetchInterventions = async () => {
-      try {
-        const response = await getInterventions();
-        // Limiter à 2 interventions les plus récentes
-        const recentInterventions = (response.data || [])
-          .sort(
-            (a, b) =>
-              new Date(b.date_intervention).getTime() -
-              new Date(a.date_intervention).getTime()
-          )
-          .slice(0, 2);
-        setInterventions(recentInterventions);
-      } catch (error) {
-        console.error("Erreur lors du chargement des interventions:", error);
-        toast.error("Erreur lors du chargement des interventions");
-      }
-    };
-    fetchInterventions();
+    refreshData();
   }, []);
 
   // Calcul des KPIs et données des graphiques
@@ -180,7 +202,10 @@ export const InterventionsPage: React.FC = () => {
     id_contrat?: number | null;
   };
 
-  const handleCreateSubmit = async (data: FormData) => {
+  const handleCreateSubmit = async (
+    data: FormData,
+    pendingDocuments?: PendingDocument[]
+  ) => {
     setIsLoading(true);
     try {
       // Validation des champs requis
@@ -254,11 +279,43 @@ export const InterventionsPage: React.FC = () => {
           );
         }
 
-        setIsCreateDialogOpen(false);
-        toast.success("L'intervention a été créée avec succès.");
+        // Associer les documents temporaires si présents
+        if (pendingDocuments && pendingDocuments.length > 0 && response.intervention?.id_intervention) {
+          toast.success(`Intervention créée avec succès ! Association de ${pendingDocuments.length} document(s)...`);
+          
+          let successCount = 0;
+          let errorCount = 0;
+          
+          for (const pendingDoc of pendingDocuments) {
+            try {
+              await addDocumentToIntervention(
+                response.intervention.id_intervention,
+                pendingDoc.file,
+                pendingDoc.textPayload
+              );
+              successCount++;
+            } catch (docError) {
+              console.error(`Erreur lors de l'association du document ${pendingDoc.textPayload.libelle_document}:`, docError);
+              errorCount++;
+            }
+          }
+          
+          // Afficher le résultat final
+          if (errorCount === 0) {
+            toast.success(`Intervention créée et ${successCount} document(s) associé(s) avec succès !`);
+          } else if (successCount > 0) {
+            toast.warning(`Intervention créée avec succès ! ${successCount} document(s) associé(s), ${errorCount} échec(s).`);
+          } else {
+            toast.error(`Intervention créée mais échec de l'association de tous les documents (${errorCount} échec(s)).`);
+          }
+        } else {
+          toast.success("L'intervention a été créée avec succès.");
+        }
 
-        // Recharger la liste des interventions
-        window.location.reload();
+        setIsCreateDialogOpen(false);
+
+        // Recharger la liste des interventions sans rafraîchir la page
+        refreshData();
       } catch (apiError) {
         console.error("Erreur détaillée de l'API:", apiError);
         if (axios.isAxiosError(apiError) && apiError.response) {
@@ -298,7 +355,9 @@ export const InterventionsPage: React.FC = () => {
       await deleteIntervention(selectedIntervention.id_intervention);
       setIsDeleteDialogOpen(false);
       toast.success("L'intervention a été supprimée avec succès.");
-      window.location.reload();
+      
+      // Recharger la liste des interventions sans rafraîchir la page
+      refreshData();
     } catch (error) {
       console.error("Erreur lors de la suppression de l'intervention:", error);
       toast.error(
@@ -529,6 +588,7 @@ export const InterventionsPage: React.FC = () => {
             <InterventionForm
               onSubmit={handleCreateSubmit}
               isLoading={isLoading}
+              natureDocumentsDisponibles={natureDocuments}
             />
           </DialogContent>
         </Dialog>

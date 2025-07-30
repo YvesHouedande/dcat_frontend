@@ -112,7 +112,7 @@ const EditerLivrablePage = () => {
 
   useEffect(() => {
     loadData(true); // Charger avec des données fraîches au montage
-  }, [id]);
+  }, [id, loadData]);
 
   // Fonction pour rafraîchir les données manuellement
   const refreshData = async () => {
@@ -120,7 +120,9 @@ const EditerLivrablePage = () => {
   };
 
   // Gère la sauvegarde du livrable (appelé depuis LivrableForm)
-  const handleSaveLivrable = async (payload: CreateLivrablePayload | UpdateLivrablePayload) => {
+  const handleSaveLivrable = async (
+    payload: CreateLivrablePayload | UpdateLivrablePayload
+  ) => {
     try {
       if (!livrable?.id_livrable) { // Vérifie si nous avons un ID pour l'opération de mise à jour
         toast.error("Impossible de mettre à jour : ID du livrable manquant.");

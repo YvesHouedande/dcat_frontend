@@ -95,7 +95,9 @@ const EditerProjetPage = () => {
     loadData();
   }, [id, getPartenaires, getEmployes]);
 
-  const handleSaveProjet = async (projetMisAJour: Projet) => {
+  const handleSaveProjet = async (
+    projetMisAJour: Projet
+  ) => {
     try {
       if (!projetMisAJour.id_projet || projetMisAJour.id_projet === 0) {
         console.error("Tentative de sauvegarde d'un nouveau projet sur la page d'édition.");

@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Save, Plus } from "lucide-react"; // Import Plus icon
+import { Calendar as CalendarIcon, Save, Plus, FileText, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,10 +51,18 @@ interface PartenaireOption {
   nom_partenaire: string;
 }
 
+// Interface pour les documents temporaires en attente d'association
+interface PendingDocument {
+  id: string; // ID temporaire unique
+  file: File;
+  textPayload: CreateDocumentTextPayload;
+}
+
 interface LivrableFormProps {
   initialData?: Livrable; // Pour l'édition
   onSave: (
-    livrable: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">>
+    livrable: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">>,
+    pendingDocuments?: PendingDocument[] // Documents à associer après création
   ) => Promise<void>;
   onCancel: () => void;
   projetsDisponibles: Projet[];
@@ -83,6 +91,9 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
   
   // État pour les partenaires filtrés selon le projet sélectionné
   const [partenairesProjet, setPartenairesProjet] = useState<PartenaireOption[]>([]);
+  
+  // État pour les documents temporaires (pendant la création)
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
 
   // Form data for the Livrable itself
   const [formData, setFormData] = useState<Livrable>(
@@ -289,7 +300,8 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     };
 
     try {
-      await onSave(payload); // Call the onSave prop from the parent
+      // Passer les documents temporaires au parent (pour le mode création)
+      await onSave(payload, initialData ? undefined : pendingDocuments);
     } catch (error) {
       console.error("Erreur lors de l'enregistrement du livrable:", error);
       toast.error("Échec de l'enregistrement du livrable.");
@@ -301,11 +313,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
   // Document upload form submission
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!initialData?.id_livrable) {
-      toast.error("Le livrable doit être enregistré avant d'ajouter des documents.");
-      return;
-    }
 
     if (!documentFormData.file) {
       toast.error("Veuillez sélectionner un fichier à télécharger.");
@@ -327,7 +334,8 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       return;
     }
 
-    if (onSaveDocument) {
+    // Si le livrable existe déjà (mode édition), utiliser l'ancienne logique
+    if (initialData?.id_livrable && onSaveDocument) {
       try {
         await onSaveDocument(
           initialData.id_livrable,
@@ -341,7 +349,7 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
         );
         toast.success("Document ajouté avec succès !");
         setShowDocumentSheet(false); // Close the sheet on success
-        // Optionally reset document form data
+        // Reset document form data
         setDocumentFormData({
           libelle_document: "",
           classification_document: "",
@@ -354,8 +362,37 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
         toast.error("Échec de l'ajout du document.");
       }
     } else {
-      toast.error("La fonction d'enregistrement du document n'est pas disponible.");
+      // Mode création : ajouter le document à la liste temporaire
+      const newPendingDocument: PendingDocument = {
+        id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // ID temporaire unique
+        file: documentFormData.file,
+        textPayload: {
+          libelle_document: documentFormData.libelle_document,
+          classification_document: documentFormData.classification_document,
+          date_document: documentFormData.date_document,
+          id_nature_document: documentFormData.id_nature_document,
+        }
+      };
+
+      setPendingDocuments(prev => [...prev, newPendingDocument]);
+      toast.success("Document ajouté temporairement ! Il sera associé au livrable lors de la sauvegarde.");
+      setShowDocumentSheet(false); // Close the sheet on success
+      
+      // Reset document form data
+      setDocumentFormData({
+        libelle_document: "",
+        classification_document: "",
+        date_document: "",
+        id_nature_document: 0,
+        file: null,
+      });
     }
+  };
+
+  // Fonction pour supprimer un document temporaire
+  const removePendingDocument = (documentId: string) => {
+    setPendingDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    toast.success("Document retiré de la liste temporaire.");
   };
 
   // --- Rendu du formulaire ---
@@ -369,13 +406,13 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
               <h1 className="text-2xl font-bold text-gray-800">
                 {initialData ? "Modifier le Livrable" : "Ajouter un nouveau Livrable"}
               </h1>
-              {initialData && (
-                <Sheet open={showDocumentSheet} onOpenChange={setShowDocumentSheet}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <Plus className="h-4 w-4" /> Associer un document
-                    </Button>
-                  </SheetTrigger>
+              <Sheet open={showDocumentSheet} onOpenChange={setShowDocumentSheet}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" /> 
+                    {initialData ? "Associer un document" : "Ajouter un document"}
+                  </Button>
+                </SheetTrigger>
                   <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
                     <SheetHeader>
                       <SheetTitle>Associer un Document</SheetTitle>
@@ -472,7 +509,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                     </form>
                   </SheetContent>
                 </Sheet>
-              )}
             </div>
           </div>
         )}
@@ -698,6 +734,60 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
               </div>
             </CardContent>
           </Card>
+
+          {/* Documents temporaires (mode création uniquement) */}
+          {!initialData && pendingDocuments.length > 0 && (
+            <Card className="mt-6">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <h2 className="text-lg font-medium text-gray-700 border-b pb-2">
+                    Documents en attente d'association ({pendingDocuments.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {pendingDocuments.map((doc) => {
+                      const natureName = natureDocumentsDisponibles.find(
+                        n => n.id_nature_document === doc.textPayload.id_nature_document
+                      )?.libelle || "Nature inconnue";
+                      
+                      return (
+                        <div key={doc.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <FileText className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <p className="font-medium text-gray-900">{doc.textPayload.libelle_document}</p>
+                                <p className="text-sm text-gray-600">
+                                  {doc.file.name} • {natureName}
+                                  {doc.textPayload.date_document && (
+                                    <> • {format(parseISO(doc.textPayload.date_document), "dd/MM/yyyy", { locale: fr })}</>
+                                  )}
+                                </p>
+                                {doc.textPayload.classification_document && (
+                                  <p className="text-xs text-gray-500">Classification: {doc.textPayload.classification_document}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePendingDocument(doc.id)}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                    💡 Ces documents seront automatiquement associés au livrable après sa création.
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Form Actions */}
           <div className="mt-6 flex justify-end gap-4">

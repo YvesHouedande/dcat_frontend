@@ -6,7 +6,8 @@ import {
   Employe,
   ApiResponse,
   Nature,
-  InterventionDocument
+  InterventionDocument,
+  CreateInterventionDocumentTextPayload
 } from '../interface/interface';
 
 const API_URL = import.meta.env.VITE_APP_API_URL;
@@ -110,12 +111,7 @@ export const getInterventionDocuments = async (interventionId: number): Promise<
 export const addDocumentToIntervention = async (
   interventionId: number,
   file: File,
-  textPayload: {
-    libelle_document: string;
-    classification_document: string;
-    date_document: string;
-    id_nature_document: number;
-  }
+  textPayload: CreateInterventionDocumentTextPayload
 ): Promise<ApiResponse<InterventionDocument>> => {
   try {
     console.log('[API Interventions] Tentative d\'ajout de document...', { interventionId, textPayload });

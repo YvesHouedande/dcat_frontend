@@ -18,10 +18,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Intervention } from "../interface/interface";
+import { Intervention, Nature } from "../interface/interface";
 import { InterventionForm } from "../components/InterventionForm";
 import { InterventionsList } from "../components/InterventionsList";
-import { createIntervention, deleteIntervention } from "../api/intervention";
+import { createIntervention, deleteIntervention, getAllNatureDocuments } from "../api/intervention";
 import Layout from "@/components/Layout";
 import { Plus, Home, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +35,24 @@ export const InterventionsListPage: React.FC = () => {
   const [selectedIntervention, setSelectedIntervention] =
     useState<Intervention | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
+
+  // Charger les natures de documents au montage
+  React.useEffect(() => {
+    const loadNatureDocuments = async () => {
+      try {
+        const naturesResponse = await getAllNatureDocuments();
+        if (Array.isArray(naturesResponse)) {
+          setNatureDocuments(naturesResponse);
+        } else if (naturesResponse && Array.isArray(naturesResponse.data)) {
+          setNatureDocuments(naturesResponse.data);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des natures de documents:", error);
+      }
+    };
+    loadNatureDocuments();
+  }, []);
 
   // Type pour les données du formulaire
   type FormData = {
@@ -135,7 +153,8 @@ export const InterventionsListPage: React.FC = () => {
 
         toast.success("Intervention créée avec succès");
         setIsCreateDialogOpen(false);
-        window.location.reload();
+        // Recharger la liste des interventions sans rafraîchir la page
+        // Note: Cette page utilise InterventionsList qui se recharge automatiquement
       } catch (apiError: unknown) {
         console.error("Erreur API:", apiError);
         throw new Error(getAxiosErrorMessage(apiError));
@@ -158,7 +177,8 @@ export const InterventionsListPage: React.FC = () => {
       await deleteIntervention(selectedIntervention.id_intervention);
       setIsDeleteDialogOpen(false);
       toast.success("L'intervention a été supprimée avec succès.");
-      window.location.reload();
+      // Recharger la liste des interventions sans rafraîchir la page
+      // Note: Cette page utilise InterventionsList qui se recharge automatiquement
     } catch (error) {
       console.error("Erreur lors de la suppression de l'intervention:", error);
       toast.error(
@@ -223,6 +243,7 @@ export const InterventionsListPage: React.FC = () => {
             <InterventionForm
               onSubmit={handleCreateSubmit}
               isLoading={isLoading}
+              natureDocumentsDisponibles={natureDocuments}
             />
           </DialogContent>
         </Dialog>

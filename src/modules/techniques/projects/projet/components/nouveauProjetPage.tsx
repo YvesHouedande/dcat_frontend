@@ -21,6 +21,13 @@ import {
 } from "../../types/types"; // Import Nature, CreateDocumentTextPayload, ApiResponse
 import { toast } from "sonner";
 
+// Interface pour les documents temporaires en attente d'association
+interface PendingDocument {
+  id: string; // ID temporaire unique
+  file: File;
+  textPayload: CreateDocumentTextPayload;
+}
+
 const NouveauProjetPage = () => {
   const navigate = useNavigate();
   const { getPartenaires } = usePartenairesApi();
@@ -86,7 +93,10 @@ const NouveauProjetPage = () => {
     loadData();
   }, [getPartenaires, getEmployes]);
 
-  const handleSaveProjet = async (projet: Projet) => {
+  const handleSaveProjet = async (
+    projet: Projet,
+    pendingDocuments?: PendingDocument[]
+  ) => {
     try {
       const { id_partenaire, ...projetToCreate } = projet;
 
@@ -162,6 +172,37 @@ const NouveauProjetPage = () => {
           toast.error(
             `${partnersFailedCount} partenaire(s) n'ont pas pu être associés.`
           );
+        }
+      }
+
+      // Associer les documents temporaires si présents
+      if (pendingDocuments && pendingDocuments.length > 0) {
+        toast.success(`Projet créé avec succès ! Association de ${pendingDocuments.length} document(s)...`);
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const pendingDoc of pendingDocuments) {
+          try {
+            await addDocumentToProjet(
+              newProjet.id_projet,
+              pendingDoc.file,
+              pendingDoc.textPayload
+            );
+            successCount++;
+          } catch (docError) {
+            console.error(`Erreur lors de l'association du document ${pendingDoc.textPayload.libelle_document}:`, docError);
+            errorCount++;
+          }
+        }
+        
+        // Afficher le résultat final
+        if (errorCount === 0) {
+          toast.success(`Projet créé et ${successCount} document(s) associé(s) avec succès !`);
+        } else if (successCount > 0) {
+          toast.warning(`Projet créé avec succès ! ${successCount} document(s) associé(s), ${errorCount} échec(s).`);
+        } else {
+          toast.error(`Projet créé mais échec de l'association de tous les documents (${errorCount} échec(s)).`);
         }
       }
 

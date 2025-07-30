@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { LivrableForm } from '../components/LivrableForm';
-import { Livrable, Projet, CreateLivrablePayload, ApiResponse, Nature } from '../../types/types';
-import { createLivrable, getAllNatureDocuments } from '../api/livrables';
+import { Livrable, Projet, CreateLivrablePayload, ApiResponse, Nature, CreateDocumentTextPayload } from '../../types/types';
+import { createLivrable, getAllNatureDocuments, addDocumentToLivrable } from '../api/livrables';
 import { fetchAllProjets } from '../../projet/api/projets';
 import { usePartenairesApi } from '../../projet/api/partenaires';
 import { Partenaires } from "@/modules/administration-Finnance/administration/types/interfaces";
@@ -13,6 +13,13 @@ import { toast } from 'sonner';
 interface PartenaireOption {
   id_partenaire: number;
   nom_partenaire: string;
+}
+
+// Interface pour les documents temporaires en attente d'association
+interface PendingDocument {
+  id: string; // ID temporaire unique
+  file: File;
+  textPayload: CreateDocumentTextPayload;
 }
 
 const CreerLivrablePage = () => {
@@ -107,10 +114,48 @@ const CreerLivrablePage = () => {
     await loadData(true);
   };
 
-  const handleSaveLivrable = async (payload: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">>) => {
+  const handleSaveLivrable = async (
+    payload: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">>,
+    pendingDocuments?: PendingDocument[]
+  ) => {
     try {
-      await createLivrable(payload as CreateLivrablePayload);
-      toast.success("Livrable créé avec succès !");
+      // 1. Créer le livrable d'abord
+      const createdLivrable = await createLivrable(payload as CreateLivrablePayload);
+      
+      // 2. Si des documents sont en attente et que le livrable a été créé avec succès
+      if (pendingDocuments && pendingDocuments.length > 0 && createdLivrable.id_livrable) {
+        toast.success(`Livrable créé avec succès ! Association de ${pendingDocuments.length} document(s)...`);
+        
+        // 3. Associer chaque document au livrable créé
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const pendingDoc of pendingDocuments) {
+          try {
+            await addDocumentToLivrable(
+              createdLivrable.id_livrable,
+              pendingDoc.file,
+              pendingDoc.textPayload
+            );
+            successCount++;
+          } catch (docError) {
+            console.error(`Erreur lors de l'association du document ${pendingDoc.textPayload.libelle_document}:`, docError);
+            errorCount++;
+          }
+        }
+        
+        // 4. Afficher le résultat final
+        if (errorCount === 0) {
+          toast.success(`Livrable créé et ${successCount} document(s) associé(s) avec succès !`);
+        } else if (successCount > 0) {
+          toast.warning(`Livrable créé avec succès ! ${successCount} document(s) associé(s), ${errorCount} échec(s).`);
+        } else {
+          toast.error(`Livrable créé mais échec de l'association de tous les documents (${errorCount} échec(s)).`);
+        }
+      } else {
+        toast.success("Livrable créé avec succès !");
+      }
+      
       navigate('/gestion-des-projets/projets/livrables');
     } catch (err) {
       console.error("Erreur lors de la création du livrable:", err);
