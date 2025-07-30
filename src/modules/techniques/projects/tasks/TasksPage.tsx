@@ -18,7 +18,7 @@ import {
     removeEmployeFromTache,
     getEmployesAssignes 
 } from "../tasks/api/taches";
-import { fetchAllProjets } from "../projet/api/projets";
+import { useProjetService } from "../projet/api/projets";
 import { useEmployesApi } from "../projet/api/employes";
 import { getOperationsByProjet } from "../operation/api/operation";
 import { getTachesByOperation } from "../tasks/api/taches";
@@ -34,6 +34,7 @@ const TachesPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [operations, setOperations] = useState<Operation[]>([]);
     const { getEmployes } = useEmployesApi();
+    const { fetchAllProjets } = useProjetService();
     // Filter states
     const [searchTerm, setSearchTerm] = useState("");
     const [filterProjet, setFilterProjet] = useState<number>(0);

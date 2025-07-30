@@ -25,9 +25,7 @@ import { toast } from "sonner"; // Import de toast pour les messages
 // Importation des fonctions API depuis leurs fichiers respectifs
 // Chemins ajustés basés sur la structure `src/api/`
 import {
-  fetchAllProjets,
-  deleteProjetWithConfirmation,
-  getProjetAssociatedPartenaires,
+  useProjetService,
 } from "../projet/api/projets"; // Chemin corrigé vers src/api/projets.ts
 import { getFamilles } from "../projet/api/famille"; // Chemin corrigé vers src/api/famille.ts
 import { usePartenairesApi } from "../projet/api/partenaires"; // Chemin corrigé vers src/api/partenaires.ts
@@ -42,6 +40,8 @@ const ProjetsPage = () => {
   const projetsPerPage = 10;
   const [error, setError] = useState<string | null>(null);
   const { getPartenaires } = usePartenairesApi(); 
+  const { fetchAllProjets } = useProjetService();
+  const { getProjetAssociatedPartenaires , deleteProjetWithConfirmation} = useProjetService();
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEtat, setFilterEtat] = useState("en_cours");
@@ -132,7 +132,7 @@ const ProjetsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, projetsPerPage, searchTerm, filterEtat, filterPartenaire]); // Ajout de currentPage, projetsPerPage, searchTerm, filterEtat, et filterPartenaire comme dépendances
+  }, [currentPage, projetsPerPage, searchTerm, filterEtat, filterPartenaire, fetchAllProjets, getPartenaires]); // Ajout de currentPage, projetsPerPage, searchTerm, filterEtat, et filterPartenaire comme dépendances
 
   // Appelle `loadAllData` une seule fois au montage du composant
   useEffect(() => {
@@ -218,7 +218,7 @@ const ProjetsPage = () => {
         setLoading(false);
       }
     },
-    [projets, loadAllData, currentPage, projetsPerPage]
+    [projets, loadAllData, currentPage, projetsPerPage, deleteProjetWithConfirmation]
   ); // Dépendances pour `useCallback`
 
   // Fonction pour formater un montant en Franc CFA

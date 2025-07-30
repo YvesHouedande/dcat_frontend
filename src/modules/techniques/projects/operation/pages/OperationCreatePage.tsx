@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import OperationForm from "../components/OperationForm";
 import { createOperation } from "../api/operation";
-import { fetchAllProjets } from "../../projet/api/projets";
+import { useProjetService } from "../../projet/api/projets";
 import { useEffect, useState } from "react";
 import { Projet } from "../../types/types";
 import Layout from "@/components/Layout";
@@ -13,12 +13,13 @@ const OperationCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const [projets, setProjets] = useState<Projet[]>([]);
   const [loading, setLoading] = useState(false);
+  const { fetchAllProjets } = useProjetService();
 
   useEffect(() => {
-    fetchAllProjets().then(res => {
+    fetchAllProjets().then((res) => {
       setProjets(Array.isArray(res.data) ? res.data : []);
     });
-  }, []);
+  }, [fetchAllProjets]);
 
   const handleCreate = async (payload: Omit<Operation, "id_operation">) => {
     setLoading(true);
