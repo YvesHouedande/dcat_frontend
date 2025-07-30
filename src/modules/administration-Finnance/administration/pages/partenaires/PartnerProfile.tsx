@@ -233,7 +233,7 @@ const ModernPartnerProfile: React.FC = () => {
             Aucune donnée de partenaire disponible.
           </p>
           <Button
-            onClick={() => navigate("/administration/partenaires")}
+            onClick={() => navigate("/gestion-administrative/partenaires")}
             variant="outline"
           >
             Retour à la liste
@@ -295,7 +295,14 @@ const ModernPartnerProfile: React.FC = () => {
                 <Edit size={16} className="mr-2" />
                 Modifier
               </Button>
-              
+              <Button
+                variant="outline"
+                className="text-gray-700 border-gray-300"
+                onClick={() => navigate("/gestion-administrative/entites")}
+              >
+                <Building size={16} className="mr-2" />
+                Gérer les entités
+              </Button>
             </div>
           </div>
         </div>
@@ -339,15 +346,26 @@ const ModernPartnerProfile: React.FC = () => {
                 <h2 className="text-2xl font-bold text-gray-800">
                   Informations du partenaire
                 </h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-500 cursor-pointer"
-                  onClick={handleEditClick}
-                >
-                  <Edit size={16} className="mr-2" />
-                  Modifier
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-gray-500 cursor-pointer"
+                    onClick={() => navigate("/gestion-administrative/entites")}
+                  >
+                    <Building size={16} className="mr-2" />
+                    Entités
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-gray-500 cursor-pointer"
+                    onClick={handleEditClick}
+                  >
+                    <Edit size={16} className="mr-2" />
+                    Modifier
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">

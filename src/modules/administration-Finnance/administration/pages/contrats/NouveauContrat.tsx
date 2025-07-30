@@ -23,6 +23,8 @@ import {
 import { MutationError, CreateContratData } from "../../types/interfaces";
 import { useContratsApi } from "../../../services/contratService";
 import { usePartenaireApi } from "../../../services/partenaireService";
+import { useEntiteApi } from '../../../services/entiteService';
+import { Interlocuteur, Entite } from "../../types/interfaces";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import DocumentSheet from "./DocumentSheet";
@@ -36,10 +38,15 @@ const NouveauContrat: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { addContrat } = useContratsApi();
-  const { fetchPartners } = usePartenaireApi();
+  const { fetchPartners, fetchPartnerById, fetchInterlocuteursByPartenaire } = usePartenaireApi();
+  const { fetchEntites } = useEntiteApi();
   const [partenaires, setPartenaires] = useState<
     Array<{ id: number; nom: string }>
   >([]);
+  const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
+  const [selectedEntite, setSelectedEntite] = useState<Entite | null>(null);
+  const [entites, setEntites] = useState<Entite[]>([]);
+  const [entitesPartenaire, setEntitesPartenaire] = useState<Entite[]>([]);
   const [createdContratId, setCreatedContratId] = useState<number | null>(null);
   const [isDocumentSheetOpen, setIsDocumentSheetOpen] = useState(false);
   const [formData, setFormData] = useState<ContratFormData>(() => {
@@ -53,10 +60,11 @@ const NouveauContrat: React.FC = () => {
       reference: "",
       statut: "actif",
       id_partenaire: partenaireId ?? undefined,
+              id_entite: 0,
       nom_interlocuteur: "",
       contact_interlocuteur: "",
       contenu_contrat: "",
-      cout: 0,
+      cout: "0",
       modalite_paiement: "",
     };
   });
@@ -64,6 +72,7 @@ const NouveauContrat: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Charger les partenaires
         const partenairesData = await fetchPartners(1, 100);
         setPartenaires(
           partenairesData.data.map((partenaire) => ({
@@ -71,12 +80,75 @@ const NouveauContrat: React.FC = () => {
             nom: partenaire.nom_partenaire,
           }))
         );
+
+        // Charger les entités
+        const entitesData = await fetchEntites();
+        setEntites(entitesData);
       } catch (error) {
-        console.error("Erreur lors du chargement des partenaires:", error);
+        console.error("Erreur lors du chargement des données:", error);
       }
     };
     loadData();
-  }, [fetchPartners]);
+  }, [fetchPartners, fetchEntites]);
+
+  // Effet pour charger les interlocuteurs et l'entité quand un partenaire est sélectionné
+  useEffect(() => {
+    const loadPartenaireDetails = async () => {
+      if (!formData.id_partenaire) {
+        setInterlocuteurs([]);
+        setSelectedEntite(null);
+        setEntitesPartenaire([]); // reset
+        setFormData(prev => ({ ...prev, id_entite: 0 }));
+        return;
+      }
+
+      try {
+        // Charger les détails du partenaire (incluant potentiellement l'entité)
+        const partenaireDetails = await fetchPartnerById(formData.id_partenaire);
+        // setSelectedPartenaire(partenaireDetails); // This line was removed
+
+        // Filtrer les entités du partenaire sélectionné
+        const entitesAssociees = entites.filter(e => e.id_partenaire === partenaireDetails.id_partenaire);
+        setEntitesPartenaire(entitesAssociees);
+        if (entitesAssociees.length === 1) {
+          setSelectedEntite(entitesAssociees[0]);
+          setFormData(prev => ({ ...prev, id_entite: entitesAssociees[0].id_entite }));
+        } else {
+          setSelectedEntite(null);
+          setFormData(prev => ({ ...prev, id_entite: 0 }));
+        }
+
+        // Charger les interlocuteurs du partenaire
+        const interlocuteursData = await fetchInterlocuteursByPartenaire(formData.id_partenaire);
+        setInterlocuteurs(interlocuteursData);
+
+        // Si il n'y a qu'un seul interlocuteur, le pré-remplir automatiquement
+        if (interlocuteursData.length === 1) {
+          const seulInterlocuteur = interlocuteursData[0];
+          setFormData(prev => ({
+            ...prev,
+            nom_interlocuteur: `${seulInterlocuteur.nom_interlocuteur} ${seulInterlocuteur.prenom_interlocuteur}`,
+            contact_interlocuteur: seulInterlocuteur.contact_interlocuteur
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            nom_interlocuteur: "",
+            contact_interlocuteur: ""
+          }));
+        }
+      } catch (error) {
+        setEntitesPartenaire([]);
+        setSelectedEntite(null);
+        setFormData(prev => ({ ...prev, id_entite: 0 }));
+        console.error("Erreur lors du chargement des détails du partenaire:", error);
+        toast.error("Erreur lors du chargement des détails du partenaire");
+      }
+    };
+
+    loadPartenaireDetails();
+    // eslint-disable-next-line
+  }, [formData.id_partenaire, fetchPartnerById, fetchInterlocuteursByPartenaire, entites]);
 
   const mutation = useMutation((data: CreateContratData) => addContrat(data), {
     onSuccess: (data) => {
@@ -87,6 +159,11 @@ const NouveauContrat: React.FC = () => {
       }
       // Invalider le cache pour rafraîchir la liste
       queryClient.invalidateQueries({ queryKey: ["contrats"] });
+      
+      // Redirection automatique vers la liste des contrats après 1.5 secondes
+      setTimeout(() => {
+        navigate("/gestion-administrative/contrats");
+      }, 1500);
     },
     onError: (error: MutationError) => {
       toast.error("Erreur lors de la création du contrat", {
@@ -101,6 +178,21 @@ const NouveauContrat: React.FC = () => {
       ...formData,
       [name]: value,
     });
+  };
+
+  // Fonction pour gérer la sélection d'un interlocuteur
+  const handleInterlocuteurChange = (interlocuteurId: string) => {
+    const selectedInterlocuteur = interlocuteurs.find(
+      (inter) => inter.id_interlocuteur.toString() === interlocuteurId
+    );
+    
+    if (selectedInterlocuteur) {
+      setFormData(prev => ({
+        ...prev,
+        nom_interlocuteur: `${selectedInterlocuteur.nom_interlocuteur} ${selectedInterlocuteur.prenom_interlocuteur}`,
+        contact_interlocuteur: selectedInterlocuteur.contact_interlocuteur
+      }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -156,11 +248,12 @@ const NouveauContrat: React.FC = () => {
       id_partenaire: formData.id_partenaire
         ? Number(formData.id_partenaire)
         : undefined,
+      id_entite: formData.id_entite, // ID de l'entité déjà mis à jour dans le formulaire
       duree_contrat: duree_contrat, // Durée calculée automatiquement
       nom_interlocuteur: formData.nom_interlocuteur,
       contact_interlocuteur: formData.contact_interlocuteur,
       contenu_contrat: formData.contenu_contrat,
-      cout: Number(formData.cout),
+      cout: formData.cout,
       modalite_paiement: formData.modalite_paiement,
     };
 
@@ -235,6 +328,53 @@ const NouveauContrat: React.FC = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {entitesPartenaire.length > 1 && (
+                        <div className="space-y-2">
+                          <Label htmlFor="entite">Entité associée <span className="text-red-500">*</span></Label>
+                          <Select
+                            value={formData.id_entite ? formData.id_entite.toString() : ""}
+                            onValueChange={value => {
+                              const entite = entitesPartenaire.find(e => e.id_entite === parseInt(value));
+                              setSelectedEntite(entite || null);
+                              setFormData(prev => ({ ...prev, id_entite: entite ? entite.id_entite : 0 }));
+                            }}
+                            required
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Sélectionner une entité" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {entitesPartenaire.map(entite => (
+                                <SelectItem key={entite.id_entite} value={entite.id_entite.toString()}>
+                                  {entite.denomination}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {/* Affichage détaillé de l'entité du partenaire */}
+                      {selectedEntite && (
+                        <div className="mt-2 p-3 bg-blue-50 border-2 border-blue-400 rounded-lg text-sm shadow-sm">
+                          <div className="font-semibold text-blue-900 mb-1 flex items-center gap-2">
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M3 21v-2a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v2" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="7" r="4" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            Entité associée
+                          </div>
+                          <div><strong>Dénomination :</strong> {selectedEntite.denomination}</div>
+                          {selectedEntite.abreviation_nom && (
+                            <div><strong>Abréviation :</strong> {selectedEntite.abreviation_nom}</div>
+                          )}
+                          {selectedEntite.contact && (
+                            <div><strong>Contact :</strong> {selectedEntite.contact}</div>
+                          )}
+                          {selectedEntite.localisation && (
+                            <div><strong>Localisation :</strong> {selectedEntite.localisation}</div>
+                          )}
+                          {selectedEntite.adresse_postal && (
+                            <div><strong>Adresse postale :</strong> {selectedEntite.adresse_postal}</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="type_de_contrat">
@@ -265,33 +405,75 @@ const NouveauContrat: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="nom_interlocuteur">
-                        Nom de l'interlocuteur{" "}
-                        <span className="text-red-500">*</span>
+                      <Label htmlFor="interlocuteur">
+                        Interlocuteur <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        id="nom_interlocuteur"
-                        name="nom_interlocuteur"
-                        placeholder="Entrez le nom de l'interlocuteur"
-                        value={formData.nom_interlocuteur}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contact_interlocuteur">
-                        Contact de l'interlocuteur{" "}
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="contact_interlocuteur"
-                        name="contact_interlocuteur"
-                        placeholder="Entrez le contact de l'interlocuteur"
-                        value={formData.contact_interlocuteur}
-                        onChange={handleInputChange}
-                        required
-                        type="tel"
-                      />
+                      {interlocuteurs.length > 0 ? (
+                        interlocuteurs.length === 1 ? (
+                          // Si un seul interlocuteur, afficher en lecture seule
+                          <div className="p-3 bg-gray-50 border rounded-md">
+                            <p className="text-sm text-gray-700">
+                              <strong>Interlocuteur unique :</strong> {formData.nom_interlocuteur}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              <strong>Contact :</strong> {formData.contact_interlocuteur}
+                            </p>
+                          </div>
+                        ) : (
+                          // Si plusieurs interlocuteurs, permettre la sélection
+                          <Select
+                            onValueChange={handleInterlocuteurChange}
+                            required
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Sélectionner un interlocuteur" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {interlocuteurs.map((interlocuteur) => (
+                                <SelectItem
+                                  key={interlocuteur.id_interlocuteur}
+                                  value={interlocuteur.id_interlocuteur.toString()}
+                                >
+                                  {interlocuteur.nom_interlocuteur} {interlocuteur.prenom_interlocuteur} - {interlocuteur.fonction_interlocuteur}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )
+                      ) : (
+                        // Si aucun interlocuteur, permettre la saisie manuelle
+                        <div className="space-y-2">
+                          <Input
+                            id="nom_interlocuteur"
+                            name="nom_interlocuteur"
+                            placeholder="Entrez le nom de l'interlocuteur"
+                            value={formData.nom_interlocuteur}
+                            onChange={handleInputChange}
+                            required
+                          />
+                          <Input
+                            id="contact_interlocuteur"
+                            name="contact_interlocuteur"
+                            placeholder="Entrez le contact de l'interlocuteur"
+                            value={formData.contact_interlocuteur}
+                            onChange={handleInputChange}
+                            required
+                            type="tel"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Affichage des informations de l'interlocuteur sélectionné */}
+                      {formData.nom_interlocuteur && formData.contact_interlocuteur && interlocuteurs.length > 1 && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                          <p className="text-sm text-green-800">
+                            <strong>Interlocuteur sélectionné :</strong> {formData.nom_interlocuteur}
+                          </p>
+                          <p className="text-sm text-green-700">
+                            <strong>Contact :</strong> {formData.contact_interlocuteur}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2 col-span-2">
                       <Label htmlFor="contenu_contrat">

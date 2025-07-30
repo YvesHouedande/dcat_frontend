@@ -8,7 +8,8 @@ import { useApi } from "@/api/api";
 const useDocumentsApi = () => {
   const api = useApi();
   const getAllDocumentss = useCallback(async (): Promise<DemandeDocument[]> => {
-    return await api.get("/administration/documents");
+    const response = await api.get("/administration/documents");
+    return response.data;
   }, [api]);
 
   const getAllNatureDocument = useCallback(async (): Promise<
@@ -39,6 +40,7 @@ const useDocumentsApi = () => {
           },
         }
       );
+
       return response.data;
     },
     [api]
@@ -91,6 +93,7 @@ const useDocumentsApi = () => {
       const response = await api.get(
         `/administration/documents/nature/${natureId}`
       );
+
       return response.data;
     },
     [api]

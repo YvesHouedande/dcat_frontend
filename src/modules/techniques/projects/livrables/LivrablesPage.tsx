@@ -166,8 +166,10 @@ const LivrablesPage: React.FC = () => {
 
     livrables.forEach(livrable => {
       // KPI par statut d'approbation
-      if (livrable.approbation in livrablesByApprobation) {
+      if (livrable.approbation && livrable.approbation in livrablesByApprobation) {
         livrablesByApprobation[livrable.approbation]++;
+      } else if (livrable.approbation) {
+        livrablesByApprobation[livrable.approbation] = 1;
       }
       // Livrables en retard (basé sur la date et le statut d'approbation)
       if (livrable.date && livrable.approbation !== "approuvé" && livrable.approbation !== "rejeté") {

@@ -111,6 +111,9 @@ const FinanceComptaGrid: React.FC = () => {
     setDossiers(dossiersByType?.pages.flatMap((page) => page.data) || []);
   }, [activeTab, refetchDossiersByType, dossiersByType]); // L'effet se déclenchera uniquement lorsque l'onglet change
 
+
+//fdfdgdfgdf
+  
   // Fonction pour extraire le type de fichier à partir de l'extension
 
   // Filtrage des documents basé sur la recherche

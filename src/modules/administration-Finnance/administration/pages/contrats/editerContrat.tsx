@@ -31,6 +31,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import DocumentSheet from "./DocumentSheet";
 import { Textarea } from "@/components/ui/textarea";
+import { Entite, Interlocuteur } from "../../types/interfaces";
+import { useEntiteApi } from '../../../services/entiteService';
 
 // Type pour le formulaire d'édition (sans duree_contrat car calculé automatiquement)
 type ContratFormData = Omit<Contrat, "id_contrat" | "duree_contrat">;
@@ -42,8 +44,11 @@ const EditerContrat: React.FC = () => {
   const [partenaires, setPartenaires] = useState<
     Array<{ id: number; nom: string }>
   >([]);
+  const [entites, setEntites] = useState<Entite[]>([]);
+  const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
   const { fetchContratById, updateContrat } = useContratsApi();
-  const { fetchPartners } = usePartenaireApi();
+  const partenaireApi = usePartenaireApi();
+  const { fetchEntites } = useEntiteApi();
   const [formData, setFormData] = useState<ContratFormData>({
     nom_contrat: "",
     type_de_contrat: "standard",
@@ -52,12 +57,14 @@ const EditerContrat: React.FC = () => {
     reference: "",
     statut: "actif",
     id_partenaire: undefined,
+    id_entite: 0,
     nom_interlocuteur: "",
     contact_interlocuteur: "",
     contenu_contrat: "",
-    cout: 0,
+    cout: "0",
     modalite_paiement: "",
   });
+  const [entitesPartenaire, setEntitesPartenaire] = useState<Entite[]>([]);
 
   // Récupérer le contrat à éditer
   const {
@@ -81,20 +88,25 @@ const EditerContrat: React.FC = () => {
         reference: contrat.reference,
         statut: contrat.statut,
         id_partenaire: contrat.id_partenaire,
+        id_entite: contrat.id_entite || 0,
         nom_interlocuteur: contrat.nom_interlocuteur,
         contact_interlocuteur: contrat.contact_interlocuteur,
         contenu_contrat: contrat.contenu_contrat,
-        cout: Number(contrat.cout),
+        cout: contrat.cout,
         modalite_paiement: contrat.modalite_paiement,
       });
     }
   }, [contrat]);
 
-  // Récupérer les partenaires
+  // Récupérer les partenaires et entités
   useEffect(() => {
     const loadData = async () => {
       try {
-        const partenairesData = await fetchPartners(1, 100);
+        const [partenairesData, entitesData] = await Promise.all([
+          partenaireApi.fetchPartners(1, 100),
+          fetchEntites()
+        ]);
+        
         setPartenaires(
           partenairesData.data.map(
             (partenaire: {
@@ -106,12 +118,57 @@ const EditerContrat: React.FC = () => {
             })
           )
         );
+        
+        setEntites(entitesData);
       } catch (error) {
-        console.error("Erreur lors du chargement des partenaires:", error);
+        console.error("Erreur lors du chargement des données:", error);
       }
     };
     loadData();
-  }, [fetchPartners]);
+  }, [partenaireApi, fetchEntites]);
+
+  // Charger les détails du partenaire et de l'entité quand le partenaire change
+  useEffect(() => {
+    const loadPartenaireDetails = async () => {
+      if (!formData.id_partenaire) {
+        setInterlocuteurs([]);
+        setEntitesPartenaire([]); // reset
+        setFormData(prev => ({ ...prev, id_entite: 0 }));
+        return;
+      }
+      try {
+        const partenaireDetailsData = await partenaireApi.fetchPartnerById(formData.id_partenaire);
+        // Filtrer les entités du partenaire sélectionné
+        const entitesAssociees = entites.filter(e => e.id_partenaire === partenaireDetailsData.id_partenaire);
+        setEntitesPartenaire(entitesAssociees);
+        if (entitesAssociees.length === 1) {
+          setFormData(prev => ({ ...prev, id_entite: entitesAssociees[0].id_entite }));
+        } else {
+          // Si on édite, garder l'entité déjà sélectionnée si elle existe
+          const entiteExistante = entitesAssociees.find(e => e.id_entite === formData.id_entite);
+          setFormData(prev => ({ ...prev, id_entite: entiteExistante ? entiteExistante.id_entite : 0 }));
+        }
+        // Charger les interlocuteurs du partenaire
+        const interlocuteursData = await partenaireApi.fetchInterlocuteursByPartenaire(formData.id_partenaire);
+        setInterlocuteurs(interlocuteursData);
+        if (interlocuteursData.length === 1) {
+          const seulInterlocuteur = interlocuteursData[0];
+          setFormData(prev => ({
+            ...prev,
+            nom_interlocuteur: `${seulInterlocuteur.nom_interlocuteur} ${seulInterlocuteur.prenom_interlocuteur}`,
+            contact_interlocuteur: seulInterlocuteur.contact_interlocuteur
+          }));
+        } else {
+          setFormData(prev => ({ ...prev, nom_interlocuteur: "", contact_interlocuteur: "" }));
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des détails du partenaire:", error);
+        setEntitesPartenaire([]);
+        setFormData(prev => ({ ...prev, id_entite: 0 }));
+      }
+    };
+    loadPartenaireDetails();
+  }, [formData.id_partenaire, entites, partenaireApi]);
 
   // Fonction utilitaire pour calculer la durée du contrat
   const calculerDureeContrat = (
@@ -154,7 +211,7 @@ const EditerContrat: React.FC = () => {
         toast.success("Contrat modifié avec succès !");
         queryClient.invalidateQueries({ queryKey: ["contrats"] });
         queryClient.invalidateQueries({ queryKey: ["contrat", id] });
-        navigate("/administration/contrats");
+        navigate("/gestion-administrative/contrats");
       },
       onError: (error: MutationError) => {
         toast.error("Erreur lors de la modification du contrat", {
@@ -170,6 +227,17 @@ const EditerContrat: React.FC = () => {
       ...formData,
       [name]: value,
     });
+  };
+
+  const handleInterlocuteurChange = (interlocuteurId: string) => {
+    const interlocuteur = interlocuteurs.find(i => i.id_interlocuteur.toString() === interlocuteurId);
+    if (interlocuteur) {
+      setFormData(prev => ({
+        ...prev,
+        nom_interlocuteur: interlocuteur.nom_interlocuteur,
+        contact_interlocuteur: interlocuteur.contact_interlocuteur
+      }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -202,6 +270,12 @@ const EditerContrat: React.FC = () => {
       id_partenaire: formData.id_partenaire
         ? Number(formData.id_partenaire)
         : undefined,
+      id_entite: formData.id_entite,
+      nom_interlocuteur: formData.nom_interlocuteur,
+      contact_interlocuteur: formData.contact_interlocuteur,
+      contenu_contrat: formData.contenu_contrat,
+      cout: formData.cout,
+      modalite_paiement: formData.modalite_paiement,
       duree_contrat: duree_contrat, // Durée calculée automatiquement
     };
 
@@ -305,6 +379,39 @@ const EditerContrat: React.FC = () => {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Affichage de l'entité associée */}
+                    {entitesPartenaire.length > 1 && (
+                      <div className="mt-2 p-3 bg-blue-50 border-2 border-blue-400 rounded-lg text-sm shadow-sm">
+                        <div className="font-semibold text-blue-900 mb-1 flex items-center gap-2">
+                          <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M3 21v-2a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v2" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="7" r="4" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          Entité associée
+                        </div>
+                        <div>
+                          <Label htmlFor="entite">Entité associée <span className="text-red-500">*</span></Label>
+                          <Select
+                            value={formData.id_entite ? formData.id_entite.toString() : ""}
+                            onValueChange={value => {
+                              const entite = entitesPartenaire.find(e => e.id_entite === parseInt(value));
+                              setFormData(prev => ({ ...prev, id_entite: entite ? entite.id_entite : 0 }));
+                            }}
+                            required
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Sélectionner une entité" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {entitesPartenaire.map(entite => (
+                                <SelectItem key={entite.id_entite} value={entite.id_entite.toString()}>
+                                  {entite.denomination}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label htmlFor="type_de_contrat">
                         Type de contrat <span className="text-red-500">*</span>
@@ -337,14 +444,35 @@ const EditerContrat: React.FC = () => {
                         Nom de l'interlocuteur{" "}
                         <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        id="nom_interlocuteur"
-                        name="nom_interlocuteur"
-                        placeholder="Entrez le nom de l'interlocuteur"
-                        value={formData.nom_interlocuteur}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      {interlocuteurs.length > 1 ? (
+                        <Select
+                          onValueChange={handleInterlocuteurChange}
+                          value={formData.nom_interlocuteur ? interlocuteurs.find(i => i.nom_interlocuteur === formData.nom_interlocuteur)?.id_interlocuteur.toString() || "" : ""}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Sélectionner un interlocuteur" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {interlocuteurs.map((interlocuteur) => (
+                              <SelectItem
+                                key={interlocuteur.id_interlocuteur}
+                                value={interlocuteur.id_interlocuteur.toString()}
+                              >
+                                {interlocuteur.nom_interlocuteur} {interlocuteur.prenom_interlocuteur} - {interlocuteur.contact_interlocuteur}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id="nom_interlocuteur"
+                          name="nom_interlocuteur"
+                          placeholder="Entrez le nom de l'interlocuteur"
+                          value={formData.nom_interlocuteur}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="contact_interlocuteur">
@@ -359,6 +487,7 @@ const EditerContrat: React.FC = () => {
                         onChange={handleInputChange}
                         required
                         type="tel"
+                        readOnly={interlocuteurs.length > 1}
                       />
                     </div>
                     <div className="space-y-2 col-span-2">

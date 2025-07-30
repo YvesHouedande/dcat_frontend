@@ -47,12 +47,12 @@ export const InterventionEditPage: React.FC = () => {
           setIntervention(response.data);
         } else {
           toast.error("Intervention non trouvée");
-          navigate("/technique/interventions");
+          navigate("/gestion-des-interventions/interventions");
         }
       } catch (error) {
         console.error("Erreur lors du chargement de l'intervention:", error);
         toast.error("Erreur lors du chargement de l'intervention");
-        navigate("/technique/interventions");
+        navigate("/gestion-des-interventions/interventions");
       } finally {
         setIsLoading(false);
       }
@@ -86,7 +86,7 @@ export const InterventionEditPage: React.FC = () => {
 
       await updateIntervention(parseInt(id), interventionData as Intervention);
       toast.success("L'intervention a été mise à jour avec succès");
-      navigate(`/technique/interventions/${id}`);
+      navigate(`/gestion-des-interventions/interventions/${id}`);
     } catch (error) {
       console.error("Erreur lors de la mise à jour de l'intervention:", error);
       toast.error(
@@ -122,28 +122,28 @@ export const InterventionEditPage: React.FC = () => {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => navigate("/technique/interventions")}
+              onClick={() => navigate("/gestion-des-interventions/interventions")}
             >
               <Home className="mr-2 h-4 w-4" />
               Tableau de bord
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate("/technique/interventions/liste")}
+              onClick={() => navigate("/gestion-des-interventions/interventions/liste")}
             >
               <FileText className="mr-2 h-4 w-4" />
               Voir toutes les interventions
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate("/technique/interventions/rapports")}
+              onClick={() => navigate("/gestion-des-interventions/interventions/rapports")}
             >
               <BarChart3 className="mr-2 h-4 w-4" />
               Rapports
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate(`/technique/interventions/${id}`)}
+              onClick={() => navigate(`/gestion-des-interventions/interventions/${id}`)}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Retour aux détails

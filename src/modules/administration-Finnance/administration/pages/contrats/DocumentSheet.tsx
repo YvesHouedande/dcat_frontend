@@ -66,8 +66,13 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
     lien_document: "",
     etat_document: "actif",
     id_nature_document: 1,
+<<<<<<< HEAD
     id_dossier: undefined,
     id_contrat: Number(contratId),
+=======
+    id_dossier: 0, // Valeur par défaut
+    id_employes: 0, // Valeur par défaut
+>>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -212,8 +217,13 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
         lien_document: "",
         etat_document: "actif",
         id_nature_document: 1,
+<<<<<<< HEAD
         id_dossier: undefined,
         id_contrat: contratId,
+=======
+        id_dossier: 0,
+        id_employes: 0,
+>>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
       });
       setSelectedFile(null);
       setErrors({});
@@ -254,8 +264,13 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
       lien_document: "",
       etat_document: "actif",
       id_nature_document: 1,
+<<<<<<< HEAD
       id_dossier: undefined,
       id_contrat: Number(contratId),
+=======
+      id_dossier: 0,
+      id_employes: 0,
+>>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
     });
     setSelectedFile(null);
     setErrors({});

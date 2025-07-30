@@ -207,21 +207,21 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => navigate("/technique/interventions")}
+            onClick={() => navigate("/gestion-des-interventions/interventions")}
           >
             <Home className="mr-2 h-4 w-4" />
             Tableau de bord
           </Button>
           <Button
             variant="outline"
-            onClick={() => navigate("/technique/interventions/liste")}
+            onClick={() => navigate("/gestion-des-interventions/interventions/liste")}
           >
             <FileText className="mr-2 h-4 w-4" />
             Voir toutes les interventions
           </Button>
           <Button
             variant="outline"
-            onClick={() => navigate("/technique/interventions/rapports")}
+            onClick={() => navigate("/gestion-des-interventions/interventions/rapports")}
           >
             <BarChart3 className="mr-2 h-4 w-4" />
             Rapports
@@ -279,7 +279,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
                   {contrat ? (
                     <span
                       className="text-indigo-600 underline cursor-pointer"
-                      onClick={() => navigate(`/administration/contrats/${contrat.id_contrat}/details`)}
+                      onClick={() => navigate(`/resources-humaines/contrats/${contrat.id_contrat}/details`)}
                     >
                       {contrat.nom_contrat}
                     </span>

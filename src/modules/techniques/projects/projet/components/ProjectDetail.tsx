@@ -172,7 +172,7 @@ const ProjectTaskDetailWrapper: FC<ProjectTaskDetailWrapperProps> = ({
     <div>
       <Button
         variant="outline"
-        onClick={() => navigate(`/technique/projets/${id}/taches`)}
+        onClick={() => navigate(`/gestion-des-projets/projets/${id}/taches`)}
         className="mb-4"
       >
         ← Retour à la liste des tâches
@@ -191,8 +191,10 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
 }) => {
   const { livrableId, id } = useParams<{ livrableId: string; id: string }>();
   const navigate = useNavigate();
+  const { getPartenaires } = usePartenairesApi();
   const [livrable, setLivrable] = useState<Livrable | null>(null);
   const [projet, setProjet] = useState<Projet | null>(null);
+  const [allPartenaires, setAllPartenaires] = useState<Partenaire[]>([]);
   const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,11 +216,12 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         }
 
         // Récupérer toutes les données nécessaires en parallèle
-        const [livrableData, projetData, natureDocumentsData] =
+        const [livrableData, projetData, natureDocumentsData, fetchedAllPartenaires] =
           await Promise.all([
             getLivrableById(livrableIdNum),
             getProjetById(projetId),
             getAllNatureDocuments(),
+            getPartenaires({ limit: 100, page: 1 }),
           ]);
 
         if (!livrableData) {
@@ -250,6 +253,7 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
           naturesToSet = natureDocumentsData;
         }
         setNatureDocuments(naturesToSet);
+        setAllPartenaires(fetchedAllPartenaires);
       } catch (err) {
         console.error("Erreur lors du chargement des données:", err);
         setError("Erreur lors du chargement des données");
@@ -259,7 +263,7 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
     };
 
     loadData();
-  }, [livrableId, id]);
+  }, [livrableId, id, getPartenaires]);
 
   if (loading) {
     return <div className="text-center py-8">Chargement du livrable...</div>;
@@ -271,7 +275,7 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/technique/projets/${id}/livrables`)}
+          onClick={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
           className="mt-4"
         >
           ← Retour à la liste des livrables
@@ -284,7 +288,7 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
     <div>
       <Button
         variant="outline"
-        onClick={() => navigate(`/technique/projets/${id}/livrables`)}
+        onClick={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
         className="mb-4"
       >
         ← Retour à la liste des livrables
@@ -299,15 +303,19 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
               payload as UpdateLivrablePayload
             );
             toast.success("Livrable modifié avec succès !");
-            navigate(`/technique/projets/${id}/livrables`);
+            navigate(`/gestion-des-projets/projets/${id}/livrables`);
           } catch (err) {
             console.error("Erreur lors de la mise à jour du livrable:", err);
             toast.error("Erreur lors de la mise à jour du livrable");
             throw err;
           }
         }}
-        onCancel={() => navigate(`/technique/projets/${id}/livrables`)}
+        onCancel={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
         projetsDisponibles={[projet]}
+        partenairesDisponibles={allPartenaires.map((p: Partenaire) => ({
+          id_partenaire: p.id_partenaire,
+          nom_partenaire: p.nom_partenaire
+        }))}
         natureDocumentsDisponibles={natureDocuments}
         onSaveDocument={async (livrableId, documentFile, textPayload) => {
           try {
@@ -393,7 +401,7 @@ const ProjectLivrableDetailsWrapper: FC = () => {
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/technique/projets/${id}/livrables`)}
+          onClick={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
           className="mt-4"
         >
           ← Retour à la liste des livrables
@@ -406,7 +414,7 @@ const ProjectLivrableDetailsWrapper: FC = () => {
     <div>
       <Button
         variant="outline"
-        onClick={() => navigate(`/technique/projets/${id}/livrables`)}
+        onClick={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
         className="mb-4"
       >
         ← Retour à la liste des livrables
@@ -503,7 +511,7 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/technique/projets/${id}/taches`)}
+          onClick={() => navigate(`/gestion-des-projets/projets/${id}/taches`)}
           className="mt-4"
         >
           ← Retour à la liste des tâches
@@ -516,7 +524,7 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({
     <div>
       <Button
         variant="outline"
-        onClick={() => navigate(`/technique/projets/${id}/taches`)}
+        onClick={() => navigate(`/gestion-des-projets/projets/${id}/taches`)}
         className="mb-4"
       >
         ← Retour à la liste des tâches
@@ -546,14 +554,14 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({
               ),
             ]);
             toast.success("Tâche modifiée avec succès !");
-            navigate(`/technique/projets/${id}/taches`);
+            navigate(`/gestion-des-projets/projets/${id}/taches`);
           } catch (err) {
             console.error("Erreur lors de la mise à jour de la tâche:", err);
             toast.error("Erreur lors de la mise à jour de la tâche");
             throw err;
           }
         }}
-        onCancel={() => navigate(`/technique/projets/${id}/taches`)}
+        onCancel={() => navigate(`/gestion-des-projets/projets/${id}/taches`)}
         employesDisponibles={employes}
         operationsDisponibles={operations}
       />
@@ -693,7 +701,7 @@ const ProjetDetailsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, getPartenaires]);
 
   // Chargement des tâches et employés pour l'onglet Tâches
   useEffect(() => {
@@ -1846,7 +1854,7 @@ const ProjetDetailsPage: React.FC = () => {
                       projet={projet}
                       onEdit={(tacheId: number) =>
                         navigate(
-                          `/technique/projets/${id}/tache/${tacheId}/editer`
+                          `/gestion-des-projets/projets/${id}/tache/${tacheId}/editer`
                         )
                       }
                     />
@@ -2147,6 +2155,10 @@ const ProjetDetailsPage: React.FC = () => {
                       onSave={handleSaveLivrable}
                       onCancel={() => navigate(-1)}
                       projetsDisponibles={[projet]}
+                      partenairesDisponibles={allPartenaires.map((p: Partenaire) => ({
+                        id_partenaire: p.id_partenaire,
+                        nom_partenaire: p.nom_partenaire
+                      }))}
                       onSaveDocument={handleSaveDocument}
                       natureDocumentsDisponibles={natureDocuments}
                       embedded={true}

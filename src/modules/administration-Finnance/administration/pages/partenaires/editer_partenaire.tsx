@@ -1,7 +1,7 @@
 // src/components/EditPartnerForm.tsx
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,31 +14,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Save, Building, X } from "lucide-react";
-import { Entite, Interlocuteur, Partenaires } from "../../types/interfaces";
-import {
-  usePartenaireApi
-} from '@/modules/administration-Finnance/services/partenaireService';
-import axios from "axios";
+import { Save, Building, X, Plus } from "lucide-react";
+import { Interlocuteur, Partenaires } from "../../types/interfaces";
+import { usePartenaireApi } from '@/modules/administration-Finnance/services/partenaireService';
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const EditPartnerForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { fetchPartnerById, updatePartner, fetchEntites, addEntite, deleteEntite, fetchInterlocuteursByPartenaire, updateInterlocuteur, deleteInterlocuteur, addInterlocuteur } = usePartenaireApi();
-  // Charger les données du partenaire
-  const { data: partnerData, isLoading: loadingPartner, error: partnerError } = useQuery({
-    queryKey: ['partenaire', id],
-    queryFn: () => fetchPartnerById(id!),
-    enabled: !!id,
-  });
+  
+  const { 
+    fetchPartnerById, 
+    updatePartner, 
+    fetchInterlocuteursByPartenaire,
+    addInterlocuteur,
+    updateInterlocuteur,
+    deleteInterlocuteur
+  } = usePartenaireApi();
 
-  // Charger les entités
-  const { data: entites, isLoading: loadingEntites } = useQuery({
-    queryKey: ['entites'],
-    queryFn: fetchEntites,
+  // Charger le partenaire
+  const { data: partnerData, isLoading: loadingPartner, error: partnerError } = useQuery({
+    queryKey: ['partner', id],
+    queryFn: () => fetchPartnerById(parseInt(id!)),
+    enabled: !!id,
   });
 
   // Charger les interlocuteurs
@@ -56,7 +55,6 @@ const EditPartnerForm: React.FC = () => {
     specialite: "",
     localisation: "",
     type_partenaire: "",
-    id_entite: 0,
     statut: "Actif",
   });
 
@@ -71,21 +69,16 @@ const EditPartnerForm: React.FC = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [interlocuteurErrors, setInterlocuteurErrors] = useState<Record<number, Record<string, string>>>({});
-  const [newEntiteNom, setNewEntiteNom] = useState("");
-  const [showAddEntite, setShowAddEntite] = useState(false);
-  const [deleteMode, setDeleteMode] = useState(false);
-  const [localEntites, setLocalEntites] = useState<Entite[]>([]);
+  const [editingInterlocuteur, setEditingInterlocuteur] = useState<number | null>(null);
 
   // Mettre à jour le formData et interlocuteurs quand les données sont chargées
   useEffect(() => {
     if (partnerData) setFormData(partnerData);
   }, [partnerData]);
+  
   useEffect(() => {
     if (initialInterlocuteurs) setInterlocuteurs(initialInterlocuteurs);
   }, [initialInterlocuteurs]);
-  useEffect(() => {
-    if (entites) setLocalEntites(entites);
-  }, [entites]);
 
   const types_partenaire = [
     "Fournisseur",
@@ -125,69 +118,42 @@ const EditPartnerForm: React.FC = () => {
     }
   };
 
-  const handleAddEntite = async () => {
-    if (!newEntiteNom.trim()) return;
-
-    try {
-      const newEntite = await addEntite({ denomination: newEntiteNom });
-      setLocalEntites([...localEntites, newEntite]);
-      setFormData(prev => ({ ...prev, id_entite: newEntite.id_entite }));
-      setNewEntiteNom("");
-      setShowAddEntite(false);
-    } catch (error) {
-      console.error("Failed to add entite", error);
-      toast.error("Erreur lors de l'ajout de l'entité");
-    }
-  };
-
-  const handleDeleteEntite = async (id: number) => {
-    if (formData.id_entite === id) {
-      toast.error("Impossible de supprimer cette entité car elle est actuellement sélectionnée");
-      return;
-    }
-
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement cette entité ?`)) {
-      try {
-        await deleteEntite(id);
-        setLocalEntites(localEntites.filter(entite => entite.id_entite !== id));
-        setDeleteMode(false);
-      } catch (error) {
-        console.error("Échec de la suppression:", error);
-        toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression de l'entité");
-      }
-    }
-  };
-
   const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewInterlocuteur(prev => ({ ...prev, [name]: value }));
   };
 
   const addInterlocuteurHandler = async () => {
-    const newErrors: Record<string, string> = {};
+    // Validation des champs requis
+    const requiredFields = {
+      nom_interlocuteur: "Nom",
+      prenom_interlocuteur: "Prénom",
+      contact_interlocuteur: "Contact",
+      email_interlocuteur: "Email",
+      fonction_interlocuteur: "Fonction"
+    };
 
-    if (!newInterlocuteur.nom_interlocuteur.trim()) {
-      newErrors.nom_interlocuteur = "Le nom est obligatoire";
-    }
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => !newInterlocuteur[key as keyof typeof newInterlocuteur])
+      .map(([, label]) => label);
 
-    if (!newInterlocuteur.prenom_interlocuteur.trim()) {
-      newErrors.prenom_interlocuteur = "Le prénom est obligatoire";
-    }
-
-    if (!newInterlocuteur.email_interlocuteur.trim()) {
-      newErrors.email_interlocuteur = "L'email est obligatoire";
-    } else if (!/^\S+@\S+\.\S+$/.test(newInterlocuteur.email_interlocuteur)) {
-      newErrors.email_interlocuteur = "Format d'email invalide";
-    }
-
-    if (!newInterlocuteur.contact_interlocuteur.trim()) {
-      newErrors.contact_interlocuteur = "Le contact est obligatoire";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
+    if (missingFields.length > 0) {
       setInterlocuteurErrors(prev => ({
         ...prev,
-        [-1]: newErrors // Utiliser -1 pour le nouvel interlocuteur
+        [-1]: {
+          general: `Les champs suivants sont obligatoires : ${missingFields.join(", ")}`
+        }
+      }));
+      return;
+    }
+
+    // Validation de l'email
+    if (!/^\S+@\S+\.\S+$/.test(newInterlocuteur.email_interlocuteur)) {
+      setInterlocuteurErrors(prev => ({
+        ...prev,
+        [-1]: {
+          email_interlocuteur: "Format d'email invalide"
+        }
       }));
       return;
     }
@@ -197,7 +163,8 @@ const EditPartnerForm: React.FC = () => {
         ...newInterlocuteur,
         id_partenaire: parseInt(id!)
       });
-      setInterlocuteurs([...interlocuteurs, createdInterlocuteur]);
+
+      setInterlocuteurs(prev => [...prev, createdInterlocuteur]);
       setNewInterlocuteur({
         nom_interlocuteur: "",
         prenom_interlocuteur: "",
@@ -205,88 +172,93 @@ const EditPartnerForm: React.FC = () => {
         contact_interlocuteur: "",
         email_interlocuteur: "",
       });
-      // Nettoyer les erreurs
       setInterlocuteurErrors(prev => {
-        const newState = { ...prev };
-        delete newState[-1];
-        return newState;
+        const newErrors = { ...prev };
+        delete newErrors[-1];
+        return newErrors;
       });
+      toast.success("Interlocuteur ajouté avec succès !");
     } catch (error) {
-      console.error("Erreur lors de l'ajout de l'interlocuteur", error);
+      console.error("Erreur lors de l'ajout de l'interlocuteur:", error);
       toast.error("Erreur lors de l'ajout de l'interlocuteur");
     }
   };
 
   const updateInterlocuteurData = async (index: number) => {
     const interlocuteur = interlocuteurs[index];
+    if (!interlocuteur) return;
+
+    // Validation des champs requis
+    const requiredFields = {
+      nom_interlocuteur: "Nom",
+      prenom_interlocuteur: "Prénom",
+      contact_interlocuteur: "Contact",
+      email_interlocuteur: "Email",
+      fonction_interlocuteur: "Fonction"
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => !interlocuteur[key as keyof typeof interlocuteur])
+      .map(([, label]) => label);
+
+    if (missingFields.length > 0) {
+      setInterlocuteurErrors(prev => ({
+        ...prev,
+        [index]: {
+          general: `Les champs suivants sont obligatoires : ${missingFields.join(", ")}`
+        }
+      }));
+      return;
+    }
+
+    // Validation de l'email
+    if (!/^\S+@\S+\.\S+$/.test(interlocuteur.email_interlocuteur)) {
+      setInterlocuteurErrors(prev => ({
+        ...prev,
+        [index]: {
+          email_interlocuteur: "Format d'email invalide"
+        }
+      }));
+      return;
+    }
+
     try {
-      // Validation des champs requis
-      const requiredFields = {
-        nom_interlocuteur: "Nom",
-        prenom_interlocuteur: "Prénom",
-        contact_interlocuteur: "Contact",
-        email_interlocuteur: "Email",
-        fonction_interlocuteur: "Fonction"
-      };
-
-      const missingFields = Object.entries(requiredFields)
-        .filter(([key]) => !interlocuteur[key as keyof typeof interlocuteur])
-        .map(([, label]) => label);
-
-      if (missingFields.length > 0) {
-        toast.error(`Les champs suivants sont obligatoires : ${missingFields.join(", ")}`);
-        return;
-      }
-
-      // Validation du format email
-      if (!/^\S+@\S+\.\S+$/.test(interlocuteur.email_interlocuteur)) {
-        toast.error("Le format de l'email est invalide");
-        return;
-      }
-
-      // Préparation des données pour l'API
-      const interlocuteurData = {
-        nom_interlocuteur: interlocuteur.nom_interlocuteur.trim(),
-        prenom_interlocuteur: interlocuteur.prenom_interlocuteur.trim(),
-        contact_interlocuteur: interlocuteur.contact_interlocuteur.trim(),
-        email_interlocuteur: interlocuteur.email_interlocuteur.trim(),
-        fonction_interlocuteur: interlocuteur.fonction_interlocuteur.trim(),
-        id_partenaire: parseInt(id!)
-      };
-
-      console.log('Tentative de mise à jour de l\'interlocuteur:', interlocuteurData);
-      
-      const updated = await updateInterlocuteur(
+      const updatedInterlocuteur = await updateInterlocuteur(
         interlocuteur.id_interlocuteur,
-        interlocuteurData
+        {
+          nom_interlocuteur: interlocuteur.nom_interlocuteur,
+          prenom_interlocuteur: interlocuteur.prenom_interlocuteur,
+          fonction_interlocuteur: interlocuteur.fonction_interlocuteur,
+          contact_interlocuteur: interlocuteur.contact_interlocuteur,
+          email_interlocuteur: interlocuteur.email_interlocuteur,
+          id_partenaire: interlocuteur.id_partenaire
+        }
       );
 
-      // Mise à jour de l'état local uniquement si la requête API réussit
-      const updatedList = [...interlocuteurs];
-      updatedList[index] = updated;
-      setInterlocuteurs(updatedList);
-      toast.success("Interlocuteur mis à jour avec succès");
+      setInterlocuteurs(prev => prev.map((item, i) => i === index ? updatedInterlocuteur : item));
+      setEditingInterlocuteur(null);
+      setInterlocuteurErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[index];
+        return newErrors;
+      });
+      toast.success("Interlocuteur mis à jour avec succès !");
     } catch (error) {
-      console.error("Erreur lors de la mise à jour de l'interlocuteur", error);
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.message || error.message || 'Une erreur est survenue';
-        toast.error(`Erreur lors de la mise à jour de l'interlocuteur: ${errorMessage}`);
-      } else {
-        toast.error("Erreur lors de la mise à jour de l'interlocuteur");
-      }
+      console.error("Erreur lors de la mise à jour de l'interlocuteur:", error);
+      toast.error("Erreur lors de la mise à jour de l'interlocuteur");
     }
   };
 
   const removeInterlocuteur = async (id: number, index: number) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet interlocuteur ?")) {
-      return;
-    }
-    try {
-      await deleteInterlocuteur(id);
-      setInterlocuteurs(interlocuteurs.filter((_, i) => i !== index));
-    } catch (error) {
-      console.error("Erreur lors de la suppression de l'interlocuteur", error);
-      toast.error("Erreur lors de la suppression de l'interlocuteur");
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet interlocuteur ?")) {
+      try {
+        await deleteInterlocuteur(id);
+        setInterlocuteurs(prev => prev.filter((_, i) => i !== index));
+        toast.success("Interlocuteur supprimé avec succès !");
+      } catch (error) {
+        console.error("Erreur lors de la suppression de l'interlocuteur:", error);
+        toast.error("Erreur lors de la suppression de l'interlocuteur");
+      }
     }
   };
 
@@ -319,10 +291,6 @@ const EditPartnerForm: React.FC = () => {
       newErrors.type_partenaire = "Le type de partenaire est obligatoire";
     }
 
-    if (!formData.id_entite) {
-      newErrors.id_entite = "L'entité est obligatoire";
-    }
-
     if (!formData.statut) {
       newErrors.statut = "Le statut est obligatoire";
     }
@@ -337,7 +305,7 @@ const EditPartnerForm: React.FC = () => {
     onSuccess: () => {
       toast.success("Partenaire mis à jour avec succès !");
       queryClient.invalidateQueries(['partenaires']);
-      navigate("/administration/partenaires");
+      navigate("/gestion-administrative/partenaires");
     },
     onError: (error: unknown) => {
       if (error instanceof Error) {
@@ -364,11 +332,10 @@ const EditPartnerForm: React.FC = () => {
       localisation: formData.localisation,
       type_partenaire: formData.type_partenaire,
       statut: formData.statut,
-      id_entite: typeof formData.id_entite === 'string' ? parseInt(formData.id_entite) : formData.id_entite
     });
   };
 
-  if (loadingPartner || loadingEntites || loadingInterlocuteurs) {
+  if (loadingPartner || loadingInterlocuteurs) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Chargement en cours...</div>
@@ -430,53 +397,81 @@ const EditPartnerForm: React.FC = () => {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="telephone_partenaire">Téléphone</Label>
-                <Input
-                  id="telephone_partenaire"
-                  name="telephone_partenaire"
-                  value={formData.telephone_partenaire}
-                  onChange={handleChange}
-                  className={errors.telephone_partenaire ? "border-red-500" : ""}
-                />
-                {errors.telephone_partenaire && (
-                  <p className="text-red-500 text-sm">{errors.telephone_partenaire}</p>
-                )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="telephone_partenaire">Téléphone</Label>
+                  <Input
+                    id="telephone_partenaire"
+                    name="telephone_partenaire"
+                    value={formData.telephone_partenaire}
+                    onChange={handleChange}
+                    className={errors.telephone_partenaire ? "border-red-500" : ""}
+                  />
+                  {errors.telephone_partenaire && (
+                    <p className="text-red-500 text-sm">{errors.telephone_partenaire}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email_partenaire">Email</Label>
+                  <Input
+                    id="email_partenaire"
+                    name="email_partenaire"
+                    type="email"
+                    value={formData.email_partenaire}
+                    onChange={handleChange}
+                    className={errors.email_partenaire ? "border-red-500" : ""}
+                  />
+                  {errors.email_partenaire && (
+                    <p className="text-red-500 text-sm">{errors.email_partenaire}</p>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email_partenaire">Email</Label>
-                <Input
-                  id="email_partenaire"
-                  name="email_partenaire"
-                  type="email"
-                  value={formData.email_partenaire}
-                  onChange={handleChange}
-                  className={errors.email_partenaire ? "border-red-500" : ""}
-                />
-                {errors.email_partenaire && (
-                  <p className="text-red-500 text-sm">{errors.email_partenaire}</p>
-                )}
-              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="specialite">Spécialité</Label>
+                  <Select
+                    value={formData.specialite}
+                    onValueChange={(value) => handleSelectChange("specialite", value)}
+                  >
+                    <SelectTrigger className={errors.specialite ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Sélectionner une spécialité" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {specialites.map((specialite) => (
+                        <SelectItem key={specialite} value={specialite}>
+                          {specialite}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.specialite && (
+                    <p className="text-red-500 text-sm">{errors.specialite}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="specialite">Spécialité</Label>
-                <Select
-                  value={formData.specialite}
-                  onValueChange={value => handleSelectChange("specialite", value)}
-                >
-                  <SelectTrigger className={errors.specialite ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Sélectionner une spécialité" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {specialites.map(specialite => (
-                      <SelectItem key={specialite} value={specialite}>{specialite}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.specialite && (
-                  <p className="text-red-500 text-sm">{errors.specialite}</p>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="type_partenaire">Type de partenaire</Label>
+                  <Select
+                    value={formData.type_partenaire}
+                    onValueChange={(value) => handleSelectChange("type_partenaire", value)}
+                  >
+                    <SelectTrigger className={errors.type_partenaire ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Sélectionner un type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {types_partenaire.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.type_partenaire && (
+                    <p className="text-red-500 text-sm">{errors.type_partenaire}</p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -494,37 +489,19 @@ const EditPartnerForm: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="type_partenaire">Type de partenaire</Label>
-                <Select
-                  value={formData.type_partenaire}
-                  onValueChange={value => handleSelectChange("type_partenaire", value)}
-                >
-                  <SelectTrigger className={errors.type_partenaire ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Sélectionner un type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {types_partenaire.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.type_partenaire && (
-                  <p className="text-red-500 text-sm">{errors.type_partenaire}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="statut">Statut</Label>
                 <Select
                   value={formData.statut}
-                  onValueChange={value => handleSelectChange("statut", value)}
+                  onValueChange={(value) => handleSelectChange("statut", value)}
                 >
                   <SelectTrigger className={errors.statut ? "border-red-500" : ""}>
                     <SelectValue placeholder="Sélectionner un statut" />
                   </SelectTrigger>
                   <SelectContent>
-                    {statuts.map(statut => (
-                      <SelectItem key={statut} value={statut}>{statut}</SelectItem>
+                    {statuts.map((statut) => (
+                      <SelectItem key={statut} value={statut}>
+                        {statut}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -532,184 +509,178 @@ const EditPartnerForm: React.FC = () => {
                   <p className="text-red-500 text-sm">{errors.statut}</p>
                 )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="entite">Entité</Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={formData.id_entite?.toString()}
-                    onValueChange={value => {
-                      if (value === "__add__") {
-                        setShowAddEntite(true);
-                        setDeleteMode(false);
-                      } else if (value === "__delete__") {
-                        setDeleteMode(!deleteMode);
-                        setShowAddEntite(false);
-                      } else if (deleteMode) {
-                        handleDeleteEntite(parseInt(value));
-                      } else {
-                        handleSelectChange("id_entite", parseInt(value));
-                      }
-                    }}
-                  >
-                    <SelectTrigger className={errors.id_entite ? "border-red-500" : ""}>
-                      <SelectValue placeholder={deleteMode ? "Sélectionner une entité à supprimer" : "Sélectionner une entité"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {localEntites?.map(entite => (
-                        <SelectItem
-                          key={entite.id_entite}
-                          value={entite.id_entite.toString()}
-                          className={deleteMode ? "text-red-500 hover:bg-red-50" : ""}
-                        >
-                          {entite.denomination}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="__add__" className="text-blue-600 font-medium">
-                        + Ajouter une entité
-                      </SelectItem>
-                      {localEntites?.length > 0 && (
-                        <SelectItem
-                          value="__delete__"
-                          className={deleteMode ? "bg-gray-100 font-medium" : "text-red-600 font-medium"}
-                        >
-                          {deleteMode ? "✕ Annuler la suppression" : "− Supprimer une entité"}
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {showAddEntite && (
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      placeholder="Nom de la nouvelle entité"
-                      value={newEntiteNom}
-                      onChange={e => setNewEntiteNom(e.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleAddEntite}
-                      disabled={!newEntiteNom.trim()}
-                    >
-                      Ajouter
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => setShowAddEntite(false)}>
-                      Annuler
-                    </Button>
-                  </div>
-                )}
-
-                {errors.id_entite && (
-                  <p className="text-red-500 text-sm">{errors.id_entite}</p>
-                )}
-              </div>
             </CardContent>
           </Card>
 
+          {/* Section Interlocuteurs */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-lg">
-                Interlocuteurs
-              </CardTitle>
+              <CardTitle className="text-lg">Interlocuteurs</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {interlocuteurs.map((interlocuteur, index) => (
-                <div key={interlocuteur.id_interlocuteur} className="border rounded-lg p-4 relative">
-                  <button
-                    type="button"
-                    className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                    onClick={() => removeInterlocuteur(interlocuteur.id_interlocuteur, index)}
-                  >
-                    <X size={16} />
-                  </button>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <Label>Prénom</Label>
-                      <Input
-                        value={interlocuteur.prenom_interlocuteur}
-                        onChange={(e) => {
-                          const updated = [...interlocuteurs];
-                          updated[index].prenom_interlocuteur = e.target.value;
-                          setInterlocuteurs(updated);
-                        }}
-                      />
+              {/* Liste des interlocuteurs existants */}
+              {interlocuteurs.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-gray-700">
+                    Interlocuteurs existants ({interlocuteurs.length})
+                  </h4>
+                  {interlocuteurs.map((interlocuteur, index) => (
+                    <div
+                      key={interlocuteur.id_interlocuteur}
+                      className="border border-gray-200 rounded-lg p-4"
+                    >
+                      {editingInterlocuteur === index ? (
+                        // Mode édition
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label htmlFor={`nom_${index}`}>Nom</Label>
+                              <Input
+                                id={`nom_${index}`}
+                                value={interlocuteur.nom_interlocuteur}
+                                onChange={(e) => {
+                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  updatedInterlocuteurs[index] = {
+                                    ...updatedInterlocuteurs[index],
+                                    nom_interlocuteur: e.target.value
+                                  };
+                                  setInterlocuteurs(updatedInterlocuteurs);
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`prenom_${index}`}>Prénom</Label>
+                              <Input
+                                id={`prenom_${index}`}
+                                value={interlocuteur.prenom_interlocuteur}
+                                onChange={(e) => {
+                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  updatedInterlocuteurs[index] = {
+                                    ...updatedInterlocuteurs[index],
+                                    prenom_interlocuteur: e.target.value
+                                  };
+                                  setInterlocuteurs(updatedInterlocuteurs);
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`fonction_${index}`}>Fonction</Label>
+                              <Input
+                                id={`fonction_${index}`}
+                                value={interlocuteur.fonction_interlocuteur}
+                                onChange={(e) => {
+                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  updatedInterlocuteurs[index] = {
+                                    ...updatedInterlocuteurs[index],
+                                    fonction_interlocuteur: e.target.value
+                                  };
+                                  setInterlocuteurs(updatedInterlocuteurs);
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`contact_${index}`}>Contact</Label>
+                              <Input
+                                id={`contact_${index}`}
+                                value={interlocuteur.contact_interlocuteur}
+                                onChange={(e) => {
+                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  updatedInterlocuteurs[index] = {
+                                    ...updatedInterlocuteurs[index],
+                                    contact_interlocuteur: e.target.value
+                                  };
+                                  setInterlocuteurs(updatedInterlocuteurs);
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                              <Label htmlFor={`email_${index}`}>Email</Label>
+                              <Input
+                                id={`email_${index}`}
+                                type="email"
+                                value={interlocuteur.email_interlocuteur}
+                                onChange={(e) => {
+                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  updatedInterlocuteurs[index] = {
+                                    ...updatedInterlocuteurs[index],
+                                    email_interlocuteur: e.target.value
+                                  };
+                                  setInterlocuteurs(updatedInterlocuteurs);
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              onClick={() => updateInterlocuteurData(index)}
+                              size="sm"
+                            >
+                              Sauvegarder
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setEditingInterlocuteur(null)}
+                              size="sm"
+                            >
+                              Annuler
+                            </Button>
+                          </div>
+                          {interlocuteurErrors[index]?.general && (
+                            <p className="text-red-500 text-sm">
+                              {interlocuteurErrors[index].general}
+                            </p>
+                          )}
+                          {interlocuteurErrors[index]?.email_interlocuteur && (
+                            <p className="text-red-500 text-sm">
+                              {interlocuteurErrors[index].email_interlocuteur}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        // Mode affichage
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium">
+                              {interlocuteur.nom_interlocuteur} {interlocuteur.prenom_interlocuteur}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {interlocuteur.fonction_interlocuteur} • {interlocuteur.contact_interlocuteur}
+                            </p>
+                            <p className="text-sm text-gray-500">{interlocuteur.email_interlocuteur}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingInterlocuteur(index)}
+                            >
+                              Modifier
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeInterlocuteur(interlocuteur.id_interlocuteur, index)}
+                            >
+                              <X size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <Label>Nom</Label>
-                      <Input
-                        value={interlocuteur.nom_interlocuteur}
-                        onChange={(e) => {
-                          const updated = [...interlocuteurs];
-                          updated[index].nom_interlocuteur = e.target.value;
-                          setInterlocuteurs(updated);
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <Label>Fonction</Label>
-                      <Input
-                        value={interlocuteur.fonction_interlocuteur}
-                        onChange={(e) => {
-                          const updated = [...interlocuteurs];
-                          updated[index].fonction_interlocuteur = e.target.value;
-                          setInterlocuteurs(updated);
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <Label>Contact</Label>
-                      <Input
-                        value={interlocuteur.contact_interlocuteur}
-                        onChange={(e) => {
-                          const updated = [...interlocuteurs];
-                          updated[index].contact_interlocuteur = e.target.value;
-                          setInterlocuteurs(updated);
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={interlocuteur.email_interlocuteur}
-                      onChange={(e) => {
-                        const updated = [...interlocuteurs];
-                        updated[index].email_interlocuteur = e.target.value;
-                        setInterlocuteurs(updated);
-                      }}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="mt-2"
-                    onClick={() => updateInterlocuteurData(index)}
-                  >
-                    Enregistrer modifications
-                  </Button>
+                  ))}
                 </div>
-              ))}
+              )}
 
-              <div className="space-y-4 border-t pt-4">
-                <h3 className="font-medium">Ajouter un interlocuteur</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="prenom_interlocuteur">Prénom</Label>
-                    <Input
-                      id="prenom_interlocuteur"
-                      name="prenom_interlocuteur"
-                      value={newInterlocuteur.prenom_interlocuteur}
-                      onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[-1]?.prenom_interlocuteur ? "border-red-500" : ""}
-                    />
-                    {interlocuteurErrors[-1]?.prenom_interlocuteur && (
-                      <p className="text-red-500 text-sm">{interlocuteurErrors[-1].prenom_interlocuteur}</p>
-                    )}
-                  </div>
+              {/* Formulaire pour ajouter un interlocuteur */}
+              <div className="border-t pt-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-4">
+                  Ajouter un interlocuteur
+                </h4>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="nom_interlocuteur">Nom</Label>
                     <Input
@@ -717,37 +688,29 @@ const EditPartnerForm: React.FC = () => {
                       name="nom_interlocuteur"
                       value={newInterlocuteur.nom_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[-1]?.nom_interlocuteur ? "border-red-500" : ""}
                     />
-                    {interlocuteurErrors[-1]?.nom_interlocuteur && (
-                      <p className="text-red-500 text-sm">{interlocuteurErrors[-1].nom_interlocuteur}</p>
-                    )}
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fonction_interlocuteur">Fonction</Label>
-                  <Input
-                    id="fonction_interlocuteur"
-                    name="fonction_interlocuteur"
-                    value={newInterlocuteur.fonction_interlocuteur}
-                    onChange={handleInterlocuteurChange}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+
                   <div className="space-y-2">
-                    <Label htmlFor="email_interlocuteur">Email</Label>
+                    <Label htmlFor="prenom_interlocuteur">Prénom</Label>
                     <Input
-                      id="email_interlocuteur"
-                      name="email_interlocuteur"
-                      type="email"
-                      value={newInterlocuteur.email_interlocuteur}
+                      id="prenom_interlocuteur"
+                      name="prenom_interlocuteur"
+                      value={newInterlocuteur.prenom_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[-1]?.email_interlocuteur ? "border-red-500" : ""}
                     />
-                    {interlocuteurErrors[-1]?.email_interlocuteur && (
-                      <p className="text-red-500 text-sm">{interlocuteurErrors[-1].email_interlocuteur}</p>
-                    )}
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="fonction_interlocuteur">Fonction</Label>
+                    <Input
+                      id="fonction_interlocuteur"
+                      name="fonction_interlocuteur"
+                      value={newInterlocuteur.fonction_interlocuteur}
+                      onChange={handleInterlocuteurChange}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="contact_interlocuteur">Contact</Label>
                     <Input
@@ -755,32 +718,56 @@ const EditPartnerForm: React.FC = () => {
                       name="contact_interlocuteur"
                       value={newInterlocuteur.contact_interlocuteur}
                       onChange={handleInterlocuteurChange}
-                      className={interlocuteurErrors[-1]?.contact_interlocuteur ? "border-red-500" : ""}
                     />
-                    {interlocuteurErrors[-1]?.contact_interlocuteur && (
-                      <p className="text-red-500 text-sm">{interlocuteurErrors[-1].contact_interlocuteur}</p>
-                    )}
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="email_interlocuteur">Email</Label>
+                    <Input
+                      id="email_interlocuteur"
+                      name="email_interlocuteur"
+                      type="email"
+                      value={newInterlocuteur.email_interlocuteur}
+                      onChange={handleInterlocuteurChange}
+                    />
                   </div>
                 </div>
+
                 <Button
                   type="button"
-                  variant="outline"
                   onClick={addInterlocuteurHandler}
-                  className="mt-2"
+                  className="mt-4"
+                  variant="outline"
                 >
+                  <Plus className="mr-2 h-4 w-4" />
                   Ajouter l'interlocuteur
                 </Button>
+
+                {interlocuteurErrors[-1]?.general && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {interlocuteurErrors[-1].general}
+                  </p>
+                )}
+                {interlocuteurErrors[-1]?.email_interlocuteur && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {interlocuteurErrors[-1].email_interlocuteur}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+          <div className="flex justify-end space-x-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/gestion-administrative/partenaires")}
+            >
               Annuler
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              <Save size={16} className="mr-2" />
-              Enregistrer les modifications
+            <Button type="submit">
+              <Save className="mr-2 h-4 w-4" />
+              Sauvegarder les modifications
             </Button>
           </div>
         </form>

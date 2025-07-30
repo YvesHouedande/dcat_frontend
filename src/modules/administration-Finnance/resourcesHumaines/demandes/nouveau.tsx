@@ -252,12 +252,20 @@ const NouvelleDemandePage: React.FC = () => {
     if (isFormComplete()) {
       setShowCancelDialog(true);
     } else {
+<<<<<<< HEAD
       navigate(-1);
+=======
+      navigate("/resources-humaines/demandes");
+>>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
     }
   };
 
   const confirmCancel = () => {
+<<<<<<< HEAD
     navigate(-1);
+=======
+    navigate("/resources-humaines/demandes");
+>>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
   };
 
   const isLoading = loadingEmployes || createDemande.isLoading;
@@ -594,7 +602,7 @@ const NouvelleDemandePage: React.FC = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction
-              onClick={() => navigate("/administration/demandes")}
+              onClick={() => navigate("/resources-humaines/demandes")}
             >
               Retour à la liste
             </AlertDialogAction>

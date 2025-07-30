@@ -177,7 +177,7 @@ const ModernUserProfile: React.FC = () => {
           <div>ID dans l'URL: {id || "Non défini"}</div>
           <div>Chemin complet: {window.location.pathname}</div>
           <button
-            onClick={() => navigate("/administration/employers")}
+            onClick={() => navigate("/resources-humaines/employers")}
             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Retour à la liste
@@ -381,7 +381,7 @@ const ModernUserProfile: React.FC = () => {
                           className="text-gray-600 text-xs"
                           onClick={() =>
                             navigate(
-                              `/administration/documents/${doc.id_documents}/editer`
+                              `/resources-humaines/employers/documents/${doc.id_documents}/editer`
                             )
                           }
                         >

@@ -15,7 +15,7 @@ import {
   Building,
   Users,
   Loader2,
-  ArrowDown,
+  ArrowDown
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  useQuery,
   useMutation,
   useInfiniteQuery,
   useQueryClient,
@@ -66,7 +65,7 @@ const ModernPartenaireGrid: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const { fetchPartners, fetchEntites, deletePartner } = usePartenaireApi();
+  const { fetchPartners, deletePartner } = usePartenaireApi();
   // Charger les partenaires avec React Query
   const {
     data,
@@ -89,11 +88,17 @@ const ModernPartenaireGrid: React.FC = () => {
     },
   });
 
+<<<<<<< HEAD
   // Charger les entités avec React Query
   const { data: entites, isLoading: entitesLoading } = useQuery({
     queryKey: ["entites"],
     queryFn: fetchEntites,
   });
+=======
+  const partenaires = data?.pages.flatMap((page) => page.data);
+
+
+>>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
 
   // Mutation pour supprimer un partenaire
   const { mutate: deletePartenaire, isLoading: deleting } = useMutation({
@@ -108,12 +113,7 @@ const ModernPartenaireGrid: React.FC = () => {
     },
   });
 
-  // Fonction pour obtenir le nom de l'entité à partir de son ID
-  const getEntiteName = (idEntite: number | string): string => {
-    if (!entites) return `Entité ${idEntite}`;
-    const entite = entites.find((e) => e.id_entite === Number(idEntite));
-    return entite ? entite.denomination : `Entité ${idEntite}`;
-  };
+
 
   const partenaires = data?.pages.flatMap((page) => page.data);
   const filteredPartenaires =
@@ -132,9 +132,7 @@ const ModernPartenaireGrid: React.FC = () => {
             partenaire.type_partenaire
               .toLowerCase()
               .includes(searchQuery.toLowerCase()) ||
-            getEntiteName(partenaire.id_entite)
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase()) ||
+
             (partenaire.interlocuteurs &&
               partenaire.interlocuteurs.some((interlocuteur) =>
                 `${interlocuteur.prenom_interlocuteur} ${interlocuteur.nom_interlocuteur}`
@@ -272,7 +270,7 @@ const ModernPartenaireGrid: React.FC = () => {
       );
     }
 
-    if ((loading && !partenaires) || entitesLoading) {
+    if (loading && !partenaires) {
       return renderSkeletons();
     }
 
@@ -403,10 +401,7 @@ const ModernPartenaireGrid: React.FC = () => {
                   <MapPin size={14} className="mr-2 text-gray-500" />
                   <p>{partenaire.localisation}</p>
                 </div>
-                <div className="flex items-center text-sm">
-                  <Building size={14} className="mr-2 text-gray-500" />
-                  <p>{getEntiteName(partenaire.id_entite)}</p>
-                </div>
+
                 <div className="flex items-center text-sm group relative">
                   <Users size={14} className="mr-2 text-gray-500" />
                   <div className="group relative inline-block">
@@ -534,6 +529,16 @@ const ModernPartenaireGrid: React.FC = () => {
             <Button variant="outline" className="text-gray-700 border-gray-300">
               <Filter size={16} className="mr-2" />
               Filtres
+            </Button>
+            <Button
+              onClick={() =>
+                navigate("/gestion-administrative/entites")
+              }
+              variant="outline"
+              className="text-gray-700 border-gray-300"
+            >
+              <Building size={16} className="mr-2" />
+              Gérer les entités
             </Button>
             <Button
               onClick={() =>
