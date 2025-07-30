@@ -158,4 +158,6 @@ const ReferenceField = ({
   return renderReferenceField();
 };
 
+// export const ReferenceField = forwardRef<HTMLInputElement, ReferenceFieldProps>(({ typeSortie, form, clients, projets, interventions, commandes }, ref) => {
+
 export default ReferenceField;
