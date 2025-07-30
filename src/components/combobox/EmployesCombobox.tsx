@@ -48,7 +48,7 @@ export function EmployesCombobox({ value, onChange }: EmployesComboboxProps) {
 
   const api = useApi();
   const { data: employes, isLoading } = useQuery({
-    queryKey: ["employes"],
+    queryKey: ["employesCombobox"],
     queryFn: getEmployes,
     staleTime: 2 * 60 * 1000,
   });

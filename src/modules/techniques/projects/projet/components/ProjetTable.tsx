@@ -1,6 +1,6 @@
 // src/components/ProjetTable.tsx
 
-import { Projet, Partenaire, Famille } from "../../types/types"; 
+import { Projet, Partenaire, Famille } from "../../types/types";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -19,9 +19,9 @@ type ProjetTableProps = {
   onView: (id: number) => void;
   onEdit: (id: number) => void;
   partenaires: Partenaire[];
-  familles: Famille[]; 
+  familles: Famille[];
   // NOUVEAU: Ajout de la map des associations projet-partenaires
-  projectPartnersMap: Map<number, number[]>; 
+  projectPartnersMap: Map<number, number[]>;
 };
 
 export const ProjetTable = ({
@@ -33,16 +33,20 @@ export const ProjetTable = ({
   familles,
   projectPartnersMap, // <-- Réception de la map d'associations
 }: ProjetTableProps) => {
-  const partnerNameMap = new Map(partenaires.map(p => [p.id_partenaire, p.nom_partenaire]));
-  const familleNameMap = new Map(familles.map(f => [f.id_famille, f.libelle_famille]));
+  const partnerNameMap = new Map(
+    partenaires.map((p) => [p.id_partenaire, p.nom_partenaire])
+  );
+  const familleNameMap = new Map(
+    familles.map((f) => [f.id_famille, f.libelle_famille])
+  );
 
   // Fonction pour formater un montant en Franc CFA
   const formatCFA = (amount: number | string | undefined): string => {
     // S'assurer que le montant est un nombre. S'il est undefined ou null, traiter comme 0.
-    const numericAmount = Number(amount) || 0; 
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'XOF', // Code ISO 4217 pour le Franc CFA Ouest-Africain
+    const numericAmount = Number(amount) || 0;
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "XOF", // Code ISO 4217 pour le Franc CFA Ouest-Africain
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(numericAmount);
@@ -57,13 +61,13 @@ export const ProjetTable = ({
       return "N/A";
     }
     return ids
-      .map(id => partnerNameMap.get(id) || `Partenaire Inconnu (${id})`)
+      .map((id) => partnerNameMap.get(id) || `Partenaire Inconnu (${id})`)
       .join(", ");
   };
 
   const getFamilleName = (id_famille: number | undefined): string => {
     if (id_famille === undefined || id_famille === null) {
-        return "Non spécifié";
+      return "Non spécifié";
     }
     return familleNameMap.get(id_famille) || `Famille Inconnue (${id_famille})`;
   };
@@ -134,40 +138,89 @@ export const ProjetTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead onClick={() => handleSort("nom_projet")}
-              className="cursor-pointer select-none">
+            <TableHead
+              onClick={() => handleSort("nom_projet")}
+              className="cursor-pointer select-none"
+            >
               Nom du Projet
-              {sortBy === "nom_projet" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+              {sortBy === "nom_projet" &&
+                (sortOrder === "asc" ? (
+                  <ArrowUp className="inline h-3 w-3 ml-1" />
+                ) : (
+                  <ArrowDown className="inline h-3 w-3 ml-1" />
+                ))}
             </TableHead>
-            <TableHead onClick={() => handleSort("type_projet")}
-              className="cursor-pointer select-none">
+            <TableHead
+              onClick={() => handleSort("type_projet")}
+              className="cursor-pointer select-none"
+            >
               Type
-              {sortBy === "type_projet" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+              {sortBy === "type_projet" &&
+                (sortOrder === "asc" ? (
+                  <ArrowUp className="inline h-3 w-3 ml-1" />
+                ) : (
+                  <ArrowDown className="inline h-3 w-3 ml-1" />
+                ))}
             </TableHead>
-            <TableHead onClick={() => handleSort("devis_estimatif")}
-              className="cursor-pointer select-none">
+            <TableHead
+              onClick={() => handleSort("devis_estimatif")}
+              className="cursor-pointer select-none"
+            >
               Budget Estimatif
-              {sortBy === "devis_estimatif" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+              {sortBy === "devis_estimatif" &&
+                (sortOrder === "asc" ? (
+                  <ArrowUp className="inline h-3 w-3 ml-1" />
+                ) : (
+                  <ArrowDown className="inline h-3 w-3 ml-1" />
+                ))}
             </TableHead>
-            <TableHead onClick={() => handleSort("etat")}
-              className="cursor-pointer select-none">
+            <TableHead
+              onClick={() => handleSort("etat")}
+              className="cursor-pointer select-none"
+            >
               État
-              {sortBy === "etat" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+              {sortBy === "etat" &&
+                (sortOrder === "asc" ? (
+                  <ArrowUp className="inline h-3 w-3 ml-1" />
+                ) : (
+                  <ArrowDown className="inline h-3 w-3 ml-1" />
+                ))}
             </TableHead>
-            <TableHead onClick={() => handleSort("lieu")}
-              className="cursor-pointer select-none">
+            <TableHead
+              onClick={() => handleSort("lieu")}
+              className="cursor-pointer select-none"
+            >
               Lieu
-              {sortBy === "lieu" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+              {sortBy === "lieu" &&
+                (sortOrder === "asc" ? (
+                  <ArrowUp className="inline h-3 w-3 ml-1" />
+                ) : (
+                  <ArrowDown className="inline h-3 w-3 ml-1" />
+                ))}
             </TableHead>
-            <TableHead onClick={() => handleSort("responsable")}
-              className="cursor-pointer select-none">
+            <TableHead
+              onClick={() => handleSort("responsable")}
+              className="cursor-pointer select-none"
+            >
               Responsable
-              {sortBy === "responsable" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+              {sortBy === "responsable" &&
+                (sortOrder === "asc" ? (
+                  <ArrowUp className="inline h-3 w-3 ml-1" />
+                ) : (
+                  <ArrowDown className="inline h-3 w-3 ml-1" />
+                ))}
             </TableHead>
-            <TableHead onClick={() => handleSort("id_famille")}
-              className="cursor-pointer select-none">
+            <TableHead
+              onClick={() => handleSort("id_famille")}
+              className="cursor-pointer select-none"
+            >
               Catégorie
-              {sortBy === "id_famille" && (sortOrder === "asc" ? <ArrowUp className="inline h-3 w-3 ml-1" /> : <ArrowDown className="inline h-3 w-3 ml-1" />)}
+              {sortBy === "id_famille" &&
+                (sortOrder === "asc" ? (
+                  <ArrowUp className="inline h-3 w-3 ml-1" />
+                ) : (
+                  <ArrowDown className="inline h-3 w-3 ml-1" />
+                ))}
             </TableHead>
             <TableHead>Partenaires</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -183,30 +236,43 @@ export const ProjetTable = ({
           ) : (
             sortedProjets.map((projet) => (
               <TableRow key={projet.id_projet}>
-                <TableCell className="font-medium">{projet.nom_projet}</TableCell>
+                <TableCell className="font-medium">
+                  {projet.nom_projet}
+                </TableCell>
                 <TableCell>{projet.type_projet}</TableCell>
-                <TableCell>{formatCFA(projet.devis_estimatif)}</TableCell> 
+                <TableCell>{formatCFA(projet.devis_estimatif)}</TableCell>
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold
-                      ${projet.etat === "planifié" && "bg-blue-100 text-blue-800"}
-                      ${projet.etat === "en_cours" && "bg-yellow-100 text-yellow-800"}
-                      ${projet.etat === "terminé" && "bg-green-100 text-green-800"}
-                      ${projet.etat === "annulé" && "bg-red-100 text-neutral-700"}
-                      ${projet.etat === "bloqué" && "bg-neutral-100 text-neutral-700"}
+                      ${
+                        projet.etat === "planifié" &&
+                        "bg-blue-100 text-blue-800"
+                      }
+                      ${
+                        projet.etat === "en_cours" &&
+                        "bg-yellow-100 text-yellow-800"
+                      }
+                      ${
+                        projet.etat === "terminé" &&
+                        "bg-green-100 text-green-800"
+                      }
+                      ${
+                        projet.etat === "annulé" &&
+                        "bg-red-100 text-neutral-700"
+                      }
+                      ${
+                        projet.etat === "bloqué" &&
+                        "bg-neutral-100 text-neutral-700"
+                      }
                     `}
                   >
-                    {projet.etat?.replace(/_/g, " ") || 'Inconnu'} 
+                    {projet.etat?.replace(/_/g, " ") || "Inconnu"}
                   </span>
                 </TableCell>
-                <TableCell>{projet.lieu || 'N/A'}</TableCell> 
-                <TableCell>
-                  {projet.responsable || 'N/A'}
-                </TableCell>
+                <TableCell>{projet.lieu || "N/A"}</TableCell>
+                <TableCell>{projet.responsable || "N/A"}</TableCell>
                 <TableCell>{getFamilleName(projet.id_famille)}</TableCell>
-                <TableCell>
-                  {getPartnerNames(projet.id_projet)} 
-                </TableCell>
+                <TableCell>{getPartnerNames(projet.id_projet)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-2">
                     <Button
@@ -241,7 +307,9 @@ export const ProjetTable = ({
         </TableBody>
       </Table>
       {projets.length === 0 && (
-        <div className="p-4 text-center text-gray-500">Aucun projet à afficher.</div>
+        <div className="p-4 text-center text-gray-500">
+          Aucun projet à afficher.
+        </div>
       )}
     </div>
   );

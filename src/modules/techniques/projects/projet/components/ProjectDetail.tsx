@@ -23,12 +23,7 @@ import {
   Operation,
 } from "../../types/types"; // Import Document, Livrable, ApiResponse
 import {
-  getProjetById,
-  getProjetAssociatedPartenaires,
-  getDocumentsByProjetId, // Import for fetching project documents
-  deleteDocumentFromProjet, // Import for deleting project documents
-  getLivrablesWithDocumentsByProjetId, // NEW: Import for fetching livrables with documents
-  addDocumentToProjet, // Import for adding documents to project
+  useProjetService, // Import for adding documents to project
 } from "../api/projets"; // Ensure paths are correct
 import { getFamilles } from "../api/famille"; // Ensure paths are correct
 import { usePartenairesApi } from "../api/partenaires"; // Ensure paths are correct
@@ -101,14 +96,7 @@ import { LivrableTable } from "../../livrables/components/LivrableTable";
 // Import des composants pour les livrables
 import { LivrableForm } from "../../livrables/components/LivrableForm";
 import LivrableDetailsPage from "../../livrables/components/livrableDetails";
-import {
-  getLivrableById,
-  createLivrable,
-  updateLivrable,
-  deleteLivrable,
-  addDocumentToLivrable,
-  getAllNatureDocuments,
-} from "../../livrables/api/livrables";
+import { useLivrableService } from "../../livrables/api/livrables";
 import {
   CreateLivrablePayload,
   UpdateLivrablePayload,
@@ -198,7 +186,13 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
   const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const { getProjetById } = useProjetService();
+  const {
+    getLivrableById,
+    getAllNatureDocuments,
+    updateLivrable,
+    addDocumentToLivrable,
+  } = useLivrableService();
   useEffect(() => {
     const loadData = async () => {
       if (!livrableId || !id) return;
@@ -216,13 +210,17 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         }
 
         // Récupérer toutes les données nécessaires en parallèle
-        const [livrableData, projetData, natureDocumentsData, fetchedAllPartenaires] =
-          await Promise.all([
-            getLivrableById(livrableIdNum),
-            getProjetById(projetId),
-            getAllNatureDocuments(),
-            getPartenaires({ limit: 100, page: 1 }),
-          ]);
+        const [
+          livrableData,
+          projetData,
+          natureDocumentsData,
+          fetchedAllPartenaires,
+        ] = await Promise.all([
+          getLivrableById(livrableIdNum),
+          getProjetById(projetId),
+          getAllNatureDocuments(),
+          getPartenaires({ limit: 100, page: 1 }),
+        ]);
 
         if (!livrableData) {
           setError("Livrable introuvable");
@@ -263,7 +261,16 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
     };
 
     loadData();
-  }, [livrableId, id, getPartenaires]);
+  }, [
+    livrableId,
+    id,
+    getPartenaires,
+    getProjetById,
+    getLivrableById,
+    getAllNatureDocuments,
+    updateLivrable,
+    addDocumentToLivrable,
+  ]);
 
   if (loading) {
     return <div className="text-center py-8">Chargement du livrable...</div>;
@@ -275,7 +282,9 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
+          onClick={() =>
+            navigate(`/gestion-des-projets/projets/${id}/livrables`)
+          }
           className="mt-4"
         >
           ← Retour à la liste des livrables
@@ -310,11 +319,13 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
             throw err;
           }
         }}
-        onCancel={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
+        onCancel={() =>
+          navigate(`/gestion-des-projets/projets/${id}/livrables`)
+        }
         projetsDisponibles={[projet]}
         partenairesDisponibles={allPartenaires.map((p: Partenaire) => ({
           id_partenaire: p.id_partenaire,
-          nom_partenaire: p.nom_partenaire
+          nom_partenaire: p.nom_partenaire,
         }))}
         natureDocumentsDisponibles={natureDocuments}
         onSaveDocument={async (livrableId, documentFile, textPayload) => {
@@ -341,6 +352,8 @@ const ProjectLivrableDetailsWrapper: FC = () => {
   const [projet, setProjet] = useState<Projet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getProjetById } = useProjetService();
+  const { getLivrableById } = useLivrableService();
 
   useEffect(() => {
     const loadData = async () => {
@@ -389,7 +402,7 @@ const ProjectLivrableDetailsWrapper: FC = () => {
     };
 
     loadData();
-  }, [livrableId, id]);
+  }, [livrableId, id, getProjetById, getLivrableById]);
 
   if (loading) {
     return <div className="text-center py-8">Chargement du livrable...</div>;
@@ -401,7 +414,9 @@ const ProjectLivrableDetailsWrapper: FC = () => {
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
+          onClick={() =>
+            navigate(`/gestion-des-projets/projets/${id}/livrables`)
+          }
           className="mt-4"
         >
           ← Retour à la liste des livrables
@@ -440,6 +455,10 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getEmployes } = useEmployesApi();
+  const { getProjetById } = useProjetService();
+  // getProjetAssociatedPartenaires,
+  // getDocumentsByProjetId,
+  // addDocumentToProjet,
 
   useEffect(() => {
     const loadData = async () => {
@@ -499,7 +518,7 @@ const ProjectTacheEditWrapper: FC<ProjectTacheEditWrapperProps> = ({
     };
 
     loadData();
-  }, [tacheId, id, getEmployes]);
+  }, [tacheId, id, getEmployes, getProjetById]);
 
   if (loading) {
     return <div className="text-center py-8">Chargement de la tâche...</div>;
@@ -603,6 +622,21 @@ const ProjetDetailsPage: React.FC = () => {
   });
 
   const [showOperationSheet, setShowOperationSheet] = useState(false);
+  const {
+    getProjetById,
+    getDocumentsByProjetId,
+    getLivrablesWithDocumentsByProjetId,
+    addDocumentToProjet,
+    deleteDocumentFromProjet,
+    getProjetAssociatedPartenaires,
+  } = useProjetService();
+  const {
+    getAllNatureDocuments,
+    addDocumentToLivrable,
+    createLivrable,
+    deleteLivrable,
+    updateLivrable,
+  } = useLivrableService();
 
   const loadProjetData = useCallback(async () => {
     setLoading(true);
@@ -701,7 +735,14 @@ const ProjetDetailsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, getPartenaires]);
+  }, [
+    id,
+    getPartenaires,
+    getProjetById,
+    getDocumentsByProjetId,
+    getLivrablesWithDocumentsByProjetId,
+    getProjetAssociatedPartenaires,
+  ]);
 
   // Chargement des tâches et employés pour l'onglet Tâches
   useEffect(() => {
@@ -760,7 +801,7 @@ const ProjetDetailsPage: React.FC = () => {
       }
     };
     loadNatureDocuments();
-  }, []);
+  }, [getAllNatureDocuments]);
 
   useEffect(() => {
     loadProjetData();
@@ -1182,9 +1223,7 @@ const ProjetDetailsPage: React.FC = () => {
     });
   };
   const handleViewOperation = (operationId: number) => {
-    navigate(
-      `/gestion-des-projets/projets/${id}/operations/${operationId}`
-    );
+    navigate(`/gestion-des-projets/projets/${id}/operations/${operationId}`);
   };
   const handleDeleteOperation = async (operationId: number) => {
     if (!window.confirm("Supprimer cette opération ?")) return;
@@ -1348,30 +1387,22 @@ const ProjetDetailsPage: React.FC = () => {
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="operations">
-                <NavLink
-                  to={`/gestion-des-projets/projets/${id}/operations`}
-                >
+                <NavLink to={`/gestion-des-projets/projets/${id}/operations`}>
                   Opérations
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="taches">
-                <NavLink
-                  to={`/gestion-des-projets/projets/${id}/taches`}
-                >
+                <NavLink to={`/gestion-des-projets/projets/${id}/taches`}>
                   Tâches
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="documents">
-                <NavLink
-                  to={`/gestion-des-projets/projets/${id}/documents`}
-                >
+                <NavLink to={`/gestion-des-projets/projets/${id}/documents`}>
                   Documents
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="livrables">
-                <NavLink
-                  to={`/gestion-des-projets/projets/${id}/livrables`}
-                >
+                <NavLink to={`/gestion-des-projets/projets/${id}/livrables`}>
                   Livrables
                 </NavLink>
               </TabsTrigger>
@@ -2155,10 +2186,12 @@ const ProjetDetailsPage: React.FC = () => {
                       onSave={handleSaveLivrable}
                       onCancel={() => navigate(-1)}
                       projetsDisponibles={[projet]}
-                      partenairesDisponibles={allPartenaires.map((p: Partenaire) => ({
-                        id_partenaire: p.id_partenaire,
-                        nom_partenaire: p.nom_partenaire
-                      }))}
+                      partenairesDisponibles={allPartenaires.map(
+                        (p: Partenaire) => ({
+                          id_partenaire: p.id_partenaire,
+                          nom_partenaire: p.nom_partenaire,
+                        })
+                      )}
                       onSaveDocument={handleSaveDocument}
                       natureDocumentsDisponibles={natureDocuments}
                       embedded={true}

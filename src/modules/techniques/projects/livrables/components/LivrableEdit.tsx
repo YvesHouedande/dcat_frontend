@@ -5,8 +5,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { LivrableForm } from '../components/LivrableForm'; // Chemin correct vers votre LivrableForm
 import { Livrable, Projet, CreateLivrablePayload, UpdateLivrablePayload, CreateDocumentTextPayload, ApiResponse, Nature } from '../../types/types'; // Import Nature type
-import { getLivrableById, updateLivrable, addDocumentToLivrable, getAllNatureDocuments } from '../api/livrables'; // Import getAllNatureDocuments
-import { fetchAllProjets } from '../../projet/api/projets'; // Assumant que c'est le chemin correct pour l'API des projets
+import { useLivrableService } from '../api/livrables'; // Import getAllNatureDocuments
+import { useProjetService } from '../../projet/api/projets'; // Assumant que c'est le chemin correct pour l'API des projets
 import { usePartenairesApi } from '../../projet/api/partenaires';
 import { Partenaires } from "@/modules/administration-Finnance/administration/types/interfaces";
 import { toast } from 'sonner'; // Importation de toast pour les messages
@@ -22,7 +22,8 @@ const EditerLivrablePage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { getPartenaires } = usePartenairesApi();
-
+  const { getLivrableById, updateLivrable, addDocumentToLivrable, getAllNatureDocuments } = useLivrableService();
+  const { fetchAllProjets } = useProjetService();
   const [livrable, setLivrable] = useState<Livrable | undefined>(undefined);
   const [projets, setProjets] = useState<Projet[]>([]);
   const [partenaires, setPartenaires] = useState<PartenaireOption[]>([]);

@@ -40,7 +40,7 @@ const ClientService = () => {
 const useClients = () => {
   const { fetchClient } = ClientService();
   return useQuery({
-    queryKey: ["clients"],
+    queryKey: ["clientsCombobox"],
     queryFn: fetchClient,
   });
 };

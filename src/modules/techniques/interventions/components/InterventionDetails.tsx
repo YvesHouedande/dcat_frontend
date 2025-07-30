@@ -58,6 +58,15 @@ interface InterventionDetailsProps {
   onDocumentAdded: () => void;
   onDocumentDeleted: () => void;
 }
+// Get API_URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
+
+// Determine the base URL for static files (media, documents, etc.)
+// Assumes API_BASE_URL ends with /api (e.g., https://erpback.dcat.ci/api)
+// and static files are served from the root domain (e.g., https://erpback.dcat.ci/media/...)
+const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
+  ? API_BASE_URL.slice(0, -4) // Remove '/api' from the end
+  : API_BASE_URL; // Otherwise, use it as is
 
 export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
   intervention,
@@ -126,7 +135,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
       }
     };
     loadContrat();
-  }, [loadData, intervention.id_contrat]);
+  }, [loadData, intervention.id_contrat, fetchContratById]);
 
   const handleDeleteDocument = async (documentId: number) => {
     try {
@@ -146,7 +155,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
   const handleDownloadDocument = async (doc: InterventionDocument) => {
     try {
       // Construire l'URL complète du document
-      const documentUrl = `${import.meta.env.VITE_APP_API_URL}/${doc.lien_document}`;
+      const documentUrl = `${STATIC_FILES_BASE_URL}/${doc.lien_document}`;
 
       // Ouvrir le document dans un nouvel onglet pour le téléchargement
       window.open(documentUrl, "_blank");

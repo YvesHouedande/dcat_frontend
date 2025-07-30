@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProjetForm from "../components/ProjetForm";
-import {
-  createProjet,
-  addPartenaireToProjet,
-  addDocumentToProjet,
-} from "../api/projets"; // Import addDocumentToProjet
+import { useProjetService } from "../api/projets"; // Import addDocumentToProjet
 import { usePartenairesApi } from "../api/partenaires";
 import { getFamilles } from "../api/famille";
-import { useEmployesApi } from "../api/employes";
-import { getAllNatureDocuments } from "../../livrables/api/livrables"; // Import getAllNatureDocuments
+import { useEmployesApi } from "../api/employes"; // Import getAllNatureDocuments
 
 import {
   Partenaire,
@@ -20,6 +15,7 @@ import {
   CreateDocumentTextPayload,
 } from "../../types/types"; // Import Nature, CreateDocumentTextPayload, ApiResponse
 import { toast } from "sonner";
+import { useLivrableService } from "../../livrables/api/livrables";
 
 // Interface pour les documents temporaires en attente d'association
 interface PendingDocument {
@@ -37,6 +33,9 @@ const NouveauProjetPage = () => {
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]); // State to store document natures
   const [loading, setLoading] = useState(true);
+  const { createProjet, addPartenaireToProjet, addDocumentToProjet } =
+    useProjetService();
+  const { getAllNatureDocuments } = useLivrableService();
 
   // State to hold the newly created project, so documents can be associated with its ID
   const [newlyCreatedProjet, setNewlyCreatedProjet] = useState<
@@ -91,7 +90,7 @@ const NouveauProjetPage = () => {
       }
     };
     loadData();
-  }, [getPartenaires, getEmployes]);
+  }, [getPartenaires, getEmployes, getAllNatureDocuments]);
 
   const handleSaveProjet = async (
     projet: Projet,
@@ -177,11 +176,13 @@ const NouveauProjetPage = () => {
 
       // Associer les documents temporaires si présents
       if (pendingDocuments && pendingDocuments.length > 0) {
-        toast.success(`Projet créé avec succès ! Association de ${pendingDocuments.length} document(s)...`);
-        
+        toast.success(
+          `Projet créé avec succès ! Association de ${pendingDocuments.length} document(s)...`
+        );
+
         let successCount = 0;
         let errorCount = 0;
-        
+
         for (const pendingDoc of pendingDocuments) {
           try {
             await addDocumentToProjet(
@@ -191,18 +192,27 @@ const NouveauProjetPage = () => {
             );
             successCount++;
           } catch (docError) {
-            console.error(`Erreur lors de l'association du document ${pendingDoc.textPayload.libelle_document}:`, docError);
+            console.error(
+              `Erreur lors de l'association du document ${pendingDoc.textPayload.libelle_document}:`,
+              docError
+            );
             errorCount++;
           }
         }
-        
+
         // Afficher le résultat final
         if (errorCount === 0) {
-          toast.success(`Projet créé et ${successCount} document(s) associé(s) avec succès !`);
+          toast.success(
+            `Projet créé et ${successCount} document(s) associé(s) avec succès !`
+          );
         } else if (successCount > 0) {
-          toast.warning(`Projet créé avec succès ! ${successCount} document(s) associé(s), ${errorCount} échec(s).`);
+          toast.warning(
+            `Projet créé avec succès ! ${successCount} document(s) associé(s), ${errorCount} échec(s).`
+          );
         } else {
-          toast.error(`Projet créé mais échec de l'association de tous les documents (${errorCount} échec(s)).`);
+          toast.error(
+            `Projet créé mais échec de l'association de tous les documents (${errorCount} échec(s)).`
+          );
         }
       }
 
