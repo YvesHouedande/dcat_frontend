@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { LivrableForm } from '../components/LivrableForm';
 import { Livrable, Projet, CreateLivrablePayload, ApiResponse, Nature, CreateDocumentTextPayload } from '../../types/types';
-import { useLivrableService } from '../api/livrables';
-import { useProjetService } from '../../projet/api/projets';
+import { createLivrable, getAllNatureDocuments, addDocumentToLivrable } from '../api/livrables';
+import { fetchAllProjets } from '../../projet/api/projets';
 import { usePartenairesApi } from '../../projet/api/partenaires';
 import { Partenaires } from "@/modules/administration-Finnance/administration/types/interfaces";
 import { toast } from 'sonner';
@@ -26,8 +26,7 @@ const CreerLivrablePage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { getPartenaires } = usePartenairesApi();
-  const { createLivrable, getAllNatureDocuments, addDocumentToLivrable } = useLivrableService();
-  const { fetchAllProjets } = useProjetService();
+
   const [projets, setProjets] = useState<Projet[]>([]);
   const [partenaires, setPartenaires] = useState<PartenaireOption[]>([]);
   const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);

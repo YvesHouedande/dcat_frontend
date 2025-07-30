@@ -26,9 +26,13 @@ import { Livrable, Projet, Document, ApiResponse, Nature, CreateDocumentTextPayl
 
 // Import API functions
 import {
-  useLivrableService,
+  getLivrableById,
+  deleteDocumentFromLivrable,
+  getDocumentsByLivrableId,
+  addDocumentToLivrable,
+  getAllNatureDocuments,
 } from "../api/livrables";
-import { useProjetService } from "../../projet/api/projets";
+import { fetchAllProjets } from "../../projet/api/projets";
 import Layout from "@/components/Layout";
 
 // Get API_URL from environment variables (assuming it's available)
@@ -49,8 +53,7 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
   const params = useParams<{ id?: string; livrableId?: string }>();
   const livrableId = params.livrableId || params.id;
   const navigate = useNavigate();
-  const { getLivrableById, deleteDocumentFromLivrable, getDocumentsByLivrableId, addDocumentToLivrable, getAllNatureDocuments } = useLivrableService();
-  const { fetchAllProjets } = useProjetService();
+
   const [livrable, setLivrable] = useState<Livrable | undefined>(undefined);
   const [projets, setProjets] = useState<Projet[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
