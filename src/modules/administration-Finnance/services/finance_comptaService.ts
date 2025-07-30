@@ -14,25 +14,32 @@ const useDocumentsApi = () => {
   const getAllNatureDocument = useCallback(async (): Promise<
     NatureDocument[]
   > => {
-    return await api.get("/administration/natures/");
+    const response = await api.get("/administration/natures/");
+    return response.data;
   }, [api]);
 
   const getDocumentById = useCallback(
     async (id: number): Promise<DemandeDocument> => {
-      return await api.get(`/administration/documents/${id}`);
+      const response = await api.get(`/administration/documents/${id}`);
+      return response.data;
     },
     [api]
   );
 
   const createDocument = useCallback(
     async (
-      documentData: Partial<DemandeDocument> | FormData
+      documentData: Partial<DemandeDocument> & { document?: File | null }
     ): Promise<DemandeDocument> => {
-      return await api.post("/administration/documents/ajouter", documentData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await api.post(
+        `/administration/dossier/${documentData.id_dossier}/document/add`,
+        documentData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
     },
     [api]
   );
@@ -55,7 +62,7 @@ const useDocumentsApi = () => {
           formData.append(key, String(value));
         }
       });
-      return await api.put(
+      const response = await api.put(
         `/administration/documents/modifier/${id}`,
         formData,
         {
@@ -64,29 +71,37 @@ const useDocumentsApi = () => {
           },
         }
       );
+      return response.data;
     },
     [api]
   );
 
   const deleteDocument = useCallback(
     async (id: number): Promise<void> => {
-      await api.delete(`/administration/documents/supprimer/${id}`);
+      const response = await api.delete(
+        `/administration/documents/supprimer/${id}`
+      );
+      return response.data;
     },
     [api]
   );
 
   const getDocumentsByNature = useCallback(
     async (natureId: number): Promise<DemandeDocument[]> => {
-      return await api.get(`/administration/documents/nature/${natureId}`);
+      const response = await api.get(
+        `/administration/documents/nature/${natureId}`
+      );
+      return response.data;
     },
     [api]
   );
 
   const searchDocuments = useCallback(
     async (query: string): Promise<DemandeDocument[]> => {
-      return await api.get(
+      const response = await api.get(
         `/administration/documents/search?q=${encodeURIComponent(query)}`
       );
+      return response.data;
     },
     [api]
   );

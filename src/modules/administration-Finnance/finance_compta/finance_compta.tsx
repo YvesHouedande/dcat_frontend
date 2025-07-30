@@ -1,48 +1,73 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Search,
-  Filter,
   PlusCircle,
-  MoreHorizontal,
   Eye,
-  Download,
   FileText,
-  Calendar,
-  Share2,
+  Edit,
+  MoreHorizontal,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate, useLocation } from "react-router-dom";
+
+import {
+  useCreateDossier,
+  useDeleteDossier,
+  useDossiersByType,
+  useUpdateDossier,
+} from "../dossier/hooks/useDosier";
+import { DossierType } from "../dossier/types/dossierType";
+import { useDebounce } from "@/modules/stocks/entree/utils/helpers";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate, useLocation } from "react-router-dom";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import {
-  DemandeDocument,
-  NatureDocument,
-} from "../administration/types/interfaces";
-import useDocumentsApi from "../services/finance_comptaService";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 // Ajoute un type local pour la structure de réponse API attendue
-type DocsApiResponse = { success: boolean; data: DemandeDocument[] };
 
 const FinanceComptaGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [documents, setDocuments] = useState<DemandeDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { getAllNatureDocument, getDocumentsByNature, deleteDocument } = useDocumentsApi();
+  const [dossiers, setDossiers] = useState<DossierType[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [nomDossier, setNomDossier] = useState("");
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedDossier, setSelectedDossier] = useState<DossierType | null>(
+    null
+  );
+  const [nouveauNom, setNouveauNom] = useState("");
+  const { createDossier } = useCreateDossier();
+  const { deleteDossierAsync, isDeletingDossier } = useDeleteDossier();
+  const { updateDossierAsync, isUpdatingDossier } = useUpdateDossier();
+
+  const debouncedSearchTerm = useDebounce(searchQuery, 300);
   // Déterminer l'onglet actif basé sur la route
   const getActiveTabFromRoute = useCallback((): "finance" | "comptabilite" => {
     if (location.pathname.includes("/comptabilite")) {
@@ -66,210 +91,112 @@ const FinanceComptaGrid: React.FC = () => {
     });
   }, [location.pathname, getActiveTabFromRoute]);
 
+  const {
+    dossiersByType,
+    isLoadingDossiersByType,
+    isErrorDossiersByType,
+    refetchDossiersByType,
+    fetchNextDossiersByType,
+    hasNextPageDossiersByType,
+    isFetchingNextPageDossiersByType,
+  } = useDossiersByType(
+    activeTab.toLowerCase() === "finance" ? "finance" : "comptabilité",
+    {
+      libelle_dossier: debouncedSearchTerm,
+    }
+  );
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      setDocuments([]); // Toujours réinitialiser les documents au début
-
-      try {
-        // Étape 1: Charger les natures de documents
-        const natures = await getAllNatureDocument();
-
-        const financeNature = natures.find(
-          (n) =>
-            n.libelle &&
-            (n.libelle.toLowerCase().includes("finance") ||
-              n.libelle.toLowerCase().includes("financier"))
-        );
-
-        const comptabiliteNature = natures.find(
-          (n) =>
-            n.libelle &&
-            (n.libelle.toLowerCase().includes("comptabilite") ||
-              n.libelle.toLowerCase().includes("comptable") ||
-              n.libelle.toLowerCase().includes("compta"))
-        );
-
-        // Étape 2: Déterminer la nature à utiliser en fonction de l'onglet actif
-        let natureToUse: NatureDocument | undefined;
-        if (activeTab === "finance") {
-          natureToUse = financeNature;
-        } else {
-          natureToUse = comptabiliteNature;
-        }
-
-        // Étape 3: Charger les documents si une nature a été trouvée
-        if (natureToUse) {
-          const response = await getDocumentsByNature(
-            natureToUse.id_nature_document
-          );
-          if (
-            response &&
-            typeof response === "object" &&
-            "success" in response &&
-            Array.isArray((response as unknown as DocsApiResponse).data)
-          ) {
-            setDocuments((response as unknown as DocsApiResponse).data);
-          } else if (Array.isArray(response)) {
-            setDocuments(response);
-          } else {
-            console.error("Format de réponse API inattendu:", response);
-            setDocuments([]);
-          }
-        }
-        // Si aucune nature n'est trouvée, documents restera un tableau vide, ce qui est correct.
-      } catch (err: unknown) {
-        console.error(
-          `Erreur lors du chargement des données pour l'onglet ${activeTab}:`,
-          err
-        );
-        // Si c'est une erreur 404 (pas de documents), on affiche juste une liste vide.
-        if (typeof err === "object" && err !== null && "response" in err) {
-          const errorObj = err as { response?: { status?: number } };
-          if (errorObj.response?.status === 404) {
-            setDocuments([]);
-            return;
-          }
-        }
-        setError("Erreur lors du chargement des données.");
-      } finally {
-        // Étape 4: Toujours arrêter le chargement à la fin
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [activeTab]); // L'effet se déclenchera uniquement lorsque l'onglet change
+    refetchDossiersByType();
+    setDossiers(dossiersByType?.pages.flatMap((page) => page.data) || []);
+  }, [activeTab, refetchDossiersByType, dossiersByType]); // L'effet se déclenchera uniquement lorsque l'onglet change
 
   // Fonction pour extraire le type de fichier à partir de l'extension
-  const getFileType = (filename: string): string => {
-    const extension = filename.split(".").pop()?.toLowerCase() || "";
-    return extension.toUpperCase();
-  };
 
   // Filtrage des documents basé sur la recherche
-  const filteredDocuments = searchQuery
-    ? (documents || []).filter(
-        (document) =>
-          document.libelle_document
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          document.lien_document
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          getFileType(document.lien_document)
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
-      )
-    : documents || [];
 
   const handleTabChange = (newTab: "finance" | "comptabilite") => {
     navigate(`/finance-et-compatibilite/${newTab}`);
     setActiveTab(newTab);
   };
 
-  const handleAddDocument = () => {
-    navigate(`/finance-et-compatibilite/${activeTab}/nouveau`);
-  };
 
-  const handleViewDocument = (id: number) => {
-    navigate(`/finance-et-compatibilite/${activeTab}/${id}/details`);
-  };
 
-  const handleDeleteDocument = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) {
-      try {
-        await deleteDocument(id);
-        setDocuments((docs) => docs.filter((doc) => doc.id_documents !== id));
-      } catch (err) {
-        console.error("Erreur lors de la suppression:", err);
-        alert("Erreur lors de la suppression du document");
-      }
-    }
-  };
-
-  const getFileTypeColor = (filename: string) => {
-    const type = getFileType(filename).toLowerCase();
-    switch (type) {
-      case "pdf":
-        return "bg-red-100 text-red-800 hover:bg-red-100";
-      case "docx":
-        return "bg-blue-100 text-blue-800 hover:bg-blue-100";
-      case "xlsx":
-        return "bg-green-100 text-green-800 hover:bg-green-100";
-      case "pptx":
-        return "bg-orange-100 text-orange-800 hover:bg-orange-100";
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100";
-    }
-  };
-
-  const getFileIcon = (filename: string) => {
-    const type = getFileType(filename).toLowerCase();
-
-    switch (type) {
-      case "pdf":
-        return <FileText size={28} className="text-red-500" />;
-      case "docx":
-        return <FileText size={28} className="text-blue-500" />;
-      case "xlsx":
-        return <FileText size={28} className="text-green-500" />;
-      case "pptx":
-        return <FileText size={28} className="text-orange-500" />;
-      default:
-        return <FileText size={28} className="text-gray-500" />;
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "-";
-    try {
-      const date = new Date(dateString);
-      return format(date, "dd MMM", { locale: fr });
-    } catch (err) {
-      console.error("Erreur de formatage de date:", err);
-      return dateString.split("T")[0];
-    }
-  };
-
-  const formatTime = (dateString?: string) => {
-    if (!dateString) return "-";
-    try {
-      const date = new Date(dateString);
-      return format(date, "HH:mm", { locale: fr });
-    } catch (err) {
-      console.error("Erreur de formatage d'heure:", err);
-      return dateString.split("T")[1]?.substring(0, 5) || "-";
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
-
-  if (error) {
+  if (isErrorDossiersByType) {
     return (
       <div className="flex justify-center items-center h-64 text-red-600">
-        {error}
+        Erreur lors du chargement des dossiers
       </div>
     );
   }
 
   // Vérification de sécurité supplémentaire
-  if (!Array.isArray(filteredDocuments)) {
-    console.error("filteredDocuments n'est pas un tableau:", filteredDocuments);
+  if (!Array.isArray(dossiers)) {
+    console.error("dossiers n'est pas un tableau:", dossiers);
     return (
       <div className="flex justify-center items-center h-64 text-red-600">
         Erreur de format de données
       </div>
     );
   }
+  const handleDeleteDossier = (dossier: DossierType) => {
+    setSelectedDossier(dossier);
+    setIsDeleteDialogOpen(true);
+  };
+  const handleRenameDossier = (dossier: DossierType) => {
+    setSelectedDossier(dossier);
+    setNouveauNom(dossier.libelle_dossier);
+    setIsRenameDialogOpen(true);
+  };
+
+  const handleCreateDossier = () => {
+    setIsDialogOpen(true);
+  };
+
+  const handleValidateCreateDossier = () => {
+    if (nomDossier.trim()) {
+      try {
+        createDossier({
+          libelle_dossier: nomDossier.trim(),
+          type_dossier: activeTab.toLowerCase() === "finance" ? "finance" : "comptabilité",
+        });
+        setIsDialogOpen(false);
+        setNomDossier("");
+      } catch (error) {
+        console.error("Erreur lors de la création du dossier:", error);
+      }
+    }
+  };
+
+  const handleValidateRename = () => {
+    if (selectedDossier && nouveauNom.trim()) {
+      try {
+        updateDossierAsync({
+          id: selectedDossier.id_dossier.toString(),
+          dossier: {
+            libelle_dossier: nouveauNom.trim(),
+          },
+        });
+        setIsRenameDialogOpen(false);
+        setSelectedDossier(null);
+        setNouveauNom("");
+      } catch (error) {
+        console.error("Erreur lors du renommage du dossier:", error);
+      }
+    }
+  };
+
+  const handleValidateDelete = () => {
+    if (selectedDossier) {
+      try {
+        deleteDossierAsync(selectedDossier.id_dossier.toString());
+        setIsDeleteDialogOpen(false);
+        setSelectedDossier(null);
+      } catch (error) {
+        console.error("Erreur lors de la suppression du dossier:", error);
+      }
+    }
+  };
 
   return (
     <div className="bg-gray-50 p-4 min-h-screen">
@@ -281,9 +208,9 @@ const FinanceComptaGrid: React.FC = () => {
               Gestion des Documents Finance & Comptabilité
             </h1>
             <p className="text-sm text-gray-500">
-              {filteredDocuments.length} document
-              {filteredDocuments.length !== 1 ? "s" : ""} disponible
-              {filteredDocuments.length !== 1 ? "s" : ""}
+              {dossiers.length} dossier
+              {dossiers.length !== 1 ? "s" : ""} disponible
+              {dossiers.length !== 1 ? "s" : ""}
             </p>
           </div>
 
@@ -338,21 +265,14 @@ const FinanceComptaGrid: React.FC = () => {
                 </svg>
               </Button>
             </div>
+           
             <Button
-              variant="outline"
-              size="sm"
-              className="text-gray-700 border-gray-300 h-8"
-            >
-              <Filter size={14} className="mr-1" />
-              Filtres
-            </Button>
-            <Button
-              onClick={handleAddDocument}
+              onClick={handleCreateDossier}
               className="bg-blue-600 hover:bg-blue-700 cursor-pointer h-8"
               size="sm"
             >
               <PlusCircle size={14} className="mr-1" />
-              Ajouter
+              Ajouter un dossier
             </Button>
           </div>
         </div>
@@ -387,235 +307,370 @@ const FinanceComptaGrid: React.FC = () => {
           </div>
         </div>
 
-        {viewMode === "grid" ? (
-          /* Grille compacte de documents */
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {filteredDocuments.map((document) => (
-              <Card
-                key={document.id_documents}
-                className="overflow-hidden hover:shadow-md transition-all duration-200 group cursor-pointer"
-                onClick={() => handleViewDocument(document.id_documents)}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    {getFileIcon(document.lien_document)}
-                    <Badge
-                      className={`text-xs font-normal ${getFileTypeColor(
-                        document.lien_document
-                      )}`}
-                    >
-                      {getFileType(document.lien_document)}
-                    </Badge>
-                  </div>
-
-                  <h3 className="font-medium text-gray-800 text-sm line-clamp-2 mb-1 h-10">
-                    {document.libelle_document}
-                  </h3>
-
-                  <div className="flex justify-between items-center text-xs text-gray-500">
-                    <div className="flex items-center">
-                      <Calendar size={12} className="mr-1" />
-                      <span>{formatDate(document.date_document)}</span>
-                    </div>
-                    <div className="flex">
+        {isLoadingDossiersByType ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+          </div>
+        ) : (
+          <>
+            {viewMode === "grid" ? (
+              /* Grille compacte de documents */
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-10 px-4">
+                {dossiers?.map((dossier) => (
+                  <div
+                    key={dossier.id_dossier}
+                    className="flex flex-col items-center group w-[190px] relative"
+                  >
+                    {/* Menu d'actions - Toujours visible avec opacité réduite */}
+                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-6 w-6 p-0 hover:bg-gray-100"
+                            className="h-8 w-8 p-0 bg-white/90 hover:bg-gray-100 border border-gray-300 shadow-md"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <MoreHorizontal size={12} />
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewDocument(document.id_documents);
-                            }}
-                            className="cursor-pointer text-xs py-1"
-                          >
-                            <Eye size={12} className="mr-2" />
-                            Consulter
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-xs py-1">
-                            <Download size={12} className="mr-2" />
-                            Télécharger
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-xs py-1">
-                            <Share2 size={12} className="mr-2" />
-                            Partager
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer text-xs py-1 text-red-500"
-                            onClick={(e) =>
-                              handleDeleteDocument(document.id_documents, e)
+                            onClick={() =>
+                              navigate(
+                                `/finance-et-compatibilite/${activeTab}/dossier/${dossier.id_dossier}`
+                              )
                             }
                           >
-                            <Trash2 size={12} className="mr-2" />
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ouvrir
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleRenameDossier(dossier)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Renommer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteDossier(dossier)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
                             Supprimer
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </div>
 
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          /* Vue liste compacte */
-          <div className="border rounded-lg overflow-hidden bg-white">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b">
-                  <th className="text-left p-3 text-xs font-medium text-gray-500">
-                    Titre
-                  </th>
-                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden md:table-cell">
-                    Fichier
-                  </th>
-                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden sm:table-cell">
-                    Type
-                  </th>
-                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden lg:table-cell">
-                    Date
-                  </th>
-                  <th className="text-right p-3 text-xs font-medium text-gray-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDocuments.map((document, index) => (
-                  <tr
-                    key={document.id_documents}
-                    className={`border-b hover:bg-gray-50 ${
-                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                    }`}
-                  >
-                    <td className="p-3">
-                      <div className="flex items-center">
-                        {getFileIcon(document.lien_document)}
-                        <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-800">
-                            {document.libelle_document}
-                          </p>
-                          <p className="text-xs text-gray-500 md:hidden">
-                            {document.lien_document}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm text-gray-600 hidden md:table-cell">
-                      {document.lien_document}
-                    </td>
-                    <td className="p-3 hidden sm:table-cell">
-                      <Badge
-                        className={`text-xs font-normal ${getFileTypeColor(
-                          document.lien_document
-                        )}`}
+                    <span
+                      className="inline-block cursor-pointer"
+                      onClick={() =>
+                        navigate(
+                          `/finance-et-compatibilite/${activeTab}/dossier/${dossier.id_dossier}`
+                        )
+                      }
+                    >
+                      <svg
+                        width="180"
+                        height="120"
+                        viewBox="0 0 100 80"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="transition-transform group-hover:scale-105"
                       >
-                        {getFileType(document.lien_document)}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-sm text-gray-600 hidden lg:table-cell">
-                      {document.date_document
-                        ? `${formatDate(document.date_document)} à ${formatTime(
-                            document.date_document
-                          )}`
-                        : "-"}
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={() =>
-                            handleViewDocument(document.id_documents)
-                          }
-                        >
-                          <Eye size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                        >
-                          <Download size={14} />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                        <path
+                          d="M10 20 H90 A5 5 0 0 1 95 25 V70 A10 10 0 0 1 85 80 H15 A10 10 0 0 1 5 70 V25 A5 5 0 0 1 10 20 Z"
+                          fill="#FFD54F"
+                        />
+                        <path
+                          d="M10 20 A5 5 0 0 1 15 15 H45 A5 5 0 0 1 50 20 H90 A5 5 0 0 1 95 25 V25 H10 Z"
+                          fill="#FFB300"
+                        />
+                      </svg>
+                    </span>
+                    <div className="mt-2 w-full">
+                      <span className="text-[13px] font-medium text-gray-700 text-center truncate block">
+                        {dossier.libelle_dossier}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {hasNextPageDossiersByType && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchNextDossiersByType()}
+                  >
+                    {isFetchingNextPageDossiersByType
+                      ? "Chargement..."
+                      : "Charger plus"}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              /* Vue liste compacte */
+              <div className="border rounded-lg overflow-hidden bg-white">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="text-left p-3 text-xs font-medium text-gray-500">
+                        Dossier
+                      </th>
+                      <th className="text-left p-3 text-xs font-medium text-gray-500">
+                        Libellé
+                      </th>
+                      <th className="text-left p-3 text-xs font-medium text-gray-500 hidden md:table-cell">
+                        Type
+                      </th>
+                      <th className="text-left p-3 text-xs font-medium text-gray-500 hidden sm:table-cell">
+                        Date
+                      </th>
+                      <th className="text-left p-3 text-xs font-medium text-gray-500 hidden lg:table-cell">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dossiers?.map((dossier) => (
+                      <tr key={dossier.id_dossier}>
+                        <td>
+                          <svg
+                            width="60"
+                            height="30"
+                            viewBox="0 0 100 80"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M10 20 H90 A5 5 0 0 1 95 25 V70 A10 10 0 0 1 85 80 H15 A10 10 0 0 1 5 70 V25 A5 5 0 0 1 10 20 Z"
+                              fill="#FFD54F"
+                            />
+
+                            <path
+                              d="M10 20 A5 5 0 0 1 15 15 H45 A5 5 0 0 1 50 20 H90 A5 5 0 0 1 95 25 V25 H10 Z"
+                              fill="#FFB300"
+                            />
+                          </svg>
+                        </td>
+                        <td>{dossier.libelle_dossier}</td>
+                        <td>{dossier.type_dossier}</td>
+                        <td>{dossier.created_at}</td>
+                        <td>
+                          <div className="flex items-center gap-2">
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              className="h-7 w-7 p-0"
-                            >
-                              <MoreHorizontal size={14} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="cursor-pointer text-xs">
-                              <Share2 size={14} className="mr-2" />
-                              Partager
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="cursor-pointer text-xs text-red-500"
-                              onClick={(e) =>
-                                handleDeleteDocument(document.id_documents, e)
+                              onClick={() =>
+                                navigate(
+                                    `/finance-et-compatibilite/${activeTab}/dossier/${dossier.id_dossier}`
+                                )
                               }
                             >
-                              <Trash2 size={14} className="mr-2" />
-                              Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Message si aucun résultat */}
-        {filteredDocuments.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-8 bg-white rounded-lg border mt-4">
-            <FileText size={48} className="text-gray-300 mb-2" />
-            <p className="text-gray-600 mb-2">
-              {searchQuery
-                ? "Aucun document ne correspond à votre recherche"
-                : `Aucun document ${
-                    activeTab === "finance" ? "de finance" : "de comptabilité"
-                  } n'a encore été ajouté`}
-            </p>
-            {searchQuery ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSearchQuery("")}
-              >
-                Réinitialiser la recherche
-              </Button>
-            ) : (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleAddDocument}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <PlusCircle size={14} className="mr-1" />
-                Ajouter le premier document
-              </Button>
+                              <Eye size={14} className="mr-1" />
+                              Voir
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleRenameDossier(dossier)}
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Renommer
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteDossier(dossier)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {hasNextPageDossiersByType && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchNextDossiersByType()}
+                  >
+                    {isFetchingNextPageDossiersByType
+                      ? "Chargement..."
+                      : "Charger plus"}
+                  </Button>
+                )}
+              </div>
             )}
-          </div>
+
+            {/* Message si aucun résultat */}
+            {dossiers.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8 bg-white rounded-lg border mt-4">
+                <FileText size={48} className="text-gray-300 mb-2" />
+                <p className="text-gray-600 mb-2">
+                  {searchQuery
+                    ? "Aucun document ne correspond à votre recherche"
+                    : `Aucun document ${
+                        activeTab === "finance"
+                          ? "de finance"
+                          : "de comptabilité"
+                      } n'a encore été ajouté`}
+                </p>
+                {searchQuery ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    Réinitialiser la recherche
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleCreateDossier}
+                    className="bg-blue-600 hover:bg-blue-700 cursor-pointer h-8"
+                    size="sm"
+                  >
+                    <PlusCircle size={14} className="mr-1" />
+                    Ajouter un dossier
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      {/* Dialogue pour créer un dossier */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Créer un nouveau dossier</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="nom-dossier">Nom du dossier</Label>
+              <Input
+                id="nom-dossier"
+                value={nomDossier}
+                onChange={(e) => setNomDossier(e.target.value)}
+                placeholder="Saisir le nom du dossier"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleValidateCreateDossier();
+                  }
+                }}
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button
+                onClick={handleValidateCreateDossier}
+                disabled={!nomDossier.trim()}
+              >
+                Créer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogue de renommage */}
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Renommer le dossier</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="nouveau-nom">Nouveau nom du dossier</Label>
+              <Input
+                id="nouveau-nom"
+                value={nouveauNom}
+                onChange={(e) => setNouveauNom(e.target.value)}
+                placeholder="Saisir le nouveau nom"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleValidateRename();
+                  }
+                }}
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsRenameDialogOpen(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleValidateRename}
+                disabled={!nouveauNom.trim() || isUpdatingDossier}
+              >
+                {isUpdatingDossier ? "Renommage..." : "Renommer"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogue de suppression avec alerte */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Supprimer le dossier
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Êtes-vous sûr de vouloir supprimer le dossier{" "}
+                <strong>"{selectedDossier?.libelle_dossier}"</strong> ?
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium">⚠️ Attention :</p>
+                    <p>
+                      Si des fichiers sont présents dans ce dossier, ils seront
+                      également supprimés définitivement. Cette action est
+                      irréversible.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleValidateDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeletingDossier}
+            >
+              {isDeletingDossier
+                ? "Suppression..."
+                : "Supprimer définitivement"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

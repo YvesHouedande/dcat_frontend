@@ -567,7 +567,7 @@ const EditerContrat: React.FC = () => {
               type="button"
               variant="outline"
               className="cursor-pointer"
-              onClick={() => navigate("/administration/contrats")}
+              onClick={() => navigate("/gestion-administrative/contrats")}
             >
               Annuler
             </Button>

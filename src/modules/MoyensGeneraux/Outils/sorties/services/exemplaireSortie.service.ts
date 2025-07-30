@@ -32,6 +32,16 @@ export const exemplaireSortieService = {
         id_commande: 0,
       },
       {
+        id_exemplaire: 13,
+        id_employes: 12,
+        but_usage: "Réparation d'urgence",
+        etat_avant: "bon",
+        date_de_sortie: "2025-05-03",
+        site_intervention: "Site A",
+        commentaire: "Doit être ramené demain",
+        id_commande: 0,
+      },
+      {
         id_exemplaire: 2,
         id_employes: 15,
         but_usage: "Installation temporaire",

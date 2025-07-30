@@ -57,13 +57,21 @@ export function RetourDashboard() {
 
   const handlePageChange = (page: number) => {
     setPaginationParams((prev) => ({ ...prev, page }));
-    fetchRetourSorties(paginationParams);
+    fetchRetourSorties({
+      page: page,
+      limit: paginationParams.pageSize,
+      search: searchTerm,
+    });
   };
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setPaginationParams((prev) => ({ ...prev, page: 1, search: term }));
-    fetchRetourSorties(paginationParams);
+    fetchRetourSorties({
+      page: 1,
+      limit: paginationParams.pageSize,
+      search: term,
+    });
   };
 
   const openEditForm = (sortie: RetourSchemaFormsValue) => {
@@ -92,6 +100,7 @@ export function RetourDashboard() {
         id_exemplaire: data.id_exemplaire,
         id_employes: data.id_employes,
         date_de_retour: data.date_de_retour,
+        type: "entree",
       },
       data
     );

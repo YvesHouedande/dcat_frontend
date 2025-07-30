@@ -20,6 +20,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useApi } from "@/api/api";
 import { Partenaires } from "@/modules/administration-Finnance/administration/types/interfaces";
+import { useDebounce } from "../../modules/stocks/entree/utils/helpers";
 
 interface PartenaireComboboxProps {
   value: string | undefined;
@@ -61,6 +62,9 @@ export function PartenaireCombobox({
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
 
+  // Debounce du terme de recherche pour éviter trop d'appels API
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const { partenaires: deliveries, isLoading } = usePartenaire();
 
   const deliveriesArray = React.useMemo(
@@ -69,11 +73,13 @@ export function PartenaireCombobox({
   );
 
   const filteredDeliveries = React.useMemo(() => {
-    if (!searchTerm) return deliveriesArray;
+    if (!debouncedSearchTerm) return deliveriesArray;
     return deliveriesArray.filter((partenaire) =>
-      partenaire.nom_partenaire.toLowerCase().includes(searchTerm.toLowerCase())
+      partenaire.nom_partenaire
+        .toLowerCase()
+        .includes(debouncedSearchTerm.toLowerCase())
     );
-  }, [deliveriesArray, searchTerm]);
+  }, [deliveriesArray, debouncedSearchTerm]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -93,7 +99,7 @@ export function PartenaireCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Rechercher une partenaire..."

@@ -1,7 +1,6 @@
 import { FileText, FolderArchive, UsersRound } from "lucide-react";
 import Layout from "@/components/Layout";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 function GestionAdminstrative() {
   const onNavigate = useNavigate();
@@ -25,7 +24,9 @@ function GestionAdminstrative() {
           </button>
 
           <button
-            onClick={() => toast.info("En cours de développement")}
+            onClick={() =>
+              onNavigate("/gestion-administrative/contrats/dossier")
+            }
             className={`cursor-pointer w-full h-1/2 p-4 flex flex-col items-center justify-center text-center font-semibold text-white rounded-lg shadow-lg bg-gradient-to-br from-emerald-500 to-emerald-600 hover:shadow-xl hover:scale-105 transform transition-all duration-300 ease-in-out`}
           >
             <FolderArchive className="h-12 w-12 mb-4" />

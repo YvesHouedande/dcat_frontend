@@ -89,8 +89,6 @@ const ModernPartenaireGrid: React.FC = () => {
     },
   });
 
-  const partenaires = data?.pages.flatMap((page) => page.data);
-
   // Charger les entités avec React Query
   const { data: entites, isLoading: entitesLoading } = useQuery({
     queryKey: ["entites"],
@@ -117,6 +115,7 @@ const ModernPartenaireGrid: React.FC = () => {
     return entite ? entite.denomination : `Entité ${idEntite}`;
   };
 
+  const partenaires = data?.pages.flatMap((page) => page.data);
   const filteredPartenaires =
     searchQuery && partenaires
       ? partenaires.filter(

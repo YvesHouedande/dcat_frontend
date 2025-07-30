@@ -258,7 +258,7 @@ const InfoContract: React.FC = () => {
                       className="text-gray-500 cursor-pointer"
                       onClick={() =>
                         navigate(
-                          `/administration/contrats/${contrat.id_contrat}/editer`
+                          `/gestion-administrative/contrats/${contrat.id_contrat}/editer`
                         )
                       }
                     >

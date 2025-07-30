@@ -75,3 +75,20 @@ export const useProductInstances = (filters = {}) => {
 
 // Exemple d'utilisation :
 // const { productInstances, ... } = useProductInstances({ search: 'foo', status: 'active' });
+
+export const useDeleteProductInstance = () => {
+  const queryClient = useQueryClient();
+  const productInstanceService = ProductInstanceService();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string | number) =>
+      await wait(productInstanceService.delete(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [PRODUCT_INSTANCES_KEY] });
+    },
+    onError: (err: Error) => err || new Error("Erreur lors de la suppression"),
+  });
+  return {
+    deleteProductInstance: deleteMutation,
+  };
+};

@@ -57,6 +57,7 @@ export interface ExemplaireSortieFormProps {
 import { Textarea } from "@/components/ui/textarea";
 import { EmployesCombobox } from "@/components/combobox/EmployesCombobox";
 import { OutilsCombobox } from "@/components/combobox/OutilsCombobox";
+import DebugZod from "@/modules/stocks/utils/debug";
 export function ExemplaireSortieForm({
   defaultValues,
   onSubmit,
@@ -100,7 +101,7 @@ export function ExemplaireSortieForm({
                 <FormLabel>Outils</FormLabel>
                 <FormControl>
                   <OutilsCombobox
-                    value={String(field.value)}
+                    value={field.value}
                     onChange={field.onChange}
                   />
                 </FormControl>
@@ -108,6 +109,7 @@ export function ExemplaireSortieForm({
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="date_de_sortie"
@@ -133,7 +135,7 @@ export function ExemplaireSortieForm({
                 <FormLabel>Personne affectée</FormLabel>
                 <FormControl>
                   <EmployesCombobox
-                    value={String(field.value)}
+                    value={field.value}
                     onChange={field.onChange}
                   />
                 </FormControl>
@@ -148,7 +150,7 @@ export function ExemplaireSortieForm({
               <FormItem>
                 <FormLabel>Site d'utilisation</FormLabel>
                 <FormControl>
-                  <Input value={field.value} onChange={field.onChange} />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -219,18 +221,23 @@ export function ExemplaireSortieForm({
             </FormItem>
           )}
         />
-
+        <DebugZod form={form} />
         {/* Boutons d'action */}
         <div className="flex justify-end space-x-2 pt-2">
-          <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+          <div
+            onClick={onCancel}
+            className={`cursor-pointer p-2 rounded-md border ${
+              isLoading ? "pointer-events-none" : "pointer-events-auto"
+            }`}
+          >
             Annuler
-          </Button>
+          </div>
           <Button type="submit" disabled={isLoading}>
             {isLoading
               ? "Chargement..."
               : isEditMode
-              ? "Mettre à jour"
-              : "Ajouter"}
+              ? "Mettre à jour la sortie"
+              : "Faire une sortie"}
           </Button>
         </div>
       </form>

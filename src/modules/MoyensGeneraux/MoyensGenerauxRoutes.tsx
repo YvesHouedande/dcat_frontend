@@ -4,18 +4,18 @@ import MoyensGenerauxLayout from "./Layout";
 import MoyenGeneraux from "./MoyenGeneraux";
 import NotFound from "@/pages/NotFound";
 import ProductRegistrationForm from "./Outils/pages/referenceRegistration.tsx";
-import ReferencePage from "./Outils/pages/referencePage.tsx";
 import CataloguePage from "./Outils/pages/cataloguePage.tsx";
 import ReferenceEditForm from "./Outils/pages/referenceRegistration.tsx";
 import { MoyensDesTravailPage } from "./EquipemntMoyensTravail/moyens_de_travail/pages/MoyensDesTravailPage.tsx";
 import { MaintenancePage } from "./EquipemntMoyensTravail/Maintenance/pages/MaintenancePage.tsx";
+import ReferenceInfo from "./Outils/components/ReferenceInfo.tsx";
 const MoyenGenerauxgRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<MoyenGeneraux />} />
       <Route path="/outils" element={<MoyensGenerauxLayout />}>
         <Route index element={<CataloguePage />} />
-        <Route path=":id" element={<ReferencePage />} />
+        <Route path=":id" element={<ReferenceInfo />} />
         <Route path=":id/edit" element={<ReferenceEditForm />} />
         <Route path="nouveau" element={<ProductRegistrationForm />} />
        

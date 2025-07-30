@@ -56,4 +56,5 @@ export interface ProductFilters {
   prixMax?: number;
   prixMin?: number;
   sortOrder?: "asc" | "desc";
+  typeId?: number;
 }

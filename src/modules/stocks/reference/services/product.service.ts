@@ -42,7 +42,7 @@ export const useProductService = () => {
     limit: number,
     filters: ProductFilters
   ): Promise<ProductServiceResponse> => {
-    const params = { page, limit, ...filters, typeId: 1 }; // Ajoutez d'autres filtres si nécessaire
+    const params = { page, limit, ...filters, typeId: filters.typeId ?? 1 }; // Ajoutez d'autres filtres si nécessaire
     // const response = await apis.get<ApiResponse>(`stocks/produits?page=${page}&limit=${limit}`);
     const response = await apis.get<ApiResponse>(`stocks/produits?`, {
       params,
@@ -102,7 +102,6 @@ export const useProductService = () => {
   ): Promise<ReferenceProduit> => {
     const formData = transformData(produit);
     // Note: Assurez-vous que l'ID du produit est bien défini dans l'objet produit
-    ;
     const response = await apis.put(
       `stocks/produits/${produit.id_produit}`,
       formData

@@ -23,7 +23,6 @@ import {
   useEmploye,
   useAddDocumentToDemande,
   useDeleteDocumentFromDemande,
-  useNatureDocuments,
   useApprouverDemande,
   useRefuserDemande,
 } from "../../hooks/useDemandes";
@@ -39,6 +38,17 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
+import useDocumentsApi from "../../services/finance_comptaService";
+import { toast } from "sonner";
+import { DossierCombobox } from "@/components/combobox/DossierCombobox";
+import {
+  SelectContent,
+  Select,
+  SelectItem,
+  SelectValue,
+  SelectTrigger,
+} from "@/components/ui/select";
+import { TypeDemandes } from "./enum";
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -74,7 +84,7 @@ const getStatusBadge = (status: string) => {
 const InfoDemandePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
+  const { createDocument } = useDocumentsApi();
   const queryClient = useQueryClient();
   const {
     data: demande,
@@ -89,11 +99,11 @@ const InfoDemandePage: React.FC = () => {
   const [file, setFile] = React.useState<File | null>(null);
   const [libelle, setLibelle] = React.useState("");
   const [classification, setClassification] = React.useState("");
-  const [natureId, setNatureId] = React.useState<number | null>(null);
-  const { data: natures, isLoading: loadingNatures } = useNatureDocuments();
+  const [natureId, setNatureId] = React.useState<string | undefined>(undefined);
   const addDocument = useAddDocumentToDemande();
   const deleteDocument = useDeleteDocumentFromDemande();
   const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [id_dossier, setIdDossier] = React.useState<number | null>(null);
 
   const approuverDemande = useApprouverDemande();
   const refuserDemande = useRefuserDemande();
@@ -154,42 +164,69 @@ const InfoDemandePage: React.FC = () => {
   const handleAddDocument = (e: React.FormEvent) => {
     e.preventDefault();
     setUploadError(null);
-    if (!file || !libelle || !classification || !natureId || !demande) {
+    if (
+      !file ||
+      !libelle ||
+      !classification ||
+      !natureId ||
+      !demande ||
+      !id_dossier
+    ) {
       setUploadError("Tous les champs sont obligatoires.");
       return;
     }
-    addDocument.mutate(
-      {
-        demandeId: demande.id_demandes,
-        documentData: {
-          file,
-          libelle_document: libelle,
-          classification_document: classification,
-          id_nature_document: natureId,
-        },
-      },
-      {
-        onSuccess: () => {
-          setFile(null);
-          setLibelle("");
-          setClassification("");
-          setNatureId(null);
-        },
-        onError: (err: unknown) => {
-          if (err instanceof Error) {
-            setUploadError(err.message);
-          } else if (
-            typeof err === "object" &&
-            err !== null &&
-            "message" in err
-          ) {
-            setUploadError(String((err as { message?: string }).message));
-          } else {
-            setUploadError("Erreur lors de l'upload");
-          }
-        },
-      }
-    );
+
+    try {
+      createDocument({
+        lien_document: file.name,
+        libelle_document: libelle,
+        date_document: new Date().toISOString(),
+        id_dossier: Number(id_dossier),
+        id_nature_document: 0,
+        classification_document: classification,
+        id_demandes: String(demande.id_demandes),
+      });
+      setFile(null);
+      setLibelle("");
+      setClassification("");
+      setNatureId(undefined);
+    } catch (error) {
+      console.error("Erreur lors du chargement des types de documents:", error);
+      toast.error("Impossible de charger les types de documents");
+    }
+
+    // addDocument.mutate(
+    //   {
+    //     demandeId: demande.id_demandes,
+    //     documentData: {
+    //       file,
+    //       libelle_document: libelle,
+    //       classification_document: classification,
+    //       id_nature_document: natureId,
+    //     },
+    //   },
+    //   {
+    //     onSuccess: () => {
+    //       setFile(null);
+    //       setLibelle("");
+    //       setClassification("");
+    //       setNatureId(null);
+    //     },
+    //     onError: (err: unknown) => {
+    //       if (err instanceof Error) {
+    //         setUploadError(err.message);
+    //       } else if (
+    //         typeof err === "object" &&
+    //         err !== null &&
+    //         "message" in err
+    //       ) {
+    //         setUploadError(String((err as { message?: string }).message));
+    //       } else {
+    //         setUploadError("Erreur lors de l'upload");
+    //       }
+    //     },
+    //   }
+    // );
   };
 
   if (loadingDemande || loadingEmploye) {
@@ -340,7 +377,7 @@ const InfoDemandePage: React.FC = () => {
                       </SheetHeader>
                       <form
                         onSubmit={handleAddDocument}
-                        className="space-y-3 mt-4"
+                        className="space-y-3 mt-4 px-2"
                       >
                         <div>
                           <label className="block text-sm font-medium mb-1">
@@ -379,30 +416,34 @@ const InfoDemandePage: React.FC = () => {
                           <label className="block text-sm font-medium mb-1">
                             Nature du document
                           </label>
-                          <select
-                            value={natureId ?? ""}
-                            onChange={(e) =>
-                              setNatureId(Number(e.target.value))
-                            }
-                            className="block w-full border rounded px-2 py-1"
+                          <Select
+                            value={natureId ?? undefined}
+                            onValueChange={(value) => setNatureId(value)}
                           >
-                            <option value="" disabled>
-                              Choisir la nature
-                            </option>
-                            {loadingNatures ? (
-                              <option>Chargement...</option>
-                            ) : (
-                              natures?.map((nature) => (
-                                <option
-                                  key={nature.id_nature_document}
-                                  value={nature.id_nature_document}
-                                >
-                                  {nature.libelle}
-                                </option>
-                              ))
-                            )}
-                          </select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionnez un type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.values(TypeDemandes).map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Dossier *
+                          </label>
+                          <DossierCombobox
+                            value={id_dossier?.toString() ?? undefined}
+                            onChange={(value) => setIdDossier(Number(value))}
+                            type={"demandes RH"}
+                          />
+                        </div>
+
                         {uploadError && (
                           <div className="text-red-600 text-sm">
                             {uploadError}

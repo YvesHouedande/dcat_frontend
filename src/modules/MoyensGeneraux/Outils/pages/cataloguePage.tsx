@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,9 +8,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
-import { Package, Search, Wrench } from "lucide-react";
-import ReferenceCarte from "../components/ui/ReferenceCarte";
+import {
+  Package,
+  Search,
+  Wrench,
+  ChevronLeft,
+  ChevronRight,
+  Package2,
+  ImageIcon,
+  Eye,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import { useProducts } from "../hooks/useProducts";
 import Parametres from "@/modules/stocks/reference/components/ui/Parametres";
 import ProductCatalogSkeleton from "@/components/skeleton/ProductCatalogSkeleton";
@@ -19,7 +37,11 @@ import {
   useProductMarques,
   useProductModels,
 } from "@/modules/stocks/reference/hooks/useOthers";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useDeleteProduct } from "@/modules/stocks/reference/hooks/useProducts";
+import { ReferenceProduit } from "@/modules/stocks/types/reference";
+import ProductInfoDialog from "../components/ProductInfoDialog";
+import AlertDeleteDialog from "@/components/AlertDeleteDialog";
+import { toast } from "sonner";
 
 export default function CataloguePage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,7 +50,18 @@ export default function CataloguePage() {
   const [brandFilter, setBrandFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [productTypeFilter, setProductTypeFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const navigate = useNavigate();
+
+  // États pour le dialogue et la suppression
+  const [selectedProduct, setSelectedProduct] =
+    useState<ReferenceProduit | null>(null);
+  const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [productToDelete, setProductToDelete] =
+    useState<ReferenceProduit | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const {
     products: productsQuery,
@@ -47,8 +80,35 @@ export default function CataloguePage() {
   const { productFamilies } = useProductFamilies();
   const { productMarques } = useProductMarques();
   const { productModels } = useProductModels();
+  const { delete: deleteProduct } = useDeleteProduct();
 
-  console.log("produits", productsQuery.data);
+  // Fonctions de gestion des actions
+  const handleViewProduct = (product: ReferenceProduit) => {
+    setSelectedProduct(product);
+    setShowInfoDialog(true);
+  };
+
+  const handleDeleteProduct = (product: ReferenceProduit) => {
+    setProductToDelete(product);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async (id: string | number) => {
+    if (!id) return;
+
+    try {
+      await deleteProduct.mutateAsync(Number(id));
+      toast.success("Produit supprimé avec succès");
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
+      setDeleteError(null);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Erreur inconnue";
+      setDeleteError("La suppression a échoué. " + errorMessage);
+      toast.error("Erreur lors de la suppression");
+    }
+  };
 
   const allProducts =
     productsQuery.data?.pages?.flatMap((page) => page.data) || [];
@@ -79,31 +139,72 @@ export default function CataloguePage() {
     );
   });
 
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  // Calcul de la pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
+  // Réinitialiser la page quand les filtres changent
   useEffect(() => {
-    const target = loadMoreRef.current;
-    if (!target) return;
+    setCurrentPage(1);
+  }, [
+    searchTerm,
+    categoryFilter,
+    modelFilter,
+    brandFilter,
+    familyFilter,
+    productTypeFilter,
+  ]);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      {
-        root: null,
-        rootMargin: "200px",
-        threshold: 0.1,
-      }
-    );
+  const handlePreviousPage = () => {
+    fetchNextPage();
+  };
 
-    observer.observe(target);
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
 
-    return () => {
-      observer.unobserve(target); // utilise la variable capturée
+  // Composant pour l'image du produit
+  const ProductImage = ({ product }: { product: ReferenceProduit }) => {
+    const [imageError, setImageError] = useState(false);
+    const [imageLoading, setImageLoading] = useState(true);
+
+    const handleImageError = () => {
+      setImageError(true);
+      setImageLoading(false);
     };
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+    const handleImageLoad = () => {
+      setImageLoading(false);
+    };
+
+    if (imageError || !product.images?.[0].url) {
+      return (
+        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+          <Package2 className="w-8 h-8 text-gray-400" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden relative">
+        {imageLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <ImageIcon className="w-6 h-6 text-gray-400 animate-pulse" />
+          </div>
+        )}
+        <img
+          src={product.images?.[0].url}
+          alt={product.desi_produit}
+          className="w-full h-full object-cover"
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+          style={{ display: imageLoading ? "none" : "block" }}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto py-4">
@@ -144,6 +245,7 @@ export default function CataloguePage() {
                 setFamilyFilter("all");
                 setModelFilter("all");
                 setBrandFilter("all");
+                setCurrentPage(1);
               }}
               className="h-9 whitespace-nowrap"
             >
@@ -154,8 +256,6 @@ export default function CataloguePage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-
-
           <Select value={familyFilter} onValueChange={setFamilyFilter}>
             <SelectTrigger className="w-40 h-9">
               <SelectValue placeholder="Catégorie" />
@@ -209,46 +309,224 @@ export default function CataloguePage() {
         </div>
       </div>
 
-      <div className="text-sm text-gray-500 p-2">
-        {filteredProducts.length} produits
+      {/* Informations sur les résultats */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-sm text-gray-500">
+          {filteredProducts.length} produits trouvés
+        </div>
+        {filteredProducts.length > 0 && (
+          <div className="text-sm text-gray-500">
+            Page {currentPage} sur {totalPages} ({startIndex + 1}-
+            {Math.min(endIndex, filteredProducts.length)} sur{" "}
+            {filteredProducts.length})
+          </div>
+        )}
       </div>
 
       {productsQuery.isLoading && !isFetchingNextPage ? (
         <ProductCatalogSkeleton />
       ) : (
         <>
-          {filteredProducts.length === 0 && (
-            <div className="flex w-full h-full flex-col justify-center items-center">
+          {filteredProducts.length === 0 ? (
+            <div className="flex w-full h-64 flex-col justify-center items-center">
               <Package className="w-24 h-24 text-blue-500" />
-              <div className="mt-6">Aucun Produit trouvé</div>
-            </div>
-          )}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {filteredProducts.map((product) => (
-              <ReferenceCarte key={product.id_produit} product={product} />
-            ))}
-          </div>
-          {/* Pagination Skeleton */}
-          {isFetchingNextPage && (
-            <div className="mt-8 flex justify-center">
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-8" />
-                <Skeleton className="h-8 w-8" />
-                <Skeleton className="h-8 w-8" />
-                <Skeleton className="h-8 w-8" />
+              <div className="mt-6 text-lg text-gray-600">
+                Aucun Produit trouvé
               </div>
             </div>
-          )}
-          {!hasNextPage && allProducts.length > 0 && (
-            <div className="text-center text-gray-500 mt-4">
-              Fin de la liste
-            </div>
+          ) : (
+            <>
+              {/* Tableau des produits */}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="w-20">Image</TableHead>
+                      <TableHead>Désignation</TableHead>
+                      <TableHead>Famille</TableHead>
+                      <TableHead>Marque</TableHead>
+                      <TableHead>Modèle</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentProducts.map((product) => (
+                      <TableRow
+                        key={product.id_produit}
+                        className="hover:bg-gray-50"
+                      >
+                        <TableCell>
+                          <ProductImage product={product} />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="max-w-xs">
+                            <div
+                              className="truncate"
+                              title={product.desi_produit}
+                            >
+                              {product.desi_produit}
+                            </div>
+                            {product.code_produit && (
+                              <div className="text-sm text-gray-500">
+                                Réf: {product.code_produit}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {productFamilies.data.find(
+                            (f) => f.id_famille === product.id_famille
+                          )?.libelle_famille || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {productMarques.data.find(
+                            (m) => m.id_marque === product.id_marque
+                          )?.libelle_marque || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {productModels.data.find(
+                            (m) => m.id_modele === product.id_modele
+                          )?.libelle_modele || "-"}
+                        </TableCell>
+
+                        <TableCell>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              product.qte_produit && product.qte_produit > 10
+                                ? "bg-green-100 text-green-800"
+                                : product.qte_produit && product.qte_produit > 0
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {product.qte_produit || 0}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewProduct(product)}
+                              className="h-8 w-8 p-0 hover:bg-slate-100"
+                              title="Voir les détails"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                navigate(
+                                  `/gestion-des-outils-travail/creation-outils/${product.id_produit}/edit`
+                                )
+                              }
+                              className="h-8 w-8 p-0 hover:bg-slate-100"
+                              title="Modifier"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteProduct(product)}
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-6">
+                <div className="text-sm text-gray-500">
+                  Affichage de {startIndex + 1} à{" "}
+                  {Math.min(endIndex, filteredProducts.length)} sur{" "}
+                  {filteredProducts.length} résultats
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    className="h-8"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Précédent
+                  </Button>
+
+                  <div className="flex items-center space-x-1">
+                    {/* Numéros de pages */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNumber;
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i;
+                      } else {
+                        pageNumber = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNumber}
+                          variant={
+                            currentPage === pageNumber ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNumber)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {pageNumber}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages && !hasNextPage}
+                    className="h-8"
+                  >
+                    Suivant
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </>
       )}
 
-      {/* Sentinelle pour scroll infini */}
-      {hasNextPage && <div ref={loadMoreRef} className="h-1" />}
+      {/* Dialogue d'informations du produit */}
+      <ProductInfoDialog
+        open={showInfoDialog}
+        onOpenChange={setShowInfoDialog}
+        product={selectedProduct}
+      />
+
+      {/* Dialogue de confirmation de suppression */}
+      <AlertDeleteDialog
+        showDeleteDialog={showDeleteDialog}
+        id={productToDelete?.id_produit?.toString() ?? ""}
+        setShowDeleteDialog={setShowDeleteDialog}
+        deleteError={deleteError}
+        handleSupprimer={handleConfirmDelete}
+        isDeleting={deleteProduct.isLoading}
+      />
     </div>
   );
 }

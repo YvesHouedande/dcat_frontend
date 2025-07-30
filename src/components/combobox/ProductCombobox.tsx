@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useDebounce } from "../../modules/stocks/entree/utils/helpers";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,8 +33,13 @@ export function ProductCombobox({
   const [searchTerm, setSearchTerm] = React.useState<string | undefined>(
     undefined
   );
+
+  // Debounce du terme de recherche pour éviter trop d'appels API
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const { products } = useProducts({
-    search: searchTerm,
+    search: debouncedSearchTerm,
+    typeId: isTools ? 2 : 1,
   });
   const allProducts = products.data?.pages?.flatMap((page) => page.data);
 
@@ -57,7 +63,7 @@ export function ProductCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder={`Rechercher un ${isTools ? "outil" : "produit"}...`}

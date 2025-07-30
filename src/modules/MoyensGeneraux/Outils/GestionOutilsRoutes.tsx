@@ -3,13 +3,12 @@ import { Route, Routes } from "react-router-dom";
 import MoyensGenerauxLayout from "../Layout";
 import CataloguePage from "./pages/cataloguePage";
 import ReferenceEditForm from "./pages/referenceRegistration";
-import ReferencePage from "./pages/referencePage";
-
 import MoyenGeneraux from "../MoyenGeneraux";
 import NotFound from "@/pages/NotFound";
 import Sortie from "./pages/sortie";
 import Retour from "./pages/retour";
 import Entree from "./pages/entree";
+import ReferenceInfo from "./components/ReferenceInfo";
 
 function GestionOutilsRoutes() {
   return (
@@ -17,7 +16,7 @@ function GestionOutilsRoutes() {
       <Route path="/" element={<GestionOutils />} />
       <Route path="/creation-outils" element={<MoyensGenerauxLayout />}>
         <Route index element={<CataloguePage />} />
-        <Route path=":id" element={<ReferencePage />} />
+        <Route path=":id" element={<ReferenceInfo />} />
         <Route path=":id/edit" element={<ReferenceEditForm />} />
         <Route path="nouveau" element={<ReferenceEditForm />} />
       </Route>

@@ -6,11 +6,17 @@ import { InterventionDetailsPage } from "./Pages/InterventionDetailsPage";
 import { InterventionsPage } from "./Pages/InterventionsPage";
 import { InterventionsListPage } from "./Pages/InterventionsListPage";
 import NotFound from "@/pages/NotFound";
+import InterventionDocument from "./Pages/InterventionDocument";
+import InterventionLayout from "./InterventionLayout";
+
 function GestionInterventionRoutes() {
   return (
     <Routes>
       <Route path="/" element={<GestionIntervention />} />
       <Route path="/interventions" element={<InterventionsPage />} />
+      <Route path="/documents" element={<InterventionLayout />}>
+        <Route index element={<InterventionDocument />} />
+      </Route>
       <Route path="/interventions/liste" element={<InterventionsListPage />} />
       <Route
         path="/interventions/rapports"

@@ -1,6 +1,9 @@
 import { useCallback } from "react";
 import { useApi } from "@/api/api";
-import { Contrat } from "@/modules/administration-Finnance/administration/types/interfaces";
+import {
+  Contrat,
+  PaginationResponse,
+} from "@/modules/administration-Finnance/administration/types/interfaces";
 import { EmployeDocument } from "@/modules/administration-Finnance/administration/types/interfaces";
 
 export const useContratsApi = () => {
@@ -161,9 +164,13 @@ export const useContratsApi = () => {
   );
 
   const fetchEmployeDocuments = useCallback(
-    async (id_employes: number): Promise<EmployeDocument[]> => {
-      const res = await api.get(
-        `/administration/employes/${id_employes}/documents`
+    async (
+      id_employes: number,
+      page: number,
+      limit: number
+    ): Promise<PaginationResponse<EmployeDocument[]>> => {
+      const res = await api.get<PaginationResponse<EmployeDocument[]>>(
+        `/administration/employes/${id_employes}/documents?page=${page}&limit=${limit}`
       );
       if (!res.data) throw new Error("Aucun document trouvé");
       return res.data;

@@ -20,6 +20,7 @@ import { useApi } from "@/api/api";
 import { Clients } from "@/modules/marketing-commercial/commercial/commande/types/commande";
 
 import { useQuery } from "@tanstack/react-query";
+import { useDebounce } from "../../modules/stocks/entree/utils/helpers";
 
 interface ClientComboboxProps {
   value: string | undefined;
@@ -51,19 +52,29 @@ export function ClientCombobox({
 }: ClientComboboxProps & { disabled?: boolean; isLoading?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
+
+  // Debounce du terme de recherche pour éviter trop d'appels API
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const { data: clients, isLoading: queryLoading } = useClients();
 
   // Filtrer les clients selon la recherche
   const filteredClients = useMemo(() => {
     if (!clients) return [];
-    if (!searchTerm) return clients;
+    if (!debouncedSearchTerm) return clients;
     return clients.filter(
       (client) =>
-        (client.nom ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.email ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.contact ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+        (client.nom ?? "")
+          .toLowerCase()
+          .includes(debouncedSearchTerm.toLowerCase()) ||
+        (client.email ?? "")
+          .toLowerCase()
+          .includes(debouncedSearchTerm.toLowerCase()) ||
+        (client.contact ?? "")
+          .toLowerCase()
+          .includes(debouncedSearchTerm.toLowerCase())
     );
-  }, [searchTerm, clients]);
+  }, [debouncedSearchTerm, clients]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -85,7 +96,7 @@ export function ClientCombobox({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Rechercher un client..."

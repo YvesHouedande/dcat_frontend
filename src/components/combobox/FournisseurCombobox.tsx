@@ -1,6 +1,7 @@
 // src/components/combobox/DeliveryCombobox.tsx
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useDebounce } from "../../modules/stocks/entree/utils/helpers";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,10 @@ export function FournisseurCombobox({
 }: ForunisseurComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
+
+  // Debounce du terme de recherche pour éviter trop d'appels API
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const { livraisons: deliveries, isLoading } = useLivraisonData();
 
   const deliveriesArray = React.useMemo(
@@ -37,11 +42,13 @@ export function FournisseurCombobox({
   );
 
   const filteredDeliveries = React.useMemo(() => {
-    if (!searchTerm) return deliveriesArray;
+    if (!debouncedSearchTerm) return deliveriesArray;
     return deliveriesArray.filter((delivery) =>
-      delivery.reference_livraison.toLowerCase().includes(searchTerm.toLowerCase())
+      delivery.reference_livraison
+        .toLowerCase()
+        .includes(debouncedSearchTerm.toLowerCase())
     );
-  }, [deliveriesArray, searchTerm]);
+  }, [deliveriesArray, debouncedSearchTerm]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -61,7 +68,7 @@ export function FournisseurCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Rechercher un fournisseur..."

@@ -17,6 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
+import { useDebounce } from "../../modules/stocks/entree/utils/helpers";
 
 interface DeliveryComboboxProps {
   value: string;
@@ -26,6 +27,10 @@ interface DeliveryComboboxProps {
 export function DeliveryCombobox({ value, onChange }: DeliveryComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
+
+  // Debounce du terme de recherche pour éviter trop d'appels API
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const { livraisons: deliveries, isLoading } = useLivraisonData();
 
   const deliveriesArray = React.useMemo(
@@ -34,11 +39,13 @@ export function DeliveryCombobox({ value, onChange }: DeliveryComboboxProps) {
   );
 
   const filteredDeliveries = React.useMemo(() => {
-    if (!searchTerm) return deliveriesArray;
+    if (!debouncedSearchTerm) return deliveriesArray;
     return deliveriesArray.filter((delivery) =>
-      delivery.reference_livraison.toLowerCase().includes(searchTerm.toLowerCase())
+      delivery.reference_livraison
+        .toLowerCase()
+        .includes(debouncedSearchTerm.toLowerCase())
     );
-  }, [deliveriesArray, searchTerm]);
+  }, [deliveriesArray, debouncedSearchTerm]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -58,7 +65,7 @@ export function DeliveryCombobox({ value, onChange }: DeliveryComboboxProps) {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Rechercher une référence..."

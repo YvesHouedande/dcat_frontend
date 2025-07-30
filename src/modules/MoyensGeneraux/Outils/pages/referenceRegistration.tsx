@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,13 +23,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 // Custom Components & Hooks
-import { ReferenceSelect } from "@/modules/stocks/reference/components/ui/ReferenceSelect";
-import { ImageDropzone } from "@/modules/stocks/reference/utils/ImageDropzone";
+import { ReferenceSelect } from "../components/ui/ReferenceSelect";
+
 import {
-  useCreateProduct,
   useProduct,
+  useCreateProduct,
   useUpadteProduct,
 } from "@/modules/stocks/reference/hooks/useProducts";
 import {
@@ -38,27 +39,35 @@ import {
   useProductMarques,
   useProductModels,
 } from "@/modules/stocks/reference/hooks/useOthers";
-import { generateProductCode } from "@/lib/codeGenerator";
+
 import { referenceSchema } from "@/modules/stocks/reference/schemas/referenceSchema";
 import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
+import { ImageProduit } from "@/modules/stocks/types/reference";
 import {
-  categorieTypes,
-  familleTypes,
-  ImageProduit,
+  useDeleteImageProduct,
+  useUpdateImageProdcut,
+} from "@/modules/stocks/reference/hooks/useProducts";
+
+import {
   marqueTypes,
+  familleTypes,
+  categorieTypes,
   modeleTypes,
 } from "@/modules/stocks/types/reference";
+import DebugZod from "@/modules/stocks/utils/debug";
+import { generateProductCode } from "@/modules/stocks/utils/generateProductCode";
+import { ImageDropzone } from "@/modules/stocks/reference/utils/ImageDropzone";
 
 export type FormValues = z.infer<typeof referenceSchema>;
 
 const DEFAULT_VALUES: Partial<FormValues> = {
-  id_type_produit: 2,
-  desi_produit: "",
+  id_type_produit: 1,
+  desi_produit: undefined,
   desc_produit: undefined,
-  caracteristiques: "",
-  emplacement_produit: "",
-  code_produit: "",
+  caracteristiques: undefined,
+  emplacement_produit: undefined,
+  code_produit: undefined,
 };
 
 type ReferenceFieldName =
@@ -67,39 +76,43 @@ type ReferenceFieldName =
   | "id_categorie"
   | "id_famille";
 
-export default function ReferenceEditForm() {
+export default function ReferenceRegistration() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
+  // Actions hooks
+  const { deleteImage } = useDeleteImageProduct();
+  const { updateImage } = useUpdateImageProdcut();
 
   // Data hooks
+  const { product } = useProduct(id);
   const { productCategories: categories } = useProductCategories();
   const { productFamilies: familles } = useProductFamilies();
   const { productMarques: marques } = useProductMarques();
   const { productModels: modeles } = useProductModels();
   const { create } = useCreateProduct();
   const { update } = useUpadteProduct();
-  const { product } = useProduct(id);
 
   // State
   const [productImages, setProductImages] = useState<ImageProduit[]>([]);
   const [isFormDirty, setIsFormDirty] = useState(false);
 
-  // Form
   const form = useForm<FormValues>({
     resolver: zodResolver(referenceSchema),
-    defaultValues:
-      isEditMode && product.data
-        ? {
-            ...DEFAULT_VALUES,
-            ...product.data,
-            id_marque: product.data.id_marque ?? undefined,
-            id_modele: product.data.id_modele ?? undefined,
-            id_categorie: product.data.id_categorie ?? undefined,
-            id_famille: product.data.id_famille ?? undefined,
-            id_type_produit: product.data.id_type_produit ?? 2,
-          }
-        : DEFAULT_VALUES,
+    defaultValues: {
+      code_produit: product.data?.code_produit,
+      id_type_produit: product.data?.id_type_produit ?? 2,
+      id_marque: product.data?.id_marque,
+      id_modele: product.data?.id_modele,
+      id_categorie: product.data?.id_categorie,
+      id_famille: product.data?.id_famille,
+      desi_produit: product.data?.desi_produit,
+      desc_produit: product.data?.desc_produit,
+      caracteristiques: product.data?.caracteristiques,
+      emplacement_produit: product.data?.emplacement_produit,
+      images: product.data?.images,
+      imagesMeta: product.data?.imagesMeta,
+    },
   });
 
   const watchedValues = form.watch([
@@ -134,6 +147,32 @@ export default function ReferenceEditForm() {
     },
     [form]
   );
+
+  useEffect(() => {
+    if (isEditMode && product.data) {
+      const formData = {
+        id_produit: product.data?.id_produit,
+        code_produit: product.data?.code_produit,
+        id_type_produit: product.data?.id_type_produit ?? 2,
+        id_marque: product.data?.id_marque,
+        id_modele: product.data?.id_modele,
+        id_categorie: product.data?.id_categorie,
+        id_famille: product.data?.id_famille,
+        desi_produit: product.data?.desi_produit,
+        desc_produit: product.data?.desc_produit,
+        caracteristiques: product.data?.caracteristiques,
+        emplacement_produit: product.data?.emplacement_produit,
+        images: product.data?.images,
+        imagesMeta: product.data?.imagesMeta,
+      };
+
+      const images = product.data.images
+        ? cleanImageData(product.data.images)
+        : [];
+
+      resetForm(formData, images);
+    }
+  }, [product.data, isEditMode, resetForm]);
 
   // Auto-generate product code
   useMemo(() => {
@@ -182,44 +221,92 @@ export default function ReferenceEditForm() {
 
   // Image handlers
   const handleImageSelected = useCallback(
-    (imageDataUrl: string, file: File) => {
+    async (imageDataUrl: string, file: File) => {
       const newImage: ImageProduit = {
         libelle_image: file.name.replace(/\.[^/.]+$/, ""),
         numero_image: productImages.length + 1,
         file,
         dataUrl: imageDataUrl,
       };
-      setProductImages((prev) => [...prev, newImage]);
-      setIsFormDirty(true);
+      if (isEditMode && product.data?.id_produit) {
+        try {
+          await updateImage.mutateAsync(
+            {
+              images: [newImage.file as File],
+              libelles: [newImage.libelle_image],
+              numeros: [Number(newImage.numero_image)],
+              id_produit: product.data?.id_produit,
+            },
+            {
+              onSuccess: () => {
+                setProductImages((prev) => [...prev, newImage]);
+                setIsFormDirty(true);
+                toast.success("Image mise à jour avec succès");
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour de l'image:", error);
+        }
+      } else {
+        try {
+          setProductImages((prev) => [...prev, newImage]);
+          setIsFormDirty(true);
+        } catch (error) {
+          console.error("Erreur lors de la création de l'image:", error);
+        }
+      }
     },
-    [productImages.length]
+    [productImages.length, updateImage, isEditMode, product.data?.id_produit]
   );
 
   const handleImageChange = useCallback(
-    (action: string, index: number, value?: string | number) => {
-      setProductImages((prev) => {
-        let updated = [...prev];
-        switch (action) {
-          case "label":
-            updated[index] = {
-              ...updated[index],
-              libelle_image: String(value),
-            };
-            break;
-          case "remove":
-            updated = updated.filter((_, i) => i !== index);
-            break;
-          case "reorder": {
-            const [movedImage] = updated.splice(index, 1);
-            updated.splice(Number(value), 0, movedImage);
-            break;
+    async (action: string, index: number, value?: string | number) => {
+      if (action === "label") {
+        // Mode création - mise à jour directe de l'état local
+        setProductImages((prev) =>
+          prev.map((img, i) =>
+            i === index ? { ...img, libelle_image: String(value) } : img
+          )
+        );
+      } else if (action === "remove") {
+        if (isEditMode) {
+          const currentImage = productImages[index];
+
+          try {
+            await deleteImage.mutateAsync(Number(currentImage.id_image));
+
+            // Mettre à jour l'état local seulement après succès de la mutation
+            setProductImages((prev) => {
+              const updated = prev.filter((_, i) => i !== index);
+              return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
+            });
+
+            toast.success("Image supprimée avec succès");
+          } catch (error) {
+            toast.error("Erreur lors de la suppression de l'image");
+            console.error("Error deleting image:", error);
           }
+        } else {
+          // Mode création - suppression directe de l'état local
+          setProductImages((prev) => {
+            const updated = prev.filter((_, i) => i !== index);
+            return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
+          });
         }
-        return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
-      });
+      } else if (action === "reorder") {
+        // Réorganisation - mise à jour directe de l'état local
+        setProductImages((prev) => {
+          const updated = [...prev];
+          const [movedImage] = updated.splice(index, 1);
+          updated.splice(Number(value), 0, movedImage);
+          return updated.map((img, i) => ({ ...img, numero_image: i + 1 }));
+        });
+      }
+
       setIsFormDirty(true);
     },
-    []
+    [deleteImage, isEditMode, productImages]
   );
 
   // Form handlers
@@ -236,6 +323,7 @@ export default function ReferenceEditForm() {
         id_famille: product.data.id_famille || undefined,
         id_type_produit: product.data.id_type_produit || 2,
       };
+      toast.warning("Les modifications seront perdues");
       const images = product.data.images
         ? cleanImageData(product.data.images)
         : [];
@@ -271,18 +359,18 @@ export default function ReferenceEditForm() {
 
       if (isEditMode) {
         await update.mutateAsync(formDataWithImages);
-        toast.success("Produit mis à jour avec succès");
+        toast.success("Outil mis à jour avec succès");
         setIsFormDirty(false);
       } else {
         await create.mutateAsync(formDataWithImages);
-        toast.success("Produit ajouté avec succès");
+        toast.success("Outil ajouté avec succès");
         resetForm();
       }
     } catch (error) {
       toast.error(
         isEditMode
-          ? "Erreur lors de la mise à jour du produit"
-          : "Erreur lors de l'ajout du produit"
+          ? "Erreur lors de la mise à jour de l'outil"
+          : "Erreur lors de l'ajout de l'outil"
       );
       console.error("Form submission error:", error);
     }
@@ -349,8 +437,8 @@ export default function ReferenceEditForm() {
           </CardTitle>
           <CardDescription className="text-base">
             {isEditMode
-              ? "Modifiez les informations du produit sélectionné"
-              : "Ajoutez un nouveau produit à votre catalogue"}
+              ? "Modifiez les informations de l'outil sélectionné"
+              : "Ajoutez un nouveau outil à votre catalogue"}
           </CardDescription>
         </CardHeader>
 
@@ -362,6 +450,7 @@ export default function ReferenceEditForm() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Classification Section */}
               <div className="px-4 pb-4 rounded-md">
+                <DebugZod form={form} />
                 <h3 className="font-medium mb-4 text-lg">
                   Classification du produit
                 </h3>
@@ -413,7 +502,7 @@ export default function ReferenceEditForm() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div className="space-y-6">
                   <h3 className="font-medium text-lg">
-                    Informations du produit
+                    Informations de l'outil
                   </h3>
 
                   <FormField
@@ -447,7 +536,7 @@ export default function ReferenceEditForm() {
                         <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Description détaillée du produit"
+                            placeholder="Description détaillée de l'outil"
                             className="min-h-24 resize-y"
                             {...field}
                             onChange={(e) => {
@@ -464,7 +553,7 @@ export default function ReferenceEditForm() {
 
                 {/* Images Section */}
                 <div className="space-y-4">
-                  <h3 className="font-medium text-lg">Images du produit</h3>
+                  <h3 className="font-medium text-lg">Images de l'outil</h3>
 
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
                     <ImageDropzone onImageSelected={handleImageSelected} />
@@ -473,7 +562,7 @@ export default function ReferenceEditForm() {
                   {productImages.length > 0 && (
                     <div className="space-y-3">
                       <h4 className="font-medium text-sm">
-                        Images ajoutées ({productImages.length})
+                        Images ajoutées ({productImages.length}) de l'outil
                       </h4>
                       <div className="space-y-2 max-h-96 overflow-y-auto">
                         {productImages.map((image, index) => (
@@ -481,6 +570,10 @@ export default function ReferenceEditForm() {
                             key={index}
                             className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50"
                           >
+                            <Badge variant="secondary" className="shrink-0">
+                              #{index + 1}
+                            </Badge>
+
                             <div className="w-12 h-12 shrink-0">
                               {image.dataUrl ||
                               image.url ||
@@ -586,7 +679,7 @@ export default function ReferenceEditForm() {
                       <FormLabel>Caractéristiques</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Caractéristiques techniques"
+                          placeholder="Caractéristiques techniques de l'outil"
                           className="min-h-24 resize-y"
                           {...field}
                           onChange={(e) => {
