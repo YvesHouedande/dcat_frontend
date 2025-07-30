@@ -55,7 +55,7 @@ import {
   categorieTypes,
   modeleTypes,
 } from "../../types/reference";
-import DebugZod from "../../utils/debug";
+// import DebugZod from "../../utils/debug";
 
 export type FormValues = z.infer<typeof referenceSchema>;
 
@@ -448,7 +448,7 @@ export default function ReferenceEditForm() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Classification Section */}
               <div className="px-4 pb-4 rounded-md">
-                <DebugZod form={form} />
+                {/* <DebugZod form={form} /> */}
                 <h3 className="font-medium mb-4 text-lg">
                   Classification du produit
                 </h3>

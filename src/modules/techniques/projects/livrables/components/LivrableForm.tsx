@@ -10,7 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Save, Plus, FileText, Trash2 } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  Save,
+  Plus,
+  FileText,
+  Trash2,
+} from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
@@ -61,7 +67,9 @@ interface PendingDocument {
 interface LivrableFormProps {
   initialData?: Livrable; // Pour l'édition
   onSave: (
-    livrable: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">>,
+    livrable:
+      | CreateLivrablePayload
+      | Partial<Omit<Livrable, "documents" | "id_livrable">>,
     pendingDocuments?: PendingDocument[] // Documents à associer après création
   ) => Promise<void>;
   onCancel: () => void;
@@ -88,12 +96,16 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDocumentSheet, setShowDocumentSheet] = useState(false); // State for sheet visibility
-  
+
   // État pour les partenaires filtrés selon le projet sélectionné
-  const [partenairesProjet, setPartenairesProjet] = useState<PartenaireOption[]>([]);
-  
+  const [partenairesProjet, setPartenairesProjet] = useState<
+    PartenaireOption[]
+  >([]);
+
   // État pour les documents temporaires (pendant la création)
-  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>(
+    []
+  );
 
   // Form data for the Livrable itself
   const [formData, setFormData] = useState<Livrable>(
@@ -113,7 +125,9 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
   );
 
   // Form data for the Document to be uploaded
-  const [documentFormData, setDocumentFormData] = useState<CreateDocumentTextPayload & { file: File | null }>({
+  const [documentFormData, setDocumentFormData] = useState<
+    CreateDocumentTextPayload & { file: File | null }
+  >({
     libelle_document: "",
     classification_document: "",
     date_document: "",
@@ -133,61 +147,84 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
 
   // Filtrer les partenaires selon le projet sélectionné
   React.useEffect(() => {
-    if (formData.id_projet > 0 && projetsDisponibles && Array.isArray(projetsDisponibles)) {
-      const projetSelectionne = projetsDisponibles.find(p => p.id_projet === formData.id_projet);
-      
-      if (projetSelectionne && projetSelectionne.id_partenaire && Array.isArray(projetSelectionne.id_partenaire) && projetSelectionne.id_partenaire.length > 0) {
-        const partenairesFiltrés = (partenairesDisponibles || []).filter(partenaire =>
-          projetSelectionne.id_partenaire.includes(partenaire.id_partenaire)
+    if (
+      formData.id_projet > 0 &&
+      projetsDisponibles &&
+      Array.isArray(projetsDisponibles)
+    ) {
+      const projetSelectionne = projetsDisponibles.find(
+        (p) => p.id_projet === formData.id_projet
+      );
+
+      if (
+        projetSelectionne &&
+        projetSelectionne.id_partenaire &&
+        Array.isArray(projetSelectionne.id_partenaire) &&
+        projetSelectionne.id_partenaire.length > 0
+      ) {
+        const partenairesFiltrés = (partenairesDisponibles || []).filter(
+          (partenaire) =>
+            projetSelectionne.id_partenaire.includes(partenaire.id_partenaire)
         );
         setPartenairesProjet(partenairesFiltrés);
-        
+
         // Auto-sélectionner si un seul partenaire
         if (partenairesFiltrés.length === 1 && !formData.client) {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            client: String(partenairesFiltrés[0].id_partenaire)
+            client: String(partenairesFiltrés[0].id_partenaire),
           }));
         }
-      } else if (projetSelectionne && (!projetSelectionne.id_partenaire || !Array.isArray(projetSelectionne.id_partenaire))) {
+      } else if (
+        projetSelectionne &&
+        (!projetSelectionne.id_partenaire ||
+          !Array.isArray(projetSelectionne.id_partenaire))
+      ) {
         // Si id_partenaire n'est pas défini ou n'est pas un tableau, récupérer via API
-        
+
         // Import dynamique pour éviter les dépendances circulaires
-        import('../../projet/api/projets').then(({ getProjetAssociatedPartenaires }) => {
-          getProjetAssociatedPartenaires(projetSelectionne.id_projet)
-            .then((partenairesIds: number[]) => {
-              if (partenairesIds && partenairesIds.length > 0) {
-                const partenairesFiltrés = (partenairesDisponibles || []).filter(partenaire =>
-                  partenairesIds.includes(partenaire.id_partenaire)
-                );
-                
-                setPartenairesProjet(partenairesFiltrés);
-                
-                // Auto-sélectionner si un seul partenaire
-                if (partenairesFiltrés.length === 1 && !formData.client) {
-                  setFormData(prev => ({
-                    ...prev,
-                    client: String(partenairesFiltrés[0].id_partenaire)
-                  }));
+        import("../../projet/api/projets").then(
+          ({ getProjetAssociatedPartenaires }) => {
+            getProjetAssociatedPartenaires(projetSelectionne.id_projet)
+              .then((partenairesIds: number[]) => {
+                if (partenairesIds && partenairesIds.length > 0) {
+                  const partenairesFiltrés = (
+                    partenairesDisponibles || []
+                  ).filter((partenaire) =>
+                    partenairesIds.includes(partenaire.id_partenaire)
+                  );
+
+                  setPartenairesProjet(partenairesFiltrés);
+
+                  // Auto-sélectionner si un seul partenaire
+                  if (partenairesFiltrés.length === 1 && !formData.client) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      client: String(partenairesFiltrés[0].id_partenaire),
+                    }));
+                  }
+                } else {
+                  setPartenairesProjet([]);
+                  setFormData((prev) => ({ ...prev, client: "" }));
                 }
-              } else {
+              })
+              .catch((error) => {
+                console.error(
+                  "Erreur lors de la récupération des partenaires via API:",
+                  error
+                );
                 setPartenairesProjet([]);
-                setFormData(prev => ({ ...prev, client: "" }));
-              }
-            })
-            .catch((error) => {
-              console.error("Erreur lors de la récupération des partenaires via API:", error);
-              setPartenairesProjet([]);
-              setFormData(prev => ({ ...prev, client: "" }));
-            });
-        });
+                setFormData((prev) => ({ ...prev, client: "" }));
+              });
+          }
+        );
       } else {
         setPartenairesProjet([]);
-        setFormData(prev => ({ ...prev, client: "" }));
+        setFormData((prev) => ({ ...prev, client: "" }));
       }
     } else {
       setPartenairesProjet([]);
-      setFormData(prev => ({ ...prev, client: "" }));
+      setFormData((prev) => ({ ...prev, client: "" }));
     }
   }, [formData.id_projet, projetsDisponibles, partenairesDisponibles]);
 
@@ -233,7 +270,10 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     }));
   };
 
-  const handleDocumentSelectChange = (name: keyof CreateDocumentTextPayload, value: string) => {
+  const handleDocumentSelectChange = (
+    name: keyof CreateDocumentTextPayload,
+    value: string
+  ) => {
     const newValue = name === "id_nature_document" ? Number(value) : value;
     setDocumentFormData((prev) => ({
       ...prev,
@@ -287,7 +327,9 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     }
 
     // Prepare the payload based on whether it's a new livrable or an update
-    const payload: CreateLivrablePayload | Partial<Omit<Livrable, "documents" | "id_livrable">> = {
+    const payload:
+      | CreateLivrablePayload
+      | Partial<Omit<Livrable, "documents" | "id_livrable">> = {
       libelle_livrable: formData.libelle_livrable,
       date: formData.date,
       realisations: formData.realisations,
@@ -326,7 +368,7 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       toast.error("Veuillez sélectionner la nature du document.");
       return;
     }
-    
+
     // Validate file size (e.g., max 5MB)
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
     if (documentFormData.file.size > MAX_FILE_SIZE) {
@@ -337,16 +379,12 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     // Si le livrable existe déjà (mode édition), utiliser l'ancienne logique
     if (initialData?.id_livrable && onSaveDocument) {
       try {
-        await onSaveDocument(
-          initialData.id_livrable,
-          documentFormData.file,
-          {
-            libelle_document: documentFormData.libelle_document,
-            classification_document: documentFormData.classification_document,
-            date_document: documentFormData.date_document,
-            id_nature_document: documentFormData.id_nature_document,
-          }
-        );
+        await onSaveDocument(initialData.id_livrable, documentFormData.file, {
+          libelle_document: documentFormData.libelle_document,
+          classification_document: documentFormData.classification_document,
+          date_document: documentFormData.date_document,
+          id_nature_document: documentFormData.id_nature_document,
+        });
         toast.success("Document ajouté avec succès !");
         setShowDocumentSheet(false); // Close the sheet on success
         // Reset document form data
@@ -371,13 +409,15 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
           classification_document: documentFormData.classification_document,
           date_document: documentFormData.date_document,
           id_nature_document: documentFormData.id_nature_document,
-        }
+        },
       };
 
-      setPendingDocuments(prev => [...prev, newPendingDocument]);
-      toast.success("Document ajouté temporairement ! Il sera associé au livrable lors de la sauvegarde.");
+      setPendingDocuments((prev) => [...prev, newPendingDocument]);
+      toast.success(
+        "Document ajouté temporairement ! Il sera associé au livrable lors de la sauvegarde."
+      );
       setShowDocumentSheet(false); // Close the sheet on success
-      
+
       // Reset document form data
       setDocumentFormData({
         libelle_document: "",
@@ -391,7 +431,7 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
 
   // Fonction pour supprimer un document temporaire
   const removePendingDocument = (documentId: string) => {
-    setPendingDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    setPendingDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
     toast.success("Document retiré de la liste temporaire.");
   };
 
@@ -404,111 +444,154 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
           <div className="mb-6">
             <div className="flex justify-between items-center">
               <h1 className="text-2xl font-bold text-gray-800">
-                {initialData ? "Modifier le Livrable" : "Ajouter un nouveau Livrable"}
+                {initialData
+                  ? "Modifier le Livrable"
+                  : "Ajouter un nouveau Livrable"}
               </h1>
-              <Sheet open={showDocumentSheet} onOpenChange={setShowDocumentSheet}>
+              <Sheet
+                open={showDocumentSheet}
+                onOpenChange={setShowDocumentSheet}
+              >
                 <SheetTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" /> 
-                    {initialData ? "Associer un document" : "Ajouter un document"}
+                    <Plus className="h-4 w-4" />
+                    {initialData
+                      ? "Associer un document"
+                      : "Ajouter un document"}
                   </Button>
                 </SheetTrigger>
-                  <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-                    <SheetHeader>
-                      <SheetTitle>Associer un Document</SheetTitle>
-                      <SheetDescription>
-                        Téléchargez un document et associez-le à ce livrable.
-                      </SheetDescription>
-                    </SheetHeader>
-                    <form onSubmit={handleDocumentSubmit} className="grid gap-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="documentFile">Fichier du document <span className="text-red-500">*</span></Label>
-                        <Input
-                          id="documentFile"
-                          type="file"
-                          onChange={handleDocumentFileChange}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="libelle_document">Libellé du document <span className="text-red-500">*</span></Label>
-                        <Input
-                          id="libelle_document"
-                          name="libelle_document"
-                          value={documentFormData.libelle_document}
-                          onChange={handleDocumentInputChange}
-                          placeholder="Entrez le libellé du document"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="classification_document">Classification</Label>
-                        <Input
-                          id="classification_document"
-                          name="classification_document"
-                          value={documentFormData.classification_document}
-                          onChange={handleDocumentInputChange}
-                          placeholder="Ex: Confidentiel, Public"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="date_document">Date du document</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {documentFormData.date_document ? (
-                                format(parseISO(documentFormData.date_document), "dd MMMM yyyy", { // Corrected format string
+                <SheetContent
+                  side="right"
+                  className="w-full sm:max-w-md overflow-y-auto"
+                >
+                  <SheetHeader>
+                    <SheetTitle>Associer un Document</SheetTitle>
+                    <SheetDescription>
+                      Téléchargez un document et associez-le à ce livrable.
+                    </SheetDescription>
+                  </SheetHeader>
+                  <form
+                    onSubmit={handleDocumentSubmit}
+                    className="grid gap-4 py-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="documentFile">
+                        Fichier du document{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="documentFile"
+                        type="file"
+                        onChange={handleDocumentFileChange}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="libelle_document">
+                        Libellé du document{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="libelle_document"
+                        name="libelle_document"
+                        value={documentFormData.libelle_document}
+                        onChange={handleDocumentInputChange}
+                        placeholder="Entrez le libellé du document"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="classification_document">
+                        Classification
+                      </Label>
+                      <Input
+                        id="classification_document"
+                        name="classification_document"
+                        value={documentFormData.classification_document}
+                        onChange={handleDocumentInputChange}
+                        placeholder="Ex: Confidentiel, Public"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date_document">Date du document</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {documentFormData.date_document ? (
+                              format(
+                                parseISO(documentFormData.date_document),
+                                "dd MMMM yyyy",
+                                {
+                                  // Corrected format string
                                   locale: fr,
-                                })
-                              ) : (
-                                <span>Sélectionner une date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={documentFormData.date_document ? parseISO(documentFormData.date_document) : undefined}
-                              onSelect={handleDocumentDateChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="id_nature_document">Nature du document <span className="text-red-500">*</span></Label>
-                        <Select
-                          onValueChange={(value) =>
-                            handleDocumentSelectChange("id_nature_document", value)
-                          }
-                          value={documentFormData.id_nature_document ? String(documentFormData.id_nature_document) : ""}
-                          required
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez une nature" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {/* Populate select options with fetched Nature data */}
-                            {natureDocumentsDisponibles.map((nature) => (
-                              <SelectItem key={nature.id_nature_document} value={String(nature.id_nature_document)}>
-                                {nature.libelle}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <SheetFooter>
-                        <Button type="submit" disabled={isSubmitting}>
-                          <Save className="mr-2 h-4 w-4" /> Enregistrer Document
-                        </Button>
-                      </SheetFooter>
-                    </form>
-                  </SheetContent>
-                </Sheet>
+                                }
+                              )
+                            ) : (
+                              <span>Sélectionner une date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={
+                              documentFormData.date_document
+                                ? parseISO(documentFormData.date_document)
+                                : undefined
+                            }
+                            onSelect={handleDocumentDateChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="id_nature_document">
+                        Nature du document{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          handleDocumentSelectChange(
+                            "id_nature_document",
+                            value
+                          )
+                        }
+                        value={
+                          documentFormData.id_nature_document
+                            ? String(documentFormData.id_nature_document)
+                            : ""
+                        }
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez une nature" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* Populate select options with fetched Nature data */}
+                          {natureDocumentsDisponibles.map((nature) => (
+                            <SelectItem
+                              key={nature.id_nature_document}
+                              value={String(nature.id_nature_document)}
+                            >
+                              {nature.libelle}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <SheetFooter>
+                      <Button type="submit" disabled={isSubmitting}>
+                        <Save className="mr-2 h-4 w-4" /> Enregistrer Document
+                      </Button>
+                    </SheetFooter>
+                  </form>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         )}
@@ -526,7 +609,8 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="libelle_livrable">
-                        Libellé du livrable <span className="text-red-500">*</span>
+                        Libellé du livrable{" "}
+                        <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="libelle_livrable"
@@ -546,7 +630,9 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                         Type de livrable <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        onValueChange={(value: TypeLivrable) => handleSelectChange("type_livrable", value)}
+                        onValueChange={(value: TypeLivrable) =>
+                          handleSelectChange("type_livrable", value)
+                        }
                         value={formData.type_livrable}
                         required
                       >
@@ -554,9 +640,15 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                           <SelectValue placeholder="Sélectionnez un type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Procès-verbal de réalisation">Procès-verbal de réalisation</SelectItem>
-                          <SelectItem value="Rapport de réalisation">Rapport de réalisation</SelectItem>
-                          <SelectItem value="Attestation de bonne exécution">Attestation de bonne exécution</SelectItem>
+                          <SelectItem value="Procès-verbal de réalisation">
+                            Procès-verbal de réalisation
+                          </SelectItem>
+                          <SelectItem value="Rapport de réalisation">
+                            Rapport de réalisation
+                          </SelectItem>
+                          <SelectItem value="Attestation de bonne exécution">
+                            Attestation de bonne exécution
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -567,8 +659,12 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                         Projet Parent <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        onValueChange={(value) => handleSelectChange("id_projet", value)}
-                        value={formData.id_projet ? String(formData.id_projet) : ""}
+                        onValueChange={(value) =>
+                          handleSelectChange("id_projet", value)
+                        }
+                        value={
+                          formData.id_projet ? String(formData.id_projet) : ""
+                        }
                         required
                         disabled={(projetsDisponibles || []).length === 1} // Désactive si un seul projet
                       >
@@ -593,22 +689,27 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                     {/* Client/Partenaire */}
                     <div className="space-y-2">
                       <Label htmlFor="client">
-                        Client/Partenaire <span className="text-red-500">*</span>
+                        Client/Partenaire{" "}
+                        <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        onValueChange={(value) => handleSelectChange("client", value)}
+                        onValueChange={(value) =>
+                          handleSelectChange("client", value)
+                        }
                         value={formData.client}
                         required
                         disabled={(partenairesProjet || []).length === 0}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={
-                            formData.id_projet === 0 
-                              ? "Sélectionnez d'abord un projet"
-                              : (partenairesProjet || []).length === 0
-                              ? "Aucun partenaire pour ce projet"
-                              : "Sélectionnez un partenaire"
-                          } />
+                          <SelectValue
+                            placeholder={
+                              formData.id_projet === 0
+                                ? "Sélectionnez d'abord un projet"
+                                : (partenairesProjet || []).length === 0
+                                ? "Aucun partenaire pour ce projet"
+                                : "Sélectionnez un partenaire"
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {(partenairesProjet || []).map((partenaire) => (
@@ -627,7 +728,8 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                     {isFullLivrableType(formData.type_livrable) && (
                       <div className="space-y-2">
                         <Label htmlFor="date">
-                          Date du livrable <span className="text-red-500">*</span>
+                          Date du livrable{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Popover>
                           <PopoverTrigger asChild>
@@ -637,9 +739,14 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {formData.date ? (
-                                format(parseISO(formData.date), "dd MMMM yyyy", { // Corrected format string
-                                  locale: fr,
-                                })
+                                format(
+                                  parseISO(formData.date),
+                                  "dd MMMM yyyy",
+                                  {
+                                    // Corrected format string
+                                    locale: fr,
+                                  }
+                                )
                               ) : (
                                 <span>Sélectionner une date</span>
                               )}
@@ -648,7 +755,11 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
-                              selected={formData.date ? parseISO(formData.date) : undefined}
+                              selected={
+                                formData.date
+                                  ? parseISO(formData.date)
+                                  : undefined
+                              }
                               onSelect={(date) =>
                                 handleDateChange("date", date)
                               }
@@ -680,7 +791,9 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                           <SelectItem value="en attente">En attente</SelectItem>
                           <SelectItem value="approuvé">Approuvé</SelectItem>
                           <SelectItem value="rejeté">Rejeté</SelectItem>
-                          <SelectItem value="révisions requises">Révisions requises</SelectItem>
+                          <SelectItem value="révisions requises">
+                            Révisions requises
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -741,29 +854,49 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
               <CardContent className="pt-6">
                 <div className="space-y-4">
                   <h2 className="text-lg font-medium text-gray-700 border-b pb-2">
-                    Documents en attente d'association ({pendingDocuments.length})
+                    Documents en attente d'association (
+                    {pendingDocuments.length})
                   </h2>
                   <div className="space-y-3">
                     {pendingDocuments.map((doc) => {
-                      const natureName = natureDocumentsDisponibles.find(
-                        n => n.id_nature_document === doc.textPayload.id_nature_document
-                      )?.libelle || "Nature inconnue";
-                      
+                      const natureName =
+                        natureDocumentsDisponibles.find(
+                          (n) =>
+                            n.id_nature_document ===
+                            doc.textPayload.id_nature_document
+                        )?.libelle || "Nature inconnue";
+
                       return (
-                        <div key={doc.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
+                        >
                           <div className="flex-1">
                             <div className="flex items-center space-x-3">
                               <FileText className="h-5 w-5 text-blue-600" />
                               <div>
-                                <p className="font-medium text-gray-900">{doc.textPayload.libelle_document}</p>
+                                <p className="font-medium text-gray-900">
+                                  {doc.textPayload.libelle_document}
+                                </p>
                                 <p className="text-sm text-gray-600">
                                   {doc.file.name} • {natureName}
                                   {doc.textPayload.date_document && (
-                                    <> • {format(parseISO(doc.textPayload.date_document), "dd/MM/yyyy", { locale: fr })}</>
+                                    <>
+                                      {" "}
+                                      •{" "}
+                                      {format(
+                                        parseISO(doc.textPayload.date_document),
+                                        "dd/MM/yyyy",
+                                        { locale: fr }
+                                      )}
+                                    </>
                                   )}
                                 </p>
                                 {doc.textPayload.classification_document && (
-                                  <p className="text-xs text-gray-500">Classification: {doc.textPayload.classification_document}</p>
+                                  <p className="text-xs text-gray-500">
+                                    Classification:{" "}
+                                    {doc.textPayload.classification_document}
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -782,7 +915,8 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                     })}
                   </div>
                   <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
-                    💡 Ces documents seront automatiquement associés au livrable après sa création.
+                    💡 Ces documents seront automatiquement associés au livrable
+                    après sa création.
                   </div>
                 </div>
               </CardContent>

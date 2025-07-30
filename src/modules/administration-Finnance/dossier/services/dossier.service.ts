@@ -1,6 +1,7 @@
 import { useApi } from "@/api/api";
 import {
   DocumentDosierResponse,
+  DossierInterventionResponse,
   DossierResponse,
   DossierType,
   PaginationParams,
@@ -15,6 +16,17 @@ export const useDossier = () => {
     const response = await api.get("/administration/dossier", {
       params: { ...params },
     });
+    return response.data;
+  };
+  const getDossierIntervention = async (
+    params: PaginationParams = {}
+  ): Promise<DossierInterventionResponse> => {
+    const response = await api.get(
+      "/administration/dossier/documents/intervention",
+      {
+        params: { ...params },
+      }
+    );
     return response.data;
   };
 
@@ -79,5 +91,6 @@ export const useDossier = () => {
     deleteDocumentDossier,
     getDossierByType,
     getDocumentDossierById,
+    getDossierIntervention,
   };
 };

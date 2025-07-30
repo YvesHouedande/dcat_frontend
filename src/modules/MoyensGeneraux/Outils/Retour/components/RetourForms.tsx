@@ -35,7 +35,7 @@ import { RetourSchemaForms } from "../schema/retourSchema";
 import { EmployesCombobox } from "@/components/combobox/EmployesCombobox";
 import { Label } from "@/components/ui/label";
 import { LoaderCircle } from "lucide-react";
-import DebugZod from "@/modules/stocks/utils/debug";
+// import DebugZod from "@/modules/stocks/utils/debug";
 export function RetourForms({
   defaultValues,
   onSubmit,
@@ -135,7 +135,7 @@ export function RetourForms({
             </FormItem>
           )}
         />
-        <DebugZod form={form} />
+        {/* <DebugZod form={form} /> */}
 
         {/* Boutons d'action */}
         <div className="flex justify-end space-x-2 pt-2">

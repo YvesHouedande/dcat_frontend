@@ -55,7 +55,7 @@ import {
   categorieTypes,
   modeleTypes,
 } from "@/modules/stocks/types/reference";
-import DebugZod from "@/modules/stocks/utils/debug";
+// import DebugZod from "@/modules/stocks/utils/debug";
 import { generateProductCode } from "@/modules/stocks/utils/generateProductCode";
 import { ImageDropzone } from "@/modules/stocks/reference/utils/ImageDropzone";
 
@@ -450,7 +450,7 @@ export default function ReferenceRegistration() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Classification Section */}
               <div className="px-4 pb-4 rounded-md">
-                <DebugZod form={form} />
+                {/* <DebugZod form={form} /> */}
                 <h3 className="font-medium mb-4 text-lg">
                   Classification du produit
                 </h3>
