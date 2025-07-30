@@ -58,7 +58,7 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { createDocument } = useDocumentsApi();
   const [formData, setFormData] = useState<
-    Omit<ContratDocument, "id_documents">
+    Omit<ContratDocument, "id_documents" | "id_employes">
   >({
     libelle_document: "",
     classification_document: "",
@@ -66,13 +66,9 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
     lien_document: "",
     etat_document: "actif",
     id_nature_document: 1,
-<<<<<<< HEAD
-    id_dossier: undefined,
-    id_contrat: Number(contratId),
-=======
-    id_dossier: 0, // Valeur par défaut
-    id_employes: 0, // Valeur par défaut
->>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
+    id_dossier: 0,
+    id_contrat: Number(contratId),// Valeur par défaut
+   
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -217,13 +213,8 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
         lien_document: "",
         etat_document: "actif",
         id_nature_document: 1,
-<<<<<<< HEAD
-        id_dossier: undefined,
-        id_contrat: contratId,
-=======
         id_dossier: 0,
-        id_employes: 0,
->>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
+        id_contrat: contratId, // Ajout du champ manquant pour correspondre au type ContratDocument sans id_documents
       });
       setSelectedFile(null);
       setErrors({});
@@ -264,13 +255,8 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
       lien_document: "",
       etat_document: "actif",
       id_nature_document: 1,
-<<<<<<< HEAD
-      id_dossier: undefined,
-      id_contrat: Number(contratId),
-=======
       id_dossier: 0,
-      id_employes: 0,
->>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
+      id_contrat: Number(contratId),
     });
     setSelectedFile(null);
     setErrors({});
@@ -491,7 +477,7 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
           <div className="space-y-2">
             <Label htmlFor="dossier">Dossier *</Label>
             <DossierCombobox
-              value={formData.id_dossier || undefined}
+              value={formData.id_dossier}
               onChange={(value) => handleSelectChange("id_dossier", value)}
               type={"contrat"}
             />

@@ -122,9 +122,6 @@ export function PartenaireCombobox({
                   <div className="flex flex-col">
                     <span className="font-medium">
                       {" "}
-                      {partenaire.entites && partenaire.entites.length > 0
-                        ? partenaire.entites[0].denomination
-                        : ""}
                       {partenaire.nom_partenaire}
                     </span>
                     <span className="text-xs text-muted-foreground">

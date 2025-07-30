@@ -103,7 +103,7 @@ const InfoDemandePage: React.FC = () => {
   const addDocument = useAddDocumentToDemande();
   const deleteDocument = useDeleteDocumentFromDemande();
   const [uploadError, setUploadError] = React.useState<string | null>(null);
-  const [id_dossier, setIdDossier] = React.useState<number | null>(null);
+  const [id_dossier, setIdDossier] = React.useState<number | undefined>(undefined);
 
   const approuverDemande = useApprouverDemande();
   const refuserDemande = useRefuserDemande();
@@ -438,7 +438,7 @@ const InfoDemandePage: React.FC = () => {
                             Dossier *
                           </label>
                           <DossierCombobox
-                            value={id_dossier?.toString() ?? undefined}
+                            value={id_dossier}
                             onChange={(value) => setIdDossier(Number(value))}
                             type={"demandes RH"}
                           />

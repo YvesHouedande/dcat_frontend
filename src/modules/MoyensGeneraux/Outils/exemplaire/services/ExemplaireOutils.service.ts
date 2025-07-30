@@ -12,6 +12,7 @@ import {
   OutilEtat,
   ExemplaireSortieFormValues,
 } from "../../sorties/types";
+import { OutilEntreeType } from "../../types/OutilsType";
 
 export const ExemplaireOutilsService = () => {
   const api = useApi();
@@ -297,7 +298,7 @@ export const ExemplaireOutilsService = () => {
     // GET /moyens-generaux/outils/exemplaires - Récupère les exemplaires d'outils
     getAllExemplaire: async (
       params: PaginationParams
-    ): Promise<PaginatedResponse<ExemplaireSortieFormValues>> => {
+    ): Promise<PaginatedResponse<OutilEntreeType>> => {
       const response = await api.get("/moyens-generaux/outils/exemplaires", {
         params,
       });

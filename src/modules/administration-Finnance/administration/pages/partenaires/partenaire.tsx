@@ -88,17 +88,13 @@ const ModernPartenaireGrid: React.FC = () => {
     },
   });
 
-<<<<<<< HEAD
+
   // Charger les entités avec React Query
-  const { data: entites, isLoading: entitesLoading } = useQuery({
-    queryKey: ["entites"],
-    queryFn: fetchEntites,
-  });
-=======
+ 
+
   const partenaires = data?.pages.flatMap((page) => page.data);
 
 
->>>>>>> 89ac3bb72f2987304ba90ab32f4f8ccf573b3c87
 
   // Mutation pour supprimer un partenaire
   const { mutate: deletePartenaire, isLoading: deleting } = useMutation({
@@ -115,7 +111,7 @@ const ModernPartenaireGrid: React.FC = () => {
 
 
 
-  const partenaires = data?.pages.flatMap((page) => page.data);
+  
   const filteredPartenaires =
     searchQuery && partenaires
       ? partenaires.filter(

@@ -22,8 +22,8 @@ import {
 import { useDebounce } from "../../modules/stocks/entree/utils/helpers";
 
 interface DossierComboboxProps {
-  value: string | undefined;
-  onChange: (value: string | number) => void;
+  value: number | undefined;
+  onChange: (value: number) => void;
   type: string;
 }
 
@@ -57,7 +57,7 @@ export function DossierCombobox({
       });
       // Sélectionner automatiquement le nouveau dossier créé
       if (newDossier?.id_dossier) {
-        onChange(newDossier.id_dossier);
+        onChange(Number(newDossier.id_dossier));
       }
       setOpen(false);
       setSearchTerm(undefined);
@@ -77,9 +77,8 @@ export function DossierCombobox({
           disabled={isLoadingDossiersByType}
         >
           {value
-            ? allDossiers?.find(
-                (dossier) => String(dossier.id_dossier) === value
-              )?.libelle_dossier
+            ? allDossiers?.find((dossier) => dossier.id_dossier === value)
+                ?.libelle_dossier
             : isLoadingDossiersByType
             ? "Chargement..."
             : isErrorDossiersByType
@@ -146,10 +145,10 @@ export function DossierCombobox({
               )}
               {allDossiers?.map((dossier) => (
                 <CommandItem
-                  key={String(dossier.id_dossier)}
+                  key={dossier.id_dossier}
                   value={String(dossier.id_dossier)}
                   onSelect={(currentValue) => {
-                    onChange(currentValue);
+                    onChange(Number(currentValue));
                     setOpen(false);
                   }}
                 >
@@ -157,9 +156,7 @@ export function DossierCombobox({
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",
-                      value === String(dossier.id_dossier)
-                        ? "opacity-100"
-                        : "opacity-0"
+                      value === dossier.id_dossier ? "opacity-100" : "opacity-0"
                     )}
                   />
                 </CommandItem>

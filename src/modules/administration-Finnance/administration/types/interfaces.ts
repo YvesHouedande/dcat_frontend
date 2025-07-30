@@ -158,7 +158,7 @@ export interface EmployeDocument {
   date_document: string; // ISO date string
   id_nature_document: number;
   id_contrat?: number;
-  id_dossier: number | string | undefined;
+  id_dossier: number | undefined;
   id_employes: number | string | undefined;
 }
 

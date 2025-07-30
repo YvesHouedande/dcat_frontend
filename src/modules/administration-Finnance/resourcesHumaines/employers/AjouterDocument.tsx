@@ -364,7 +364,7 @@ const AjouterDocument: React.FC = () => {
             <div className="space-y-2">
               <Label htmlFor="dossier">Dossier *</Label>
               <DossierCombobox
-                value={documentInfo.id_dossier?.toString() || ""}
+                value={documentInfo.id_dossier}
                 onChange={(value) =>
                   setDocumentInfo((prev) => ({
                     ...prev,

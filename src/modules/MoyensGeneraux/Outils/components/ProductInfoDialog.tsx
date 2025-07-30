@@ -179,37 +179,6 @@ const ProductInfoDialog: React.FC<ProductInfoDialogProps> = ({
                 <Building2 className="w-4 h-4" />
                 Informations techniques
               </h4>
-
-              <div className="space-y-3">
-                {product.prix_unitaire && (
-                  <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded-md">
-                    <span className="text-sm text-slate-600">
-                      Prix unitaire
-                    </span>
-                    <span className="text-sm font-medium text-slate-900">
-                      {product.prix_unitaire.toLocaleString("fr-FR")} FCFA
-                    </span>
-                  </div>
-                )}
-
-                {product.seuil_alerte && (
-                  <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded-md">
-                    <span className="text-sm text-slate-600">
-                      Seuil d'alerte
-                    </span>
-                    <span className="text-sm font-medium text-slate-900">
-                      {product.seuil_alerte}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center py-2 px-3 bg-slate-50 rounded-md">
-                  <span className="text-sm text-slate-600">Stock actuel</span>
-                  <span className="text-sm font-medium text-slate-900">
-                    {product.qte_produit || 0}
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
 
