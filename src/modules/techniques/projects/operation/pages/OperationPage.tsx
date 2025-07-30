@@ -8,7 +8,7 @@ import { OperationTable } from "../components/OperationTable";
 import OperationPagination from "../components/OperationPagination";
 import OperationForm from "../components/OperationForm";
 import { getAllOperations, createOperation, deleteOperation } from "../api/operation";
-import { useProjetService } from "../../projet/api/projets";
+import { fetchAllProjets } from "../../projet/api/projets";
 import { Operation, Projet } from "../../types/types";
 import { CheckCircle, Clock, AlertTriangle, CircleDashed } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const OperationPage: React.FC = () => {
   const navigate = useNavigate(); // Initialisez useNavigate ici
-  const { fetchAllProjets } = useProjetService();
+
   const [operations, setOperations] = useState<Operation[]>([]);
   const [projets, setProjets] = useState<Projet[]>([]);
   const [loading, setLoading] = useState(true);

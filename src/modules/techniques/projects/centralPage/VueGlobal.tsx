@@ -15,7 +15,7 @@ import {
 import { format, subDays, parseISO, isWithinInterval } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getInterventions } from "../../interventions/api/intervention";
-import { useProjetService } from "../projet/api/projets";
+import { fetchAllProjets } from "../projet/api/projets";
 import { getOperationsByProjet } from "../operation/api/operation";
 import { getTachesByOperation } from "../tasks/api/taches";
 import { Intervention } from "../../interventions/interface/interface";
@@ -30,7 +30,7 @@ const VueGlobalPage: React.FC = () => {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [projects, setProjects] = useState<Projet[]>([]);
   const [tasks, setTasks] = useState<Tache[]>([]);
-  const { fetchAllProjets } = useProjetService();
+
   useEffect(() => {
     const fetchData = async () => {
       try {
