@@ -44,8 +44,6 @@ export const InterventionsListPage: React.FC = () => {
         const naturesResponse = await getAllNatureDocuments();
         if (Array.isArray(naturesResponse)) {
           setNatureDocuments(naturesResponse);
-        } else if (naturesResponse && Array.isArray(naturesResponse.data)) {
-          setNatureDocuments(naturesResponse.data);
         }
       } catch (error) {
         console.error("Erreur lors du chargement des natures de documents:", error);

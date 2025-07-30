@@ -58,8 +58,6 @@ export const InterventionEditPage: React.FC = () => {
         // Charger les natures de documents
         if (Array.isArray(naturesResponse)) {
           setNatureDocuments(naturesResponse);
-        } else if (naturesResponse && Array.isArray(naturesResponse.data)) {
-          setNatureDocuments(naturesResponse.data);
         }
       } catch (error) {
         console.error("Erreur lors du chargement des données:", error);
