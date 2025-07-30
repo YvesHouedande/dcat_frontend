@@ -1,5 +1,5 @@
-import { ExemplaireOutilsDashboard } from "..";
+import { OutilsInstanceDashboard } from "../../components/OutilsInstanceDashboard";
 
 export default function Dashboard() {
-  return <ExemplaireOutilsDashboard />;
+  return <OutilsInstanceDashboard />;
 }
