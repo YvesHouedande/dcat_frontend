@@ -4,7 +4,7 @@ import { Trash2, Edit, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import AlertDeleteDialog from "@/components/AlertDeleteDialog";
-import { ExemplaireOutilsDashboard } from "../exemplaire";
+
 import {
   useDeleteProduct,
   useProduct,
@@ -140,10 +140,7 @@ export default function ReferencePage() {
           </div>
         </div>
 
-        {/* Dashboard des exemplaires */}
-        <div className="mt-8">
-          <ExemplaireOutilsDashboard id_outil={id} />
-        </div>
+       
 
         {/* Dialog de suppression */}
         <AlertDeleteDialog
