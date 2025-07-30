@@ -1,4 +1,4 @@
-import EntreeDashboard from "@/modules/stocks/entree/pages/Dashboard";
+import { OutilsInstanceDashboard } from "../components/OutilsInstanceDashboard";
 
 function Entree() {
   return (
@@ -11,7 +11,7 @@ function Entree() {
           Gérez toutes les entrées des outils dans le système
         </p>
       </div>
-      <EntreeDashboard/>
+      <OutilsInstanceDashboard />
     </div>
   );
 }

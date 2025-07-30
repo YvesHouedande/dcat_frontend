@@ -82,7 +82,7 @@ const ModernContractGrid: React.FC = () => {
 
   // Récupération des partenaires pour affichage du nom
   const { data: partenaires } = useQuery({
-    queryKey: ["partenaires"],
+    queryKey: ["partenaires-contrats"],
     queryFn: () => fetchPartners(1, 100),
   });
 
@@ -113,7 +113,7 @@ const ModernContractGrid: React.FC = () => {
   const getPartenaireNom = useCallback(
     (id_partenaire?: number) => {
       if (!id_partenaire || !partenaires) return "-";
-      const partenaire = partenaires.data.find(
+      const partenaire = partenaires.data?.find(
         (p: Partenaires) => p.id_partenaire === id_partenaire
       );
       return partenaire ? partenaire.nom_partenaire : "-";

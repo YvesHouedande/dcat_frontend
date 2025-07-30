@@ -15,10 +15,14 @@ import Contrats from "./pages/contrats/contrats";
 import NouveauContrat from "./pages/contrats/NouveauContrat";
 import InfoContract from "./pages/contrats/info_contrats";
 import EditerContrat from "./pages/contrats/editerContrat";
+import DossierPage from "./pages/documents/DossierPage";
+import DocumentPage from "./pages/documents/documentPage";
+import DetailContrat from "./pages/documents/detailContrat";
 import EntitesList from "./pages/entites/entites";
 import AddEntiteForm from "./pages/entites/ajouter_entite";
 import EditEntiteForm from "./pages/entites/editer_entite";
 import EntiteProfile from "./pages/entites/EntiteProfile";
+
 
 const GestionAdministrativeRoutes: React.FC = () => {
   return (
@@ -40,6 +44,12 @@ const GestionAdministrativeRoutes: React.FC = () => {
         <Route path=":id" element={<InfoContract />} />
         <Route path="nouveau" element={<NouveauContrat />} />
         <Route path=":id/editer" element={<EditerContrat />} />
+      </Route>
+
+      <Route path="/contrats/dossier" element={<AdministrationLayout />}>
+        <Route index element={<DossierPage />} />
+        <Route path="/contrats/dossier/:id" element={<DocumentPage />} />
+        <Route path="/contrats/dossier/detail" element={<DetailContrat />} />
       </Route>
 
       {/* Routes /documents */}

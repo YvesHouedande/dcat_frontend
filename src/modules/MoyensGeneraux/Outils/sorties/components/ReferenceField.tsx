@@ -61,9 +61,9 @@ const ReferenceField = ({
         return (
           <Select
             onValueChange={(value: string) =>
-              form.setValue("id_commande", value)
+              form.setValue("id_exemplaire", value)
             }
-            defaultValue={form.getValues("id_commande") as string}
+            defaultValue={form.getValues("id_exemplaire") as string}
           >
             <FormControl>
               <SelectTrigger>
@@ -83,9 +83,9 @@ const ReferenceField = ({
         return (
           <Select
             onValueChange={(value: string) =>
-              form.setValue("id_commande", value)
+              form.setValue("id_exemplaire", value)
             }
-            defaultValue={form.getValues("id_commande") as string}
+            defaultValue={form.getValues("id_exemplaire") as string}
           >
             <FormControl>
               <SelectTrigger>
@@ -105,9 +105,9 @@ const ReferenceField = ({
         return (
           <Select
             onValueChange={(value: string) =>
-              form.setValue("id_commande", value)
+              form.setValue("id_exemplaire", value)
             }
-            defaultValue={form.getValues("id_commande") as string}
+            defaultValue={form.getValues("id_exemplaire") as string}
           >
             <FormControl>
               <SelectTrigger>
@@ -127,9 +127,9 @@ const ReferenceField = ({
         return (
           <Select
             onValueChange={(value: string) =>
-              form.setValue("id_commande", value)
+              form.setValue("id_exemplaire", value)
             }
-            defaultValue={form.getValues("id_commande") as string}
+            defaultValue={form.getValues("id_exemplaire") as string}
           >
             <FormControl>
               <SelectTrigger>
@@ -150,12 +150,14 @@ const ReferenceField = ({
         );
       default:
         return (
-          <Input placeholder="Référence" {...form.register("id_commande")} />
+          <Input placeholder="Référence" {...form.register("id_exemplaire")} />
         );
     }
   };
 
   return renderReferenceField();
 };
+
+// export const ReferenceField = forwardRef<HTMLInputElement, ReferenceFieldProps>(({ typeSortie, form, clients, projets, interventions, commandes }, ref) => {
 
 export default ReferenceField;

@@ -29,13 +29,18 @@ const useDocumentsApi = () => {
 
   const createDocument = useCallback(
     async (
-      documentData: Partial<DemandeDocument> | FormData
+      documentData: Partial<DemandeDocument> & { document?: File | null }
     ): Promise<DemandeDocument> => {
-      const response = await api.post("/administration/documents/ajouter", documentData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await api.post(
+        `/administration/dossier/${documentData.id_dossier}/document/add`,
+        documentData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
       return response.data;
     },
     [api]
@@ -75,14 +80,20 @@ const useDocumentsApi = () => {
 
   const deleteDocument = useCallback(
     async (id: number): Promise<void> => {
-      await api.delete(`/administration/documents/supprimer/${id}`);
+      const response = await api.delete(
+        `/administration/documents/supprimer/${id}`
+      );
+      return response.data;
     },
     [api]
   );
 
   const getDocumentsByNature = useCallback(
     async (natureId: number): Promise<DemandeDocument[]> => {
-      const response = await api.get(`/administration/documents/nature/${natureId}`);
+      const response = await api.get(
+        `/administration/documents/nature/${natureId}`
+      );
+
       return response.data;
     },
     [api]

@@ -66,6 +66,7 @@ const DEFAULT_VALUES: Partial<FormValues> = {
   caracteristiques: undefined,
   emplacement_produit: undefined,
   code_produit: undefined,
+  
 };
 
 type ReferenceFieldName =

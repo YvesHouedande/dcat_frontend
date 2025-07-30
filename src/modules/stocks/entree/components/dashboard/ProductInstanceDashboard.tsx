@@ -1,8 +1,10 @@
 // src/components/dashboard/ProductInstanceDashboard.tsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { ProductInstanceTable } from "../tables/ProductInstanceTable";
 import { ProductInstanceForm } from "../forms/ProductInstanceForm";
-import { useProductInstances } from "../../hooks/useProductInstances";
+import {
+  useDeleteProductInstance,
+} from "../../hooks/useProductInstances";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +22,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { UseFormReturn } from "react-hook-form";
 
 import { ExemplaireProduitFormValues } from "@/modules/stocks/exemplaire";
@@ -36,42 +37,10 @@ export function ProductInstanceDashboard() {
     useState<ExemplaireProduitFormValues | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteId, setDeleteId] = useState<string | number | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState<string | undefined>(undefined);
 
-  const {
-    productInstances,
-    pages,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    loading,
-    error,
-    deleteProductInstance,
-  } = useProductInstances({ search });
+  const { deleteProductInstance } = useDeleteProductInstance();
 
   // Pagination calculée à partir des pages
-  const total = pages?.[0]?.total ? pages?.[0]?.total : 0;
-  const totalPages = pages?.[0]?.totalPages ? pages?.[0]?.totalPages : 0;
-  const pageInstances = productInstances.slice(
-    (currentPage - 1) * pages?.[0]?.pageSize
-      ? (currentPage - 1) * pages?.[0]?.pageSize
-      : 0,
-    currentPage * pages?.[0]?.pageSize ? currentPage * pages?.[0]?.pageSize : 0
-  );
-
-  const setSercahTerm = (searchTerm: string) => {
-    setSearch(searchTerm);
-  };
-
-  const handlePageChange = (page: number) => {
-    if (page > currentPage && hasNextPage) {
-      fetchNextPage();
-    }
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
 
   const openAddForm = () => {
     setCurrentInstance(null);
@@ -144,10 +113,6 @@ export function ProductInstanceDashboard() {
     }
   };
 
-  useEffect(() => {
-    // Initial fetch is handled by useInfiniteQuery
-  }, [currentPage]); // Re-run when currentPage changes to fetch next page if needed
-
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col space-y-2">
@@ -156,29 +121,11 @@ export function ProductInstanceDashboard() {
         </h1>
       </div>
 
-      {error && (
-        <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-800">
-          Erreur: {error.message}
-        </div>
-      )}
-
-      {loading ? (
-        <TableSkeleton />
-      ) : (
-        <ProductInstanceTable
-          productInstances={pageInstances}
-          onPageChange={handlePageChange}
-          onSearch={setSercahTerm}
-          onEdit={openEditForm}
-          onDelete={openDeleteDialog}
-          onAdd={openAddForm}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pages[0].pageSize}
-          total={total}
-          loading={loading || isFetchingNextPage}
-        />
-      )}
+      <ProductInstanceTable
+        onEdit={openEditForm}
+        onDelete={openDeleteDialog}
+        onAdd={openAddForm}
+      />
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">

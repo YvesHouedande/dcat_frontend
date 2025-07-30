@@ -42,4 +42,25 @@ export interface idSotieOutils {
   id_exemplaire: string | number;
   date_de_sortie?: string | number;
   date_de_retour?: string | number;
+  type: "sortie" | "entree";
+}
+
+export interface OutilMovement extends ExemplaireSortieFormValues {
+  type: "sortie" | "entree";
+}
+
+// Types spécifiques pour les endpoints
+
+
+export interface OutilStatistiques {
+  total_outils: number;
+  outils_sortis: number;
+  outils_disponibles: number;
+  mouvements_du_jour: number;
+}
+
+export interface OutilEtat {
+  est_retourne: boolean;
+  date_sortie?: string;
+  date_retour?: string;
 }

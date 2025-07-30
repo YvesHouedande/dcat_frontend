@@ -15,7 +15,7 @@ export const retourSortiesKeys = {
   detail: (id: idSotieOutils) => [...retourSortiesKeys.details(), id] as const,
 };
 
-export const useRetourSorties = (params: PaginationParams = { page: 1, pageSize: 10 }) => {
+export const useRetourSorties = (params: PaginationParams = { page: 1, limit: 10 }) => {
   const queryClient = useQueryClient();
 
   // Récupération des retours avec pagination
@@ -97,7 +97,7 @@ export const useRetourSorties = (params: PaginationParams = { page: 1, pageSize:
     } : {
       total: 0,
       page: params.page,
-      pageSize: params.pageSize,
+      pageSize: params.limit,
       totalPages: 0,
     },
     loading: isLoading,

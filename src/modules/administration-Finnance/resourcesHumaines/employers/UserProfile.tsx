@@ -22,10 +22,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   Employe,
   EmployeDocument,
+  PaginationResponse,
 } from "../../administration/types/interfaces";
 import { useEmployesApi } from "../../services/employeService";
 import { fetchFonctionById } from "../../services/fonctionService";
 import { useContratsApi } from "../../services/documentService";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 const ModernUserProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -34,10 +36,35 @@ const ModernUserProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [jobTitle, setJobTitle] = useState<string>("Non spécifié");
-  const [documents, setDocuments] = useState<EmployeDocument[]>([]);
-  const [loadingDocuments, setLoadingDocuments] = useState(true);
   const { fetchEmployeDocuments, downloadDocument } = useContratsApi();
   const { fetchEmployeById } = useEmployesApi();
+
+  const {
+    data: documentsData,
+    isLoading: loadingDocuments,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery<PaginationResponse<EmployeDocument[]>>({
+    queryKey: ["documents", id],
+    queryFn: ({ pageParam = 1 }) =>
+      fetchEmployeDocuments(parseInt(String(id)), pageParam, 10),
+    enabled: !!id,
+    getNextPageParam: (lastPage) => {
+      const currentPage = lastPage.pagination.page;
+      const totalPages = lastPage.pagination.total;
+      if (currentPage < totalPages) {
+        return currentPage + 1;
+      }
+      return undefined; // Plus de pages à charger
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Extract all documents from pages
+  const documents =
+    documentsData?.pages?.flatMap((page) => page.data).flat() || [];
+
   useEffect(() => {
     const loadEmploye = async () => {
       try {
@@ -76,17 +103,7 @@ const ModernUserProfile: React.FC = () => {
           }
         }
 
-        // Charger les documents
-        try {
-          setLoadingDocuments(true);
-          const docs = await fetchEmployeDocuments(data.id_employes);
-          setDocuments(docs || []); // Type assertion pour Document[]
-        } catch (err) {
-          console.error("Erreur lors du chargement des documents:", err);
-          // Ne pas bloquer l'affichage du profil si les documents ne se chargent pas
-        } finally {
-          setLoadingDocuments(false);
-        }
+        // Documents will be loaded by useInfiniteQuery
       } catch (err) {
         console.error("Erreur lors du chargement des données:", err);
         setError(
@@ -386,6 +403,14 @@ const ModernUserProfile: React.FC = () => {
                     </CardContent>
                   </Card>
                 ))}
+                {hasNextPage && (
+                  <Button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage ? "Chargement..." : "Charger plus"}
+                  </Button>
+                )}
               </div>
             )}
           </TabsContent>

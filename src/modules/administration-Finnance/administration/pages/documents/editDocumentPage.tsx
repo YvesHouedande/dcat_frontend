@@ -32,6 +32,8 @@ const EditDocumentPage: React.FC = () => {
     etat_document: "private",
     id_nature_document: 0,
     date_document: new Date().toISOString(),
+    id_dossier: 0,
+    id_employes: 0,
   });
 
   // Liste des natures de document
@@ -52,7 +54,8 @@ const EditDocumentPage: React.FC = () => {
           id_document: parseInt(id || "0"),
           libele_document: "Rapport annuel 2024",
           classification_document: "confidentiel",
-          lien_document: "https://example.com/documents/rapport-annuel-2024.pdf",
+          lien_document:
+            "https://example.com/documents/rapport-annuel-2024.pdf",
           etat_document: "private",
           id_nature_document: 3,
           date_document: "2024-05-10T14:20:00",
@@ -60,7 +63,7 @@ const EditDocumentPage: React.FC = () => {
 
         setFormData({
           ...formData,
-          ...mockDocument
+          ...mockDocument,
         });
         setLoading(false);
       } catch (error) {
@@ -88,13 +91,13 @@ const EditDocumentPage: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
-      
+
       // Mettre à jour le libellé avec le nom du fichier (sans extension)
       const fileName = selectedFile.name.split(".")[0];
       setFormData({
         ...formData,
         libelle_document: fileName,
-        lien_document: selectedFile.name
+        lien_document: selectedFile.name,
       });
 
       // Créer un aperçu pour les images/PDF
@@ -114,7 +117,7 @@ const EditDocumentPage: React.FC = () => {
     setFilePreview(null);
     setFormData({
       ...formData,
-      lien_document: ""
+      lien_document: "",
     });
   };
 
@@ -132,7 +135,7 @@ const EditDocumentPage: React.FC = () => {
     try {
       // Créer FormData si un fichier est uploadé
       const formDataToSend = new FormData();
-      
+
       // Ajouter les champs du formulaire
       Object.entries(formData).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
@@ -152,8 +155,8 @@ const EditDocumentPage: React.FC = () => {
       // });
 
       // Simulation d'appel API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Redirection après succès
       navigate("/administration/documents");
     } catch (error) {
@@ -197,7 +200,8 @@ const EditDocumentPage: React.FC = () => {
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="libele_document">
-                        Libellé du document <span className="text-red-500">*</span>
+                        Libellé du document{" "}
+                        <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="libele_document"
@@ -213,12 +217,16 @@ const EditDocumentPage: React.FC = () => {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="id_nature_document">
-                        Nature du document <span className="text-red-500">*</span>
+                        Nature du document{" "}
+                        <span className="text-red-500">*</span>
                       </Label>
                       <Select
                         value={formData.id_nature_document?.toString()}
                         onValueChange={(value) =>
-                          setFormData({ ...formData, id_nature_document: parseInt(value) })
+                          setFormData({
+                            ...formData,
+                            id_nature_document: parseInt(value),
+                          })
                         }
                         required
                       >
@@ -268,12 +276,17 @@ const EditDocumentPage: React.FC = () => {
                         id="date_document"
                         name="date_document"
                         type="date"
-                        value={new Date(formData.date_document || "").toISOString().split('T')[0]}
+                        value={
+                          new Date(formData.date_document || "")
+                            .toISOString()
+                            .split("T")[0]
+                        }
                         onChange={handleInputChange}
                         disabled
                       />
                       <p className="text-xs text-gray-500 italic">
-                        La date sera mise à jour automatiquement lors de l'enregistrement
+                        La date sera mise à jour automatiquement lors de
+                        l'enregistrement
                       </p>
                     </div>
                   </div>
@@ -305,9 +318,9 @@ const EditDocumentPage: React.FC = () => {
                       <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
                         <div className="flex items-center space-x-3">
                           {filePreview && (
-                            <img 
-                              src={filePreview} 
-                              alt="Preview" 
+                            <img
+                              src={filePreview}
+                              alt="Preview"
                               className="h-10 w-10 object-cover rounded-md"
                             />
                           )}
@@ -394,7 +407,9 @@ const EditDocumentPage: React.FC = () => {
               disabled={isSubmitting}
             >
               <Save size={16} className="mr-2" />
-              {isSubmitting ? "Enregistrement en cours..." : "Enregistrer les modifications"}
+              {isSubmitting
+                ? "Enregistrement en cours..."
+                : "Enregistrer les modifications"}
             </Button>
           </div>
         </form>

@@ -15,67 +15,96 @@ import { toast } from "sonner";
 import { ArrowLeft, Upload, Save, X } from "lucide-react";
 import { NatureDocument } from "../administration/types/interfaces";
 import useDocumentsApi from "../services/finance_comptaService";
+import { DossierCombobox } from "@/components/combobox/DossierCombobox";
 const AddFinanceCompta: React.FC = () => {
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     libelle_document: "",
     lien_document: "",
     date_document: "",
     id_nature_document: 0,
     classification_document: "",
-    etat_document: ""
+    etat_document: "",
+    id_dossier: undefined,
   });
-  
+
   const [natures, setNatures] = useState<NatureDocument[]>([]);
+  const [id_comptabilité, setId_comptabilité] = useState<number | undefined>(
+    undefined
+  );
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
   const { getAllNatureDocument, createDocument } = useDocumentsApi();
+
+  const type_dossier = natures
+    .find((n) => n.id_nature_document === formData.id_nature_document)
+    ?.libelle?.toLowerCase();
 
   useEffect(() => {
     const fetchNatures = async () => {
       try {
         const naturesData = await getAllNatureDocument();
         setNatures(naturesData);
-        
+
+        const comptabiliteNature = naturesData.find(
+          (n) =>
+            n.libelle &&
+            (n.libelle.toLowerCase().includes("comptabilite") ||
+              n.libelle.toLowerCase().includes("comptable") ||
+              n.libelle.toLowerCase().includes("compta"))
+        );
+        if (comptabiliteNature) {
+          setId_comptabilité(comptabiliteNature.id_nature_document);
+        }
+
         // Pré-sélectionner la nature selon le type (finance ou comptabilite)
         if (type === "finance") {
-          const financeNature = naturesData.find(n =>
-            n.libelle && (
-              n.libelle.toLowerCase().includes('finance') ||
-              n.libelle.toLowerCase().includes('financier')
-            )
+          const financeNature = naturesData.find(
+            (n) =>
+              n.libelle &&
+              (n.libelle.toLowerCase().includes("finance") ||
+                n.libelle.toLowerCase().includes("financier"))
           );
           if (financeNature) {
-            setFormData(prev => ({ ...prev, id_nature_document: financeNature.id_nature_document }));
+            setFormData((prev) => ({
+              ...prev,
+              id_nature_document: financeNature.id_nature_document,
+            }));
           }
         } else if (type === "comptabilite") {
-          const comptabiliteNature = naturesData.find(n =>
-            n.libelle && (
-              n.libelle.toLowerCase().includes('comptabilite') ||
-              n.libelle.toLowerCase().includes('comptable') ||
-              n.libelle.toLowerCase().includes('compta')
-            )
+          const comptabiliteNature = naturesData.find(
+            (n) =>
+              n.libelle &&
+              (n.libelle.toLowerCase().includes("comptabilite") ||
+                n.libelle.toLowerCase().includes("comptable") ||
+                n.libelle.toLowerCase().includes("compta"))
           );
           if (comptabiliteNature) {
-            setFormData(prev => ({ ...prev, id_nature_document: comptabiliteNature.id_nature_document }));
+            setFormData((prev) => ({
+              ...prev,
+              id_nature_document: comptabiliteNature.id_nature_document,
+            }));
           }
         }
       } catch (error) {
-        console.error("Erreur lors du chargement des types de documents:", error);
+        console.error(
+          "Erreur lors du chargement des types de documents:",
+          error
+        );
         toast.error("Impossible de charger les types de documents");
       }
     };
 
     fetchNatures();
-  }, [type]);
+  }, [type, getAllNatureDocument]);
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -84,9 +113,9 @@ const AddFinanceCompta: React.FC = () => {
     if (file) {
       setSelectedFile(file);
       setFileName(file.name);
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        lien_document: file.name
+        lien_document: file.name,
       }));
     }
   };
@@ -94,15 +123,15 @@ const AddFinanceCompta: React.FC = () => {
   const removeFile = () => {
     setSelectedFile(null);
     setFileName("");
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      lien_document: ""
+      lien_document: "",
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.libelle_document.trim()) {
       toast.error("Le titre du document est requis");
       return;
@@ -118,30 +147,31 @@ const AddFinanceCompta: React.FC = () => {
       return;
     }
 
+    if (!formData.id_dossier) {
+      toast.error("Veuillez sélectionner un dossier");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Créer un FormData pour l'upload de fichier
-      const formDataToSend = new FormData();
-      formDataToSend.append('libelle_document', formData.libelle_document);
-      formDataToSend.append('date_document', formData.date_document);
-      formDataToSend.append('id_nature_document', formData.id_nature_document.toString());
-      formDataToSend.append('classification_document', formData.classification_document || '');
-      formDataToSend.append('etat_document', formData.etat_document || '');
-      formDataToSend.append('document', selectedFile);
-
-      await createDocument(formDataToSend);
+      await createDocument({
+        ...formData,
+        document: selectedFile,
+      });
 
       toast.success("Document ajouté avec succès");
 
       // Rediriger vers la liste
-      navigate(`/finance-et-compatibilite/${type}`);
+      navigate(-1);
     } catch (error: unknown) {
       console.error("Erreur lors de l'ajout du document:", error);
-      if (typeof error === 'object' && error !== null && 'response' in error) {
+      if (typeof error === "object" && error !== null && "response" in error) {
         const err = error as { response?: { data?: { message?: string } } };
         console.error("Réponse backend:", err.response?.data);
-        toast.error(err.response?.data?.message || "Impossible d'ajouter le document");
+        toast.error(
+          err.response?.data?.message || "Impossible d'ajouter le document"
+        );
       } else {
         toast.error("Impossible d'ajouter le document");
       }
@@ -151,7 +181,9 @@ const AddFinanceCompta: React.FC = () => {
   };
 
   const getTitle = () => {
-    return type === "finance" ? "Ajouter un Document Finance" : "Ajouter un Document Comptabilité";
+    return type === "finance"
+      ? "Ajouter un Document Finance"
+      : "Ajouter un Document Comptabilité";
   };
 
   return (
@@ -183,7 +215,9 @@ const AddFinanceCompta: React.FC = () => {
                 <Input
                   id="libelle_document"
                   value={formData.libelle_document}
-                  onChange={(e) => handleInputChange("libelle_document", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("libelle_document", e.target.value)
+                  }
                   placeholder="Entrez le titre du document"
                   required
                 />
@@ -194,14 +228,19 @@ const AddFinanceCompta: React.FC = () => {
                 <Label htmlFor="nature">Type de document *</Label>
                 <Select
                   value={formData.id_nature_document.toString()}
-                  onValueChange={(value) => handleInputChange("id_nature_document", parseInt(value))}
+                  onValueChange={(value) =>
+                    handleInputChange("id_nature_document", parseInt(value))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionnez un type" />
                   </SelectTrigger>
                   <SelectContent>
                     {natures.map((nature) => (
-                      <SelectItem key={nature.id_nature_document} value={nature.id_nature_document.toString()}>
+                      <SelectItem
+                        key={nature.id_nature_document}
+                        value={nature.id_nature_document.toString()}
+                      >
                         {nature.libelle}
                       </SelectItem>
                     ))}
@@ -216,31 +255,54 @@ const AddFinanceCompta: React.FC = () => {
                   id="date_document"
                   type="date"
                   value={formData.date_document}
-                  onChange={(e) => handleInputChange("date_document", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("date_document", e.target.value)
+                  }
                 />
               </div>
 
               {/* Classification du document */}
-              <div className="space-y-2">
-                <Label htmlFor="classification_document">Classification</Label>
-                <Input
-                  id="classification_document"
-                  value={formData.classification_document}
-                  onChange={(e) => handleInputChange("classification_document", e.target.value)}
-                  placeholder="Ex: confidentiel, public, interne..."
-                />
-              </div>
-
+              {formData.id_nature_document === id_comptabilité && (
+                <div className="space-y-2">
+                  <Label htmlFor="classification_document">
+                    Classification
+                  </Label>
+                  <Input
+                    id="classification_document"
+                    value={formData.classification_document}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "classification_document",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Ex: confidentiel, public, interne..."
+                  />
+                </div>
+              )}
               {/* État du document */}
               <div className="space-y-2">
                 <Label htmlFor="etat_document">État du document</Label>
                 <Input
                   id="etat_document"
                   value={formData.etat_document}
-                  onChange={(e) => handleInputChange("etat_document", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("etat_document", e.target.value)
+                  }
                   placeholder="Ex: actif, archivé..."
                 />
               </div>
+              {/* Dossier */}
+              {type_dossier && (
+                <div className="space-y-2">
+                  <Label htmlFor="dossier">Dossier *</Label>
+                  <DossierCombobox
+                    value={formData.id_dossier || undefined}
+                    onChange={(value) => handleInputChange("id_dossier", value)}
+                    type={type_dossier}
+                  />
+                </div>
+              )}
 
               {/* Upload de fichier */}
               <div className="space-y-2">
@@ -252,7 +314,9 @@ const AddFinanceCompta: React.FC = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => document.getElementById('file-input')?.click()}
+                        onClick={() =>
+                          document.getElementById("file-input")?.click()
+                        }
                       >
                         Sélectionner un fichier
                       </Button>
@@ -294,7 +358,7 @@ const AddFinanceCompta: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(`/finance-et-compatibilite/${type}`)}
+                  onClick={() => navigate(-1)}
                   disabled={loading}
                 >
                   Annuler
@@ -320,4 +384,4 @@ const AddFinanceCompta: React.FC = () => {
   );
 };
 
-export default AddFinanceCompta; 
+export default AddFinanceCompta;

@@ -29,37 +29,44 @@ import {
 // import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
 import { ProductInstanceFormValues } from "../../schemas/productInstanceSchema";
 import { formatCurrency } from "@/modules/stocks/utils/helpers";
+import { useProductInstances } from "../../hooks/useProductInstances";
+import { useDebounce } from "../../utils/helpers";
 interface ProductInstanceTableProps {
-  productInstances: ProductInstanceFormValues[];
-  onPageChange: (page: number) => void;
-  onSearch: (term: string) => void;
   onEdit: (instance: ProductInstanceFormValues) => void;
   onDelete: (id: string | number) => void;
   onAdd: () => void;
-  currentPage: number;
-  totalPages: number;
-  pageSize: number;
-  total: number;
-  loading: boolean;
 }
 
 // interface Props {
 //   Id: string | number;
 // }
 export function ProductInstanceTable({
-  productInstances,
-  onPageChange,
-  onSearch,
   onEdit,
   onDelete,
   onAdd,
-  currentPage,
-  totalPages,
-  total,
-  loading,
-  pageSize
 }: ProductInstanceTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  const {
+    productInstances,
+    pages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    loading,
+  } = useProductInstances({ search: debouncedSearchTerm });
+
+  // Pagination calculée à partir des pages
+  const total = pages?.[0]?.total ? pages?.[0]?.total : 0;
+  const totalPages = pages?.[0]?.totalPages ? pages?.[0]?.totalPages : 0;
+  const pageInstances = productInstances.slice(
+    (currentPage - 1) * pages?.[0]?.pageSize
+      ? (currentPage - 1) * pages?.[0]?.pageSize
+      : 0,
+    currentPage * pages?.[0]?.pageSize ? currentPage * pages?.[0]?.pageSize : 0
+  );
 
   function ImageOrIcon({ src }: { src?: string }) {
     const [error, setError] = useState(false);
@@ -76,22 +83,24 @@ export function ProductInstanceTable({
       />
     );
   }
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+
+  const handlePageChange = (page: number) => {
+    if (page > currentPage && hasNextPage) {
+      fetchNextPage();
+    }
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(searchTerm);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <form
-          onSubmit={handleSearchSubmit}
-          className="relative w-full max-sm:w-64"
-        >
+        <div className="relative w-full max-sm:w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <Input
             placeholder="Rechercher..."
@@ -99,7 +108,7 @@ export function ProductInstanceTable({
             onChange={handleSearchChange}
             className="pl-8"
           />
-        </form>
+        </div>
         <Button onClick={onAdd} variant={"blue"} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-" /> Ajouter un produit
         </Button>
@@ -109,7 +118,7 @@ export function ProductInstanceTable({
         <Table>
           <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead className="font-semibold"></TableHead>
+              <TableHead className="font-semibold">Image</TableHead>
               <TableHead className="font-semibold">Produit</TableHead>
               <TableHead className="font-semibold">N° Série</TableHead>
               <TableHead className="font-semibold">Prix de vente</TableHead>
@@ -118,20 +127,20 @@ export function ProductInstanceTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {loading || isFetchingNextPage ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-4">
                   Chargement...
                 </TableCell>
               </TableRow>
-            ) : productInstances.length === 0 ? (
+            ) : pageInstances.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-4">
                   Aucun exemplaire trouvé
                 </TableCell>
               </TableRow>
             ) : (
-              productInstances.map((instance) => (
+              pageInstances.map((instance) => (
                 <TableRow key={instance.id_exemplaire}>
                   <TableCell>
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -190,16 +199,18 @@ export function ProductInstanceTable({
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
-          Affichage de {total === 0 ? 0 : (currentPage - 1) * pageSize + 1} à{" "}
-          {Math.min(currentPage * pageSize, total)} sur {total} exemplaire
+          Affichage de{" "}
+          {total === 0 ? 0 : (currentPage - 1) * pages?.[0]?.pageSize + 1} à{" "}
+          {Math.min(currentPage * pages?.[0]?.pageSize, total)} sur {total}{" "}
+          exemplaire
           {total > 1 ? "s" : ""}
         </p>
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage <= 1 || loading}
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage <= 1 || loading || isFetchingNextPage}
           >
             Précédent
           </Button>
@@ -209,8 +220,10 @@ export function ProductInstanceTable({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages || loading}
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={
+              currentPage >= totalPages || loading || isFetchingNextPage
+            }
           >
             Suivant
           </Button>

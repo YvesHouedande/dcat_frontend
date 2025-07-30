@@ -44,6 +44,7 @@ import {
   useUpdateDemande,
 } from "../../hooks/useDemandes";
 import { CreateDemandeData } from "../../services/demandeService";
+import { TypeDemandes } from "./enum";
 
 interface DemandeFormData {
   motif: string;
@@ -226,11 +227,11 @@ const ModifierDemandePage: React.FC = () => {
                   <SelectValue placeholder="Sélectionnez un type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Congé">Congé</SelectItem>
-                  <SelectItem value="Absence">Absence</SelectItem>
-                  <SelectItem value="Formation">Formation</SelectItem>
-                  <SelectItem value="Mission">Mission</SelectItem>
-                  <SelectItem value="Autre">Autre</SelectItem>
+                  {Object.values(TypeDemandes).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {formErrors.type_demande && (

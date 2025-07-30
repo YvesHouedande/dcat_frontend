@@ -86,6 +86,13 @@ export interface DemandeDocument {
   etat_document?: string; // Optionnel
   date_document: string; // ISO date string
   id_nature_document: number; // Clé étrangère vers NatureDocument (maintenue car les documents ont une nature)
+  id_dossier: number | number;
+  id_livrable: string | number | undefined;
+  id_projet: string | number | undefined;
+  id_demandes: string | number | undefined;
+  id_contrat: string | number | undefined;
+  id_employes: string | number | undefined;
+  id_intervention: string | number | undefined;
 }
 
 //les demandes
@@ -151,6 +158,8 @@ export interface EmployeDocument {
   date_document: string; // ISO date string
   id_nature_document: number;
   id_contrat?: number;
+  id_dossier: number | undefined;
+  id_employes: number | string | undefined;
 }
 
 // Interface pour les documents de contrat
@@ -223,4 +232,13 @@ export interface UpdateContratData
 export interface CreateDocumentData
   extends Omit<ContratDocument, "id_documents" | "id_contrat"> {
   file: File;
+}
+
+export interface PaginationResponse<T> {
+  data: T[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+  };
 }

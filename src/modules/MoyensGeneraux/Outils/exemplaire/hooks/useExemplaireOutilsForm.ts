@@ -2,51 +2,53 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  ExemplaireOutilsSchema,
-  ExemplaireOutilsFormValues,
-  ExemplaireOutilsEditSchema,
-} from "..";
-import { ExemplaireProduit } from "../types";
+
 import { toDatetimeLocal } from "@/modules/stocks/utils/helpers";
-import { useExemplaireOutils } from "..";
+import {
+  ExemplaireProduitEditSchema,
+  ExemplaireProduitFormValues,
+  ExemplaireProduitSchema,
+} from "@/modules/stocks/exemplaire/schemas/ExemplaireProduitSchema";
+import {
+  useExemplaireCréation,
+  useExemplaireUpdate,
+} from "@/modules/stocks/exemplaire";
 
 interface UseExemplaireProduitFormProps {
   onSuccess?: () => void;
-  initialData?: Partial<ExemplaireProduit>;
+  initialData?: Partial<ExemplaireProduitFormValues>;
   isEditMode?: boolean;
 }
 
-export function useExemplaireProduitForm({
+export function useExemplaireOutilsForm({
   onSuccess,
   initialData,
   isEditMode = false,
-}: UseExemplaireProduitFormProps = {}) {
+}: UseExemplaireProduitFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const { createExemplaireProduit, updateExemplaireProduit } =
-    useExemplaireOutils();
-
+  const { createExemplaireProduit } = useExemplaireCréation();
+  const { updateExemplaireProduit } = useExemplaireUpdate();
   const schema = isEditMode
-    ? ExemplaireOutilsEditSchema
-    : ExemplaireOutilsSchema;
+    ? ExemplaireProduitEditSchema
+    : ExemplaireProduitSchema;
 
-  const form = useForm<ExemplaireOutilsFormValues>({
-    resolver: zodResolver(schema as typeof ExemplaireOutilsSchema),
+  const form = useForm<ExemplaireProduitFormValues>({
+    resolver: zodResolver(schema as typeof ExemplaireProduitSchema),
     defaultValues: {
       id_exemplaire: initialData?.id_exemplaire || "",
       num_serie: initialData?.num_serie || "",
       date_entree: initialData?.date_entree || toDatetimeLocal(new Date()),
-      etat_vente: initialData?.etat_vente || "invendu",
-      id_livraison: initialData?.id_livraison || "",
+      etat_exemplaire: initialData?.etat_exemplaire || "Disponible",
       id_produit: initialData?.id_produit || "",
     },
   });
 
-  const handleSubmit = async (data: ExemplaireOutilsFormValues) => {
+  const handleSubmit = async (data: ExemplaireProduitFormValues) => {
     setLoading(true);
     setError(null);
+
     try {
       if (isEditMode && initialData?.id_exemplaire) {
         await updateExemplaireProduit({
@@ -54,14 +56,13 @@ export function useExemplaireProduitForm({
           data: {
             ...data,
             id_exemplaire: initialData.id_exemplaire,
-            commentaire: data.commentaire ?? "",
           },
         });
       } else {
         await createExemplaireProduit({
           ...data,
-          commentaire: data.commentaire ?? "",
         });
+        reset();
       }
       if (onSuccess) {
         onSuccess();
@@ -77,13 +78,12 @@ export function useExemplaireProduitForm({
 
   const onSubmit = form.handleSubmit(handleSubmit);
 
-  const reset = (data?: Partial<ExemplaireProduit>) => {
+  const reset = (data?: Partial<ExemplaireProduitFormValues>) => {
     form.reset({
       id_exemplaire: data?.id_exemplaire || "",
       num_serie: data?.num_serie || "",
       date_entree: data?.date_entree || toDatetimeLocal(new Date()),
-      etat_vente: data?.etat_vente || "invendu",
-      id_livraison: data?.id_livraison || "",
+      etat_exemplaire: data?.etat_exemplaire || "invendu",
       id_produit: data?.id_produit || "",
     });
   };

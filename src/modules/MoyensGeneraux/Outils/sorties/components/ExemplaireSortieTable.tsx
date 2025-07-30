@@ -51,7 +51,7 @@ interface ExemplaireSortieTableProps {
   onEdit: (sortie: ExemplaireSortieFormValues) => void;
   onDelete: (id: idSotieOutils) => void;
   onAdd: () => void;
-  onRetrun: (sortie: ExemplaireSortieFormValues)=>void;
+  onRetrun: (sortie: ExemplaireSortieFormValues) => void;
 }
 
 export function ExemplaireSortieTable({
@@ -77,9 +77,9 @@ export function ExemplaireSortieTable({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-64">
+    <div className="space-y-4 w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
+        <form onSubmit={handleSearchSubmit} className="relative w-full  flex  space-x-8 ">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <Input
             placeholder="Rechercher..."
@@ -87,6 +87,9 @@ export function ExemplaireSortieTable({
             onChange={handleSearchChange}
             className="pl-8"
           />
+          <Button type="submit" variant={"blue"}>
+            Rechercher
+          </Button>
         </form>
         <Button onClick={onAdd} variant={"blue"} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Ajouter une sortie
@@ -191,15 +194,15 @@ export function ExemplaireSortieTable({
                           <DropdownMenuItem onClick={() => onEdit(sortie)}>
                             <Edit className="mr-2 h-4 w-4" /> Modifier
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onRetrun(sortie)} >
-                            <Undo2 className="mr-2 h-4 w-4"  /> Retourner
+                          <DropdownMenuItem onClick={() => onRetrun(sortie)}>
+                            <Undo2 className="mr-2 h-4 w-4" /> Retourner
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>
                               onDelete({
                                 id_employes: sortie.id_employes,
                                 id_exemplaire: sortie.id_exemplaire,
-                                date_de_sortie: sortie.date_de_sortie,
+                                type: "sortie",
                               })
                             }
                           >

@@ -29,8 +29,6 @@ export const imageProduitSchema = z.object({
   dataUrl: z.string().optional(),
 });
 
-
-
 export const referenceSchema = z.object({
   id_produit: z.union([z.number(), z.string()]).optional(),
   code_produit: z.string().optional(),
@@ -52,6 +50,9 @@ export const referenceSchema = z.object({
   marque: z.string().optional(),
   qte_produit: z.number().optional(),
   imagesMeta: z.string().optional(),
+  description: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 });
 
 export type FormValues = z.infer<typeof referenceSchema>;

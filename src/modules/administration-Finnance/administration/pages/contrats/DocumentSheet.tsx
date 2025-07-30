@@ -30,7 +30,9 @@ import {
 import { ContratDocument, NatureDocument } from "../../types/interfaces";
 import { useContratsApi } from "../../../services/contratService";
 import { toast } from "sonner";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
+import { DossierCombobox } from "@/components/combobox/DossierCombobox";
+import useDocumentsApi from "@/modules/administration-Finnance/services/finance_comptaService";
 
 interface DocumentSheetProps {
   contratId?: number;
@@ -40,37 +42,40 @@ interface DocumentSheetProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-const DocumentSheet: React.FC<DocumentSheetProps> = ({ 
-  contratId, 
+const DocumentSheet: React.FC<DocumentSheetProps> = ({
+  contratId,
   onDocumentAdded,
   trigger,
   isOpen,
-  onOpenChange
+  onOpenChange,
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
-  const { addDocumentToContrat, fetchNaturesDocument } = useContratsApi();
+  const {fetchNaturesDocument } = useContratsApi();
   // Utiliser les props externes si fournies, sinon utiliser l'état interne
   const open = isOpen !== undefined ? isOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
-  const [formData, setFormData] = useState<Omit<ContratDocument, 'id_documents' | 'id_contrat'>>({
+  const { createDocument } = useDocumentsApi();
+  const [formData, setFormData] = useState<
+    Omit<ContratDocument, "id_documents" | "id_employes">
+  >({
     libelle_document: "",
     classification_document: "",
-    date_document: new Date().toISOString().split('T')[0],
+    date_document: new Date().toISOString().split("T")[0],
     lien_document: "",
     etat_document: "actif",
     id_nature_document: 1,
-    id_dossier: 0, // Valeur par défaut
-    id_employes: 0, // Valeur par défaut
+    id_dossier: 0,
+    id_contrat: Number(contratId),// Valeur par défaut
+   
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Récupérer les natures de document depuis l'API
   const { data: naturesDocument } = useQuery({
-    queryKey: ['natures-document'],
+    queryKey: ["natures-document"],
     queryFn: fetchNaturesDocument,
   });
 
@@ -83,31 +88,28 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
     "Facture",
     "Devis",
     "Document légal",
-    "Autre"
+    "Autre",
   ];
 
-  const etats = [
-    "actif",
-    "inactif",
-    "archivé",
-    "en révision"
-  ];
+  const etats = ["actif", "inactif", "archivé", "en révision"];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     // Nettoyer l'erreur si elle existe
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const handleSelectChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -116,10 +118,10 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
     if (file) {
       setSelectedFile(file);
       // Auto-remplir le libellé avec le nom du fichier
-      setFormData(prev => ({ 
-        ...prev, 
+      setFormData((prev) => ({
+        ...prev,
         libelle_document: file.name,
-        lien_document: file.name 
+        lien_document: file.name,
       }));
     }
   };
@@ -145,6 +147,9 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
 
     if (!formData.id_nature_document) {
       newErrors.id_nature_document = "La nature du document est obligatoire";
+    }
+    if (!formData.id_dossier) {
+      newErrors.id_dossier = "Le dossier est obligatoire";
     }
 
     // Validation de la taille du fichier (10MB max)
@@ -187,21 +192,29 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
       }
 
       // Appel au service pour ajouter le document
-      await addDocumentToContrat(contratId, formData, selectedFile);
+      // await addDocumentToContrat(contratId, formData, selectedFile);
+      await createDocument({
+        ...formData,
+        document: selectedFile,
+        id_contrat: contratId.toString(),
+        id_dossier: Number(formData.id_dossier)
+      });
+
+      // console.log(JSON.stringify(formData))
 
       toast.success("Document ajouté avec succès !");
       setOpen(false);
-      
+
       // Réinitialiser le formulaire
       setFormData({
         libelle_document: "",
         classification_document: "",
-        date_document: new Date().toISOString().split('T')[0],
+        date_document: new Date().toISOString().split("T")[0],
         lien_document: "",
         etat_document: "actif",
         id_nature_document: 1,
         id_dossier: 0,
-        id_employes: 0,
+        id_contrat: contratId, // Ajout du champ manquant pour correspondre au type ContratDocument sans id_documents
       });
       setSelectedFile(null);
       setErrors({});
@@ -212,14 +225,19 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
       }
       
       // Rediriger vers la page principale après un délai
-      setTimeout(() => {
-        window.location.href = "/administration/contrats";
-      }, 1000);
+      
     } catch (error: unknown) {
       console.error("Erreur lors de l'ajout du document:", error);
       let errorMessage = "Erreur lors de l'ajout du document";
-      if (typeof error === "object" && error !== null && "response" in error && typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === "string") {
-        errorMessage = (error as { response: { data: { message: string } } }).response.data.message;
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } })
+          .response?.data?.message === "string"
+      ) {
+        errorMessage = (error as { response: { data: { message: string } } })
+          .response.data.message;
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -233,12 +251,12 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
     setFormData({
       libelle_document: "",
       classification_document: "",
-      date_document: new Date().toISOString().split('T')[0],
+      date_document: new Date().toISOString().split("T")[0],
       lien_document: "",
       etat_document: "actif",
       id_nature_document: 1,
       id_dossier: 0,
-      id_employes: 0,
+      id_contrat: Number(contratId),
     });
     setSelectedFile(null);
     setErrors({});
@@ -254,7 +272,7 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+      <SheetContent className="w-[400px] sm:w-[540px]  overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Ajouter un document</SheetTitle>
           <SheetDescription>
@@ -262,15 +280,19 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+        <form onSubmit={handleSubmit} className="space-y-6 mt-6 px-2">
           {/* Sélection du fichier */}
           <div className="space-y-2">
-            <Label htmlFor="file">Fichier <span className="text-red-500">*</span></Label>
+            <Label htmlFor="file">
+              Fichier <span className="text-red-500">*</span>
+            </Label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
               <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
               <label htmlFor="file-upload" className="cursor-pointer">
                 <span className="text-blue-600 hover:text-blue-500 font-medium">
-                  {selectedFile ? "Fichier sélectionné" : "Cliquez pour sélectionner un fichier"}
+                  {selectedFile
+                    ? "Fichier sélectionné"
+                    : "Cliquez pour sélectionner un fichier"}
                 </span>
               </label>
               <input
@@ -283,7 +305,8 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
               />
               {selectedFile && (
                 <p className="text-sm text-gray-600 mt-2">
-                  {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                  {selectedFile.name} (
+                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                 </p>
               )}
               <p className="text-xs text-gray-500 mt-2">
@@ -320,9 +343,15 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
             </Label>
             <Select
               value={formData.classification_document}
-              onValueChange={(value) => handleSelectChange("classification_document", value)}
+              onValueChange={(value) =>
+                handleSelectChange("classification_document", value)
+              }
             >
-              <SelectTrigger className={errors.classification_document ? "border-red-500" : ""}>
+              <SelectTrigger
+                className={
+                  errors.classification_document ? "border-red-500" : ""
+                }
+              >
                 <SelectValue placeholder="Sélectionner une classification" />
               </SelectTrigger>
               <SelectContent>
@@ -334,7 +363,9 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
               </SelectContent>
             </Select>
             {errors.classification_document && (
-              <p className="text-red-500 text-sm">{errors.classification_document}</p>
+              <p className="text-red-500 text-sm">
+                {errors.classification_document}
+              </p>
             )}
           </div>
 
@@ -345,21 +376,30 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
             </Label>
             <Select
               value={formData.id_nature_document?.toString()}
-              onValueChange={(value) => handleSelectChange("id_nature_document", parseInt(value))}
+              onValueChange={(value) =>
+                handleSelectChange("id_nature_document", parseInt(value))
+              }
             >
-              <SelectTrigger className={errors.id_nature_document ? "border-red-500" : ""}>
+              <SelectTrigger
+                className={errors.id_nature_document ? "border-red-500" : ""}
+              >
                 <SelectValue placeholder="Sélectionner une nature" />
               </SelectTrigger>
               <SelectContent>
                 {naturesDocument?.map((nature: NatureDocument) => (
-                  <SelectItem key={nature.id_nature_document} value={nature.id_nature_document.toString()}>
+                  <SelectItem
+                    key={nature.id_nature_document}
+                    value={nature.id_nature_document.toString()}
+                  >
                     {nature.libelle}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {errors.id_nature_document && (
-              <p className="text-red-500 text-sm">{errors.id_nature_document}</p>
+              <p className="text-red-500 text-sm">
+                {errors.id_nature_document}
+              </p>
             )}
           </div>
 
@@ -372,11 +412,15 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={`w-full justify-start text-left font-normal ${errors.date_document ? "border-red-500" : ""}`}
+                  className={`w-full justify-start text-left font-normal ${
+                    errors.date_document ? "border-red-500" : ""
+                  }`}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {formData.date_document ? (
-                    format(new Date(formData.date_document), "dd MMMM yyyy", { locale: fr })
+                    format(new Date(formData.date_document), "dd MMMM yyyy", {
+                      locale: fr,
+                    })
                   ) : (
                     <span>Sélectionner une date</span>
                   )}
@@ -385,10 +429,17 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={formData.date_document ? new Date(formData.date_document) : undefined}
+                  selected={
+                    formData.date_document
+                      ? new Date(formData.date_document)
+                      : undefined
+                  }
                   onSelect={(date) => {
                     if (date) {
-                      handleSelectChange("date_document", format(date, "yyyy-MM-dd"));
+                      handleSelectChange(
+                        "date_document",
+                        format(date, "yyyy-MM-dd")
+                      );
                     }
                   }}
                   initialFocus
@@ -405,7 +456,9 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
             <Label htmlFor="etat_document">État du document</Label>
             <Select
               value={formData.etat_document}
-              onValueChange={(value) => handleSelectChange("etat_document", value)}
+              onValueChange={(value) =>
+                handleSelectChange("etat_document", value)
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner un état" />
@@ -418,6 +471,19 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Dossier */}
+          <div className="space-y-2">
+            <Label htmlFor="dossier">Dossier *</Label>
+            <DossierCombobox
+              value={formData.id_dossier}
+              onChange={(value) => handleSelectChange("id_dossier", value)}
+              type={"contrat"}
+            />
+            {errors.id_dossier && (
+              <p className="text-red-500 text-sm">{errors.id_dossier}</p>
+            )}
           </div>
 
           {/* Description/Notes */}
@@ -457,4 +523,4 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
   );
 };
 
-export default DocumentSheet; 
+export default DocumentSheet;

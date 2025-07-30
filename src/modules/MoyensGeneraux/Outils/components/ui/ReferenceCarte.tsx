@@ -17,13 +17,7 @@ import { ExemplaireSortieFormValues } from "../../sorties/types";
 import { useExemplaireSorties } from "../../sorties/hooks/useExemplaireSorties";
 import { UseFormReturn } from "react-hook-form";
 import { ExemplaireProduitFormValues } from "@/modules/stocks/exemplaire";
-import { Package, Plus, ShoppingCart, Eye, MoreHorizontal } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Package, Eye } from "lucide-react";
 
 interface ReferenceCarteProps {
   product: ReferenceProduit;
@@ -118,7 +112,6 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
               date_de_sortie: "",
               site_intervention: "",
               commentaire: "",
-              id_commande: 0,
             }}
             isEditMode={false}
           />
@@ -212,58 +205,6 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
             >
               {product.type_produit}
             </Badge>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-2">
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsFormOpen(true);
-              }}
-              size="sm"
-              className="flex-1 h-9 text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Ajouter
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 w-9 p-0 border-slate-200 hover:bg-slate-50"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={() => navigate(`${product.id_produit}`)}
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  Voir les détails
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setIsFormOpen(true);
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Ajouter exemplaire
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    toast.info("Fonctionnalité de sortie à venir");
-                  }}
-                  className="text-orange-600 focus:text-orange-600"
-                >
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  Sortie
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 

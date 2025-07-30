@@ -28,9 +28,10 @@ export interface PaginationParams<
   TFilter extends Record<string, unknown> = Record<string, unknown>
 > {
   page: number;
-  pageSize: number;
+  limit: number;
   search?: string;
   filter?: TFilter;
+  sortOrder?: "asc" | "desc";
 }
 
 export interface PaginatedResponse<T> {

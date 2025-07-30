@@ -159,7 +159,7 @@ function RetourTable({
                           onDelete({
                             id_employes: retour.id_employes,
                             id_exemplaire: retour.id_exemplaire,
-                            date_de_retour: retour.date_de_retour,
+                            type: "entree",
                           })
                         }
                       >

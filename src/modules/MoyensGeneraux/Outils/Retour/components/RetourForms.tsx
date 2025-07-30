@@ -35,6 +35,7 @@ import { RetourSchemaForms } from "../schema/retourSchema";
 import { EmployesCombobox } from "@/components/combobox/EmployesCombobox";
 import { Label } from "@/components/ui/label";
 import { LoaderCircle } from "lucide-react";
+import DebugZod from "@/modules/stocks/utils/debug";
 export function RetourForms({
   defaultValues,
   onSubmit,
@@ -134,12 +135,18 @@ export function RetourForms({
             </FormItem>
           )}
         />
+        <DebugZod form={form} />
 
         {/* Boutons d'action */}
         <div className="flex justify-end space-x-2 pt-2">
-          <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+          <div
+            onClick={onCancel}
+            className={`cursor-pointer p-2 rounded-md border ${
+              isLoading ? "pointer-events-none" : "pointer-events-auto"
+            }`}
+          >
             Annuler
-          </Button>
+          </div>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
@@ -147,11 +154,9 @@ export function RetourForms({
                 Chargement...
               </>
             ) : isEditMode ? (
-              "Mettre à jour"
+              "Mettre à jour le retour"
             ) : (
-              <>
-                <LoaderCircle className="animate-spin" /> Retourner
-              </>
+              <>Retourner</>
             )}
           </Button>
         </div>

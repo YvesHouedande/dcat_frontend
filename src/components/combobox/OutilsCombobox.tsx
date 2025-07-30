@@ -1,6 +1,7 @@
 // src/components/combobox/DeliveryCombobox.tsx
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useDebounce } from "../../modules/stocks/entree/utils/helpers";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,24 +17,25 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
+import { useOutilsDisponibles } from "@/modules/MoyensGeneraux/Outils/exemplaire/hooks/ExemaplaireOutils";
 
 interface OutilsComboboxProps {
-  value: string;
+  value: string | number | undefined;
   onChange: (value: string | number) => void;
 }
 
 export function OutilsCombobox({ value, onChange }: OutilsComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const { livraisons: deliveries, isLoading } = useLivraisonData();
 
-  const filteredDeliveries = React.useMemo(() => {
-    if (!searchTerm) return deliveries;
-    return deliveries?.filter((delivery) =>
-      delivery.reference_livraison.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [deliveries, searchTerm]);
+  // Debounce du terme de recherche pour éviter trop d'appels API
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  const { data: deliveries, isLoading } = useOutilsDisponibles({
+    page: 1,
+    limit: 10,
+    search: debouncedSearchTerm,
+  });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -47,13 +49,13 @@ export function OutilsCombobox({ value, onChange }: OutilsComboboxProps) {
         >
           {value
             ? deliveries?.find(
-                (delivery) => String(delivery.id_livraison) === value
-              )?.reference_livraison
+                (delivery) => String(delivery.id_exemplaire) === value
+              )?.id_exemplaire
             : "Sélectionner un outil..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Rechercher un outil..."
@@ -64,20 +66,20 @@ export function OutilsCombobox({ value, onChange }: OutilsComboboxProps) {
           <CommandList>
             <CommandEmpty>Aucun outil trouvé.</CommandEmpty>
             <CommandGroup className="max-h-60 overflow-y-auto">
-              {filteredDeliveries?.map((delivery) => (
+              {deliveries?.map((delivery) => (
                 <CommandItem
-                  key={delivery.id_livraison}
-                  value={String(delivery.id_livraison)}
+                  key={delivery.id_exemplaire}
+                  value={String(delivery.id_exemplaire)}
                   onSelect={(currentValue) => {
                     onChange(currentValue);
                     setOpen(false);
                   }}
                 >
-                  {delivery.reference_livraison}
+                  {delivery.id_exemplaire}
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",
-                      value === String(delivery.id_livraison)
+                      value === String(delivery.id_exemplaire)
                         ? "opacity-100"
                         : "opacity-0"
                     )}

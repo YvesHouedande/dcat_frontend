@@ -7,6 +7,8 @@ import EditFinanceCompta from "./editFinanceCompta";
 import DocFinanceComptabilite from "@/modules/dashboard/pages/administrationFinance/financeComptabilité";
 import NotFound from "@/pages/NotFound";
 import AdministrationLayout from "../administration/pages/administrationLayout";
+import DocCompta from "./docCompta";
+import DocFinance from "./docFinance";
 
 const FinanceComptaRoutes: React.FC = () => {
   return (
@@ -14,19 +16,20 @@ const FinanceComptaRoutes: React.FC = () => {
       <Route path="/" element={<DocFinanceComptabilite />} />
       <Route path="/" element={<AdministrationLayout />}>
         <Route path="/finance" element={<FinanceComptaGrid />} />
+        <Route path="/finance/dossier/" element={<FinanceComptaGrid />} />
+        <Route path="/comptabilite/dossier/" element={<FinanceComptaGrid />} />
         <Route path="/finance/nouveau" element={<AddFinanceCompta />} />
-        <Route path="/finance/:id/details" element={<DetailFinanceCompta />} />
+        <Route path="/finance/:id" element={<DetailFinanceCompta />} />
         <Route path="/finance/:id/modifier" element={<EditFinanceCompta />} />
+        <Route path="/finance/dossier/:id" element={<DocFinance />} />
         <Route path="/comptabilite" element={<FinanceComptaGrid />} />
         <Route path="/comptabilite/nouveau" element={<AddFinanceCompta />} />
         <Route
           path="/comptabilite/:id/modifier"
           element={<EditFinanceCompta />}
         />
-        <Route
-          path="/comptabilite/:id/details"
-          element={<DetailFinanceCompta />}
-        />
+        <Route path="/comptabilite/dossier/:id" element={<DocCompta />} />
+        <Route path="/comptabilite/:id" element={<DetailFinanceCompta />} />
       </Route>
       <Route path="/*" element={<NotFound />} />
     </Routes>

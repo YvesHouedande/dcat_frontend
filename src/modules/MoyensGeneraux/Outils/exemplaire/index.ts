@@ -1,8 +1,10 @@
 // src/index.ts
 // Point d'entrée principal qui exporte tous les composants et fonctionnalités
 
+export { OutilsInstanceDashboard } from "../components/OutilsInstanceDashboard";
+
 // Composants
-export { ExemplaireOutilsDashboard } from "./components//ExemplaireOutilsDashboard";
+// export { ExemplaireOutilsDashboard } from "./components/ExemplaireOutilsDashboard";
 export { ExemplaireOutilsTable } from "./components/ExemplaireOutilsTable";
 
 // Hooks

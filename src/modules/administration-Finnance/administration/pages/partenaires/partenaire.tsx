@@ -88,6 +88,10 @@ const ModernPartenaireGrid: React.FC = () => {
     },
   });
 
+
+  // Charger les entités avec React Query
+ 
+
   const partenaires = data?.pages.flatMap((page) => page.data);
 
 
@@ -106,6 +110,7 @@ const ModernPartenaireGrid: React.FC = () => {
 
 
 
+  
   const filteredPartenaires =
     searchQuery && partenaires
       ? partenaires.filter(

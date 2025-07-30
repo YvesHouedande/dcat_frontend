@@ -28,7 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Calendar as CalendarIcon, Save, X, Loader2 } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  Save,
+  X,
+  Loader2,
+  Upload,
+} from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -40,6 +46,10 @@ import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useCreateDemande, useEmployes } from "../../hooks/useDemandes";
 import { CreateDemandeData } from "../../services/demandeService";
+import { DossierCombobox } from "@/components/combobox/DossierCombobox";
+import useDocumentsApi from "../../services/finance_comptaService";
+import { toast } from "sonner";
+import { TypeDemandes } from "./enum";
 
 // Type strict pour le formulaire local
 interface DemandeFormData {
@@ -52,6 +62,7 @@ interface DemandeFormData {
   type_demande: string;
   status: string;
   id_employes: number | undefined;
+  id_dossier: number | undefined;
 }
 
 type FormField = keyof DemandeFormData;
@@ -70,13 +81,36 @@ const NouvelleDemandePage: React.FC = () => {
     type_demande: "",
     status: "En attente",
     id_employes: undefined,
+    id_dossier: undefined,
   });
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
-
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState("");
   const createDemande = useCreateDemande();
   const { data: employes, isLoading: loadingEmployes } = useEmployes();
+  const { createDocument } = useDocumentsApi();
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setFileName(file.name);
+      setFormData((prev) => ({
+        ...prev,
+        lien_document: file.name,
+        libelle_document: file.name,
+        date_document: new Date().toISOString(),
+      }));
+    }
+  };
+
+  const removeFile = () => {
+    setSelectedFile(null);
+    setFileName("");
+    setFormData((prev) => ({ ...prev, lien_document: "" }));
+  };
 
   // Fonction pour extraire le nombre de jours depuis la durée
   const extractDaysFromDuration = (duration: string): number => {
@@ -160,6 +194,8 @@ const NouvelleDemandePage: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
     console.log("formData au submit", formData);
+    if (!formData.id_dossier && selectedFile)
+      return toast.error("Veuillez sélectionner un dossier");
     try {
       const demandeData: CreateDemandeData = {
         motif: formData.motif,
@@ -176,8 +212,20 @@ const NouvelleDemandePage: React.FC = () => {
         status: formData.status,
         id_employes: formData.id_employes!, // Champ avec S partout
       };
-      await createDemande.mutateAsync({ data: demandeData });
+      const demande = await createDemande.mutateAsync({ data: demandeData });
       setShowSuccessDialog(true);
+      if (selectedFile) {
+        await createDocument({
+          lien_document: selectedFile.name,
+          libelle_document: selectedFile.name,
+          date_document: new Date().toISOString(),
+          id_dossier: Number(formData.id_dossier),
+          id_nature_document: 0,
+          classification_document: "demande rh",
+          etat_document: "En attente",
+          id_demandes: String(demande.id_demandes),
+        });
+      }
     } catch {
       // L'erreur est déjà gérée par le hook avec toast
     }
@@ -204,12 +252,12 @@ const NouvelleDemandePage: React.FC = () => {
     if (isFormComplete()) {
       setShowCancelDialog(true);
     } else {
-      navigate("/resources-humaines/demandes");
+      navigate(-1);
     }
   };
 
   const confirmCancel = () => {
-    navigate("/resources-humaines/demandes");
+    navigate(-1);
   };
 
   const isLoading = loadingEmployes || createDemande.isLoading;
@@ -230,7 +278,7 @@ const NouvelleDemandePage: React.FC = () => {
           <CardContent className="space-y-6">
             {/* Type de demande */}
             <div className="space-y-2">
-              <Label htmlFor="type_demande">Type de demande *</Label>
+              <Label htmlFor="type_demande">Type de demande  <span className="text-red-500"> *</span></Label>
               <Select
                 value={formData.type_demande}
                 onValueChange={(value) => handleChange("type_demande", value)}
@@ -239,11 +287,11 @@ const NouvelleDemandePage: React.FC = () => {
                   <SelectValue placeholder="Sélectionnez un type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Congé">Congé</SelectItem>
-                  <SelectItem value="Absence">Absence</SelectItem>
-                  <SelectItem value="Formation">Formation</SelectItem>
-                  <SelectItem value="Mission">Mission</SelectItem>
-                  <SelectItem value="Autre">Autre</SelectItem>
+                  {Object.values(TypeDemandes).map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {formErrors.type_demande && (
@@ -254,7 +302,7 @@ const NouvelleDemandePage: React.FC = () => {
             </div>
             {/* Employé */}
             <div className="space-y-2">
-              <Label htmlFor="id_employes">Employé concerné *</Label>
+              <Label htmlFor="id_employes">Employé concerné  <span className="text-red-500"> *</span></Label>
               <Select
                 value={formData.id_employes ? String(formData.id_employes) : ""}
                 onValueChange={(value) =>
@@ -288,7 +336,7 @@ const NouvelleDemandePage: React.FC = () => {
             </div>
             {/* Motif */}
             <div className="space-y-2">
-              <Label htmlFor="motif">Motif *</Label>
+              <Label htmlFor="motif">Motif  <span className="text-red-500"> *</span></Label>
               <Textarea
                 id="motif"
                 value={formData.motif}
@@ -302,7 +350,7 @@ const NouvelleDemandePage: React.FC = () => {
             </div>
             {/* Date d'absence */}
             <div className="space-y-2">
-              <Label htmlFor="date_absence">Date d'absence *</Label>
+              <Label htmlFor="date_absence">Date d'absence  <span className="text-red-500"> *</span></Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -337,22 +385,16 @@ const NouvelleDemandePage: React.FC = () => {
             <div className="space-y-2">
               <Label htmlFor="date_retour">
                 Date de retour
-                {formData.duree &&
-                  extractDaysFromDuration(formData.duree) > 0 && (
-                    <span className="text-xs text-blue-600 ml-2">
-                      (calculée automatiquement)
-                    </span>
-                  )}
+                <span className="text-xs text-blue-600 ml-2">
+                  (calculée automatiquement)
+                </span>
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
-                    disabled={Boolean(
-                      formData.duree &&
-                        extractDaysFromDuration(formData.duree) > 0
-                    )}
+                    disabled={true}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {formData.date_retour ? (
@@ -391,7 +433,7 @@ const NouvelleDemandePage: React.FC = () => {
               <p className="text-xs text-gray-500">
                 Si vous saisissez "0 jour", vous devrez préciser les heures de
                 début et fin. La date de retour sera calculée automatiquement
-                selon la durée.
+                selon la durée. Veuillez prévicer la durée en jours suivis de (jour) ou (jours)
               </p>
             </div>
             {/* Heures début/fin */}
@@ -452,6 +494,67 @@ const NouvelleDemandePage: React.FC = () => {
                   <SelectItem value="Refusée">Refusée</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            {selectedFile && (
+              <div className="space-y-2 mb-8">
+                <Label htmlFor="dossier">Dossier  <span className="text-red-500"> *</span></Label>
+                <DossierCombobox
+                  value={formData.id_dossier}
+                  onChange={(value) =>
+                    handleChange("id_dossier", Number(value))
+                  }
+                  type={"demandes RH"}
+                />
+              </div>
+            )}
+
+            {/* Upload de fichier */}
+            <div className="space-y-2">
+              <Label htmlFor="file">Fichier  <span className="text-red-500"> *</span></Label>
+              {!selectedFile ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="mt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        document.getElementById("file-input")?.click()
+                      }
+                    >
+                      Sélectionner un fichier
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500">
+                    PDF, DOCX, XLSX, PPTX ou images acceptés
+                  </p>
+                </div>
+              ) : (
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Upload className="h-5 w-5 text-gray-500" />
+                      <span className="text-sm font-medium">{fileName}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeFile}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <X size={16} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <input
+                id="file-input"
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".pdf,.docx,.xlsx,.pptx,.jpg,.jpeg,.png"
+              />
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
