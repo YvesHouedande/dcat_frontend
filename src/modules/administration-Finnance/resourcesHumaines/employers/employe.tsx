@@ -3,7 +3,15 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, MoreHorizontal, Eye, Mail, Phone } from "lucide-react";
+import {
+  Search,
+  Filter,
+  MoreHorizontal,
+  Eye,
+  Mail,
+  Phone,
+  X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -11,6 +19,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import { Employe } from "../../administration/types/interfaces";
 import { useEmployesApi } from "../../services/employeService";
@@ -18,6 +33,7 @@ import { fetchFonctionById } from "../../services/fonctionService";
 
 const ModernProfileGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("tous");
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,26 +92,33 @@ const ModernProfileGrid: React.FC = () => {
     loadEmployes();
   }, [fetchEmployes]);
 
-  // Filter profiles based on search query
-  const filteredProfiles = searchQuery
-    ? employes.filter(
-        (profile) =>
-          profile.nom_employes
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          profile.prenom_employes
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          profile.email_employes
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          profile.adresse_employes
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase())
-      )
-    : employes;
+  // Filter profiles based on search query and status
+  const filteredProfiles = employes.filter((profile) => {
+    // Filtre par recherche textuelle
+    const matchesSearch = searchQuery
+      ? profile.nom_employes
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        profile.prenom_employes
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        profile.email_employes
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        profile.adresse_employes
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      : true;
 
-  const handleClickVoirProfile = (id_employes: number) => {// Debug log
+    // Filtre par statut
+    const matchesStatus =
+      statusFilter === "tous" || profile.status_employes === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleClickVoirProfile = (id_employes: number) => {
+    // Debug log
     if (!id_employes || isNaN(id_employes)) {
       return;
     }
@@ -145,6 +168,18 @@ const ModernProfileGrid: React.FC = () => {
     return colors[colorIndex];
   };
 
+  const resetFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("tous");
+  };
+
+  const getFilterCount = () => {
+    let count = 0;
+    if (searchQuery) count++;
+    if (statusFilter !== "tous") count++;
+    return count;
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -175,10 +210,29 @@ const ModernProfileGrid: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <Button variant="outline" className="text-gray-700 border-gray-300">
-              <Filter size={16} className="mr-2" />
-              Filtres
-            </Button>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <Filter size={16} className="mr-2" />
+                <SelectValue placeholder="Filtrer par statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tous">Tous les statuts</SelectItem>
+                <SelectItem value="actif">Actif</SelectItem>
+                <SelectItem value="absent">Absent</SelectItem>
+                <SelectItem value="depart">Départ</SelectItem>
+              </SelectContent>
+            </Select>
+            {getFilterCount() > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetFilters}
+                className="text-gray-700 border-gray-300"
+              >
+                <X size={16} className="mr-2" />
+                Effacer ({getFilterCount()})
+              </Button>
+            )}
           </div>
         </div>
 
@@ -351,13 +405,13 @@ const ModernProfileGrid: React.FC = () => {
         </div>
 
         {/* Message if no results */}
-        {filteredProfiles.length === 0 && (
+        {filteredProfiles.length === 0 && employes.length > 0 && (
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-gray-600 mb-4">
-              Aucun profil ne correspond à votre recherche
+              Aucun profil ne correspond à vos critères de recherche
             </p>
-            <Button variant="outline" onClick={() => setSearchQuery("")}>
-              Réinitialiser la recherche
+            <Button variant="outline" onClick={resetFilters}>
+              Réinitialiser tous les filtres
             </Button>
           </div>
         )}

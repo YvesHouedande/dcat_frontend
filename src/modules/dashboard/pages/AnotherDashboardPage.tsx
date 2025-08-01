@@ -38,131 +38,107 @@ const dashboardConfig: Record<
   daf: {
     name: "ADMINISTRATION ET FINANCE",
     route: "/gestion-administrative",
-    color: "bg-slate-700",
+    color: "bg-slate-800",
     sections: [
       {
-        title: "Gestion Adminsitrative",
+        title: "Gestion Administrative",
         route: "/gestion-administrative",
         icon: FolderArchive,
-        color: "from-amber-500 to-amber-600",
+        color: "from-slate-600 to-slate-700",
       },
       {
-        title: "Finance et compatiblité  ",
+        title: "Finance et compatibilité",
         route: "/finance-et-compatibilite",
         icon: Briefcase,
-        color: "from-emerald-500 to-emerald-600",
+        color: "from-blue-600 to-blue-700",
       },
       {
-        title: "Resources Humaines",
+        title: "Ressources Humaines",
         route: "/resources-humaines",
         icon: Landmark,
-        color: "from-purple-500 to-purple-600",
+        color: "from-indigo-600 to-indigo-700",
       },
     ],
   },
   gs: {
     name: "GESTION DES STOCKS",
     route: "/entrees-sorties",
-    color: "bg-slate-700",
+    color: "bg-gray-800",
     sections: [
       {
         title: "Entrées/sorties stock",
         route: "/entrees-sorties",
         icon: Truck,
-        color: "from-amber-500 to-amber-600",
+        color: "from-teal-600 to-teal-700",
       },
       {
         title: "Achat",
         route: "/achat",
         icon: NotepadText,
-        color: "from-emerald-500 to-emerald-600",
+        color: "from-emerald-600 to-emerald-700",
       },
     ],
   },
   dsei: {
     name: "TECHNIQUE",
     route: "/gestion-des-interventions",
-    color: "bg-blue-700",
+    color: "bg-zinc-800",
     sections: [
       {
         title: "Gestion des interventions",
         route: "/gestion-des-interventions",
         icon: Wrench,
-        color: "from-sky-500 to-sky-600",
+        color: "from-cyan-600 to-cyan-700",
       },
       {
         title: "Gestion des Projets",
         route: "/gestion-des-projets",
         icon: KanbanSquare,
-        color: "from-orange-400 to-orange-500",
+        color: "from-blue-600 to-blue-700",
       },
     ],
   },
   mg: {
     name: "MOYENS GENERAUX",
     route: "/gestion-des-outils-travail",
-    color: "bg-blue-700",
+    color: "bg-stone-800",
     sections: [
       {
         title: "Gestion des outils de travail",
         route: "/gestion-des-outils-travail",
         icon: Camera,
-        color: "from-sky-500 to-sky-600",
+        color: "from-slate-600 to-slate-700",
       },
       {
-        title: "Gestion des equipements et moyens de travail",
+        title: "Gestion des équipements et moyens de travail",
         route: "/gestion-equipements-et-moyens-travail",
         icon: Printer,
-        color: "from-orange-400 to-orange-500",
+        color: "from-gray-600 to-gray-700",
       },
     ],
   },
   dmc: {
     name: "MARKETING et COMMERCIAL",
     route: "/commercial",
-    color: "bg-orange-700",
+    color: "bg-neutral-800",
     sections: [
       {
         title: "Marketing",
         route: "/marketing",
         icon: Megaphone,
-        color: "from-yellow-600 to-yellow-700",
+        color: "from-violet-600 to-violet-700",
       },
       {
         title: "Commercial",
         route: "/commercial",
         icon: BadgeDollarSign,
-        color: "from-yellow-600 to-yellow-700",
+        color: "from-purple-600 to-purple-700",
       },
     ],
   },
 };
 
 // --- Reusable Components ---
-
-const Header = ({ onNavigate }: { onNavigate: (path: string) => void }) => (
-  <header className="flex items-center justify-between bg-white p-4 border-b border-gray-200 shadow-sm">
-    <div
-      className="flex items-center space-x-4 cursor-pointer"
-      onClick={() => onNavigate("/")}
-      title="Retour à l'accueil"
-    >
-      <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-900 text-white font-bold text-xl shadow-md">
-        DCAT
-      </div>
-      <h1 className="text-xl font-semibold text-gray-800 hidden sm:block">
-        Portail de Gestion DCAT
-      </h1>
-    </div>
-    <div
-      className="text-center font-bold text-2xl text-blue-800 cursor-pointer"
-      onClick={() => onNavigate("/direction-generale")}
-      title="Accéder à la Direction Générale"
-    >
-      Direction Générale
-    </div>
-  </header>
-);
 
 const DepartmentCard = ({
   department,
@@ -171,15 +147,15 @@ const DepartmentCard = ({
   department: Department;
   onNavigate: (path: string) => void;
 }) => (
-  <div className="flex-1 flex flex-col  bg-gray-50 rounded-xl overflow-hidden shadow-md border border-gray-100 min-w-[300px]">
+  <div className="flex-1 flex flex-col bg-white rounded-xl overflow-hidden shadow-lg border border-gray-200 min-w-[300px] hover:shadow-xl transition-all duration-300">
     <div
-      className={`${department.color} p-4 text-center text-wrap font-bold text-xl text-white cursor-pointer hover:opacity-90 transition-opacity`}
+      className={`${department.color} p-5 text-center font-semibold text-lg text-white cursor-pointer hover:bg-opacity-90 transition-all duration-200`}
       onClick={() => onNavigate(department.route)}
       title={`Vue d'ensemble ${department.name}`}
     >
-      <h2>{department.name}</h2>
+      <h2 className="tracking-wide">{department.name}</h2>
     </div>
-    <div className="p-4 grid grid-cols-2 gap-4 container flex-grow">
+    <div className="p-5 grid grid-cols-2 gap-3 container flex-grow bg-slate-50">
       {department.sections.map((section) => (
         <SectionButton
           key={section.title}
@@ -203,10 +179,10 @@ const SectionButton = ({
     <button
       onClick={() => onNavigate(section.route)}
       title={`Accéder à ${section.title}`}
-      className={` cursor-pointer p-4 flex flex-col items-center justify-center text-center font-semibold text-white rounded-lg shadow-lg bg-gradient-to-br ${section.color} hover:shadow-xl hover:scale-105 transform transition-all duration-300 ease-in-out`}
+      className={`cursor-pointer p-4 flex flex-col items-center justify-center text-center font-medium text-white rounded-lg shadow-md bg-gradient-to-br ${section.color} hover:shadow-lg hover:scale-[1.02] transform transition-all duration-200 ease-out border border-gray-300/20`}
     >
-      <Icon className="h-8 w-8 mb-2" />
-      <span>{section.title}</span>
+      <Icon className="h-7 w-7 mb-2 opacity-95" />
+      <span className="text-sm leading-tight">{section.title}</span>
     </button>
   );
 };
@@ -222,11 +198,18 @@ const AnotherDashboardPage = (): JSX.Element => {
 
   return (
     <Layout>
-      <div className="w-full h-full ">
-        <div className=" bg-white rounded-2xl shadow-xl overflow-hidden">
-          <Header onNavigate={handleNavigation} />
-          <main className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 justify-center items-stretch w-full mx-auto max-w-7xl">
+      <div className="w-full h-full bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <header className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              Tableau de Bord DCAT
+            </h1>
+            <p className="text-gray-600">
+              Accédez rapidement à tous vos modules de gestion
+            </p>
+          </header>
+          <main>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 justify-center items-stretch w-full">
               <DepartmentCard
                 department={dashboardConfig.daf}
                 onNavigate={handleNavigation}

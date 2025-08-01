@@ -15,6 +15,13 @@ export const demandeKeys = {
   lists: () => [...demandeKeys.all, "list"] as const,
   list: (filters: { type?: string; employeId?: number }) =>
     [...demandeKeys.lists(), filters] as const,
+  filtered: (filters: {
+    search?: string;
+    status?: string;
+    type?: string;
+    employeId?: number;
+    limit?: number;
+  }) => [...demandeKeys.lists(), "filtered", filters] as const,
   details: () => [...demandeKeys.all, "detail"] as const,
   detail: (id: number) => [...demandeKeys.details(), id] as const,
   documents: (demandeId: number) =>
@@ -362,51 +369,6 @@ export const useDemandesStats = () => {
 /**
  * Hook pour filtrer et rechercher les demandes
  */
-export const useFilteredDemandess = (filters: {
-  search?: string;
-  status?: string;
-  type?: string;
-  employeId?: number;
-}) => {
-  const { data, isLoading, error } = useDemandes();
-  const { data: employes } = useEmployes();
-  const demandes = data?.data;
-  const filteredDemandes =
-    demandes?.filter((demande) => {
-      const employe = employes?.find(
-        (e) => e.id_employes === demande.id_employes
-      );
-
-      const matchesSearch =
-        !filters.search ||
-        employe?.nom_employes
-          .toLowerCase()
-          .includes(filters.search.toLowerCase()) ||
-        employe?.prenom_employes
-          .toLowerCase()
-          .includes(filters.search.toLowerCase()) ||
-        demande.type_demande
-          .toLowerCase()
-          .includes(filters.search.toLowerCase()) ||
-        demande.motif.toLowerCase().includes(filters.search.toLowerCase()) ||
-        demande.status.toLowerCase().includes(filters.search.toLowerCase());
-
-      const matchesStatus =
-        !filters.status || demande.status === filters.status;
-      const matchesType =
-        !filters.type || demande.type_demande === filters.type;
-      const matchesEmploye =
-        !filters.employeId || demande.id_employes === filters.employeId;
-
-      return matchesSearch && matchesStatus && matchesType && matchesEmploye;
-    }) || [];
-
-  return {
-    demandes: filteredDemandes,
-    isLoading,
-    error,
-  };
-};
 
 export const useFilteredDemandes = (
   limit = 16,
@@ -426,7 +388,7 @@ export const useFilteredDemandes = (
     isLoading,
     error,
   } = useInfiniteQuery({
-    queryKey: ["filtered-demandes", limit],
+    queryKey: demandeKeys.filtered({ ...filters, limit }),
     queryFn: ({ pageParam = 1 }) =>
       fetchFilteredDemandes({
         page: pageParam,

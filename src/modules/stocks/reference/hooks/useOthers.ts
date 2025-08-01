@@ -222,7 +222,10 @@ export const useModeleByProduct = (modeleId?: string | number) => {
   };
 };
 
-export const useProductModels = (modeleId?: string | number) => {
+export const useProductModels = (
+  modeleId?: string | number,
+  marqueId?: string | number
+) => {
   const productModels = useProductModelsService();
   const queryClient = useQueryClient();
 
@@ -238,13 +241,31 @@ export const useProductModels = (modeleId?: string | number) => {
     enabled: !!modeleId,
   });
 
-  const create = useMutation({
-    mutationFn: (newModele: Omit<modeleTypes, "id_modele">) =>
-      productModels.create(newModele),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["productModels"] });
-    },
+  const modelesByMarque = useQuery({
+    queryKey: ["productModels", "byMarque", marqueId],
+    queryFn: () => productModels.getModeleByMarque(marqueId || ""),
+    enabled: !!marqueId,
   });
+
+  const create = useMutation(
+    async ({
+      newModele,
+      marqueId,
+    }: {
+      newModele: Omit<modeleTypes, "id_modele">;
+      marqueId: string;
+    }) => {
+      return productModels.create(newModele, marqueId);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["productModels"] });
+        queryClient.invalidateQueries({
+          queryKey: ["productModels", "byMarque", marqueId],
+        });
+      },
+    }
+  );
 
   const update = useMutation({
     mutationFn: (updatedModele: modeleTypes) =>
@@ -281,6 +302,13 @@ export const useProductModels = (modeleId?: string | number) => {
       isLoading: productModel.isLoading,
       error: productModel.error,
       refetch: productModel.refetch,
+    },
+
+    modelesByMarque: {
+      data: modelesByMarque.data || [],
+      isLoading: modelesByMarque.isLoading,
+      error: modelesByMarque.error,
+      refetch: modelesByMarque.refetch,
     },
   };
 };

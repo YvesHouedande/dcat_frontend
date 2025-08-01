@@ -21,6 +21,7 @@ const transformData = (values: ReferenceProduit) => {
     formData.append("id_marque", values.id_marque.toString());
     formData.append("id_modele", values.id_modele.toString());
     formData.append("id_type_produit", values.id_type_produit.toString());
+    formData.append("caracteristiques_produit", values.caracteristiques_produit ?? "");
     if (values.imagesMeta !== undefined) {
       formData.append("imagesMeta", values.imagesMeta);
     } else {

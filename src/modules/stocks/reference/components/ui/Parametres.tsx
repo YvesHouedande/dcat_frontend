@@ -44,6 +44,7 @@ import {
   useProductTypes,
 } from "../../hooks/useOthers";
 import { Label } from "@/components/ui/label";
+import { marqueTypes } from "@/modules/stocks/types/reference";
 
 type ParamKey = "catégories" | "familles" | "modèles" | "marques" | "types";
 
@@ -53,10 +54,14 @@ function Parametres() {
   const [isEdit, setIsEdit] = useState(false);
   const [selected, setSelected] = useState<ParamKey>("catégories");
   const [editId, setEditId] = useState<number | null>(null);
+  const [marqueId, setMarqueId] = useState<string | undefined>(undefined);
 
   const { productCategories } = useProductCategories();
   const { productFamilies } = useProductFamilies();
-  const { productModels } = useProductModels();
+  const { productModels, modelesByMarque } = useProductModels(
+    undefined,
+    marqueId
+  );
   const { productMarques } = useProductMarques();
   const { productTypes } = useProductTypes();
 
@@ -72,9 +77,13 @@ function Parametres() {
     setEditId(null);
     setIsEdit(false);
     setEditOpen(true);
+    // Ne pas réinitialiser marqueId si on est en mode modèles pour garder la sélection
+    if (selected !== "modèles") {
+      setMarqueId(undefined);
+    }
   };
 
-  const handleSave = async (value: string) => {
+  const handleSave = async (value: string, marqueId?: string) => {
     try {
       if (isEdit && editId !== null) {
         // Mise à jour - chaque type a sa propre structure
@@ -125,7 +134,10 @@ function Parametres() {
             break;
           case "modèles":
             await productModels.create.mutateAsync({
-              libelle_modele: value,
+              newModele: {
+                libelle_modele: value,
+              },
+              marqueId: marqueId || "",
             });
             break;
           case "marques":
@@ -240,21 +252,47 @@ function Parametres() {
                   </div>
                 ));
               case "modèles":
-                return productModels.data?.map((item) => (
-                  <div className="flex items-center gap-3" key={item.id_modele}>
-                    <Label className="w-full">{item.libelle_modele}</Label>
-                    <SquarePen
-                      size={16}
-                      className="hover:scale-125 transition ease-in-out duration-300 hover:text-blue-600 cursor-pointer"
-                      onClick={() =>
-                        handleEdit(item.id_modele, item.libelle_modele)
-                      }
-                    />
-                    <AlertDialogDelete
-                      onConfirm={() => handleRemove(item.id_modele)}
-                    />
-                  </div>
-                ));
+                return (
+                  <>
+                    <Select
+                      value={marqueId}
+                      onValueChange={(value) => setMarqueId(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une marque" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productMarques.data?.map((item) => (
+                          <SelectItem
+                            key={item.id_marque}
+                            value={item.id_marque.toString()}
+                          >
+                            {item.libelle_marque}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {modelesByMarque.data?.map((item) => (
+                      <div
+                        className="flex items-center gap-3"
+                        key={item.id_modele}
+                      >
+                        <Label className="w-full">{item.libelle_modele}</Label>
+                        <SquarePen
+                          size={16}
+                          className="hover:scale-125 transition ease-in-out duration-300 hover:text-blue-600 cursor-pointer"
+                          onClick={() =>
+                            handleEdit(item.id_modele, item.libelle_modele)
+                          }
+                        />
+                        <AlertDialogDelete
+                          onConfirm={() => handleRemove(item.id_modele)}
+                        />
+                      </div>
+                    ))}
+                  </>
+                );
+
               case "marques":
                 return productMarques.data?.map((item) => (
                   <div className="flex items-center gap-3" key={item.id_marque}>
@@ -297,7 +335,11 @@ function Parametres() {
         </div>
 
         <SheetFooter>
-          <Button variant={"blue"} onClick={handleAdd}>
+          <Button
+            variant={"blue"}
+            onClick={handleAdd}
+            disabled={selected === "modèles" && !marqueId}
+          >
             Nouveau
           </Button>
           <SheetClose asChild>
@@ -311,6 +353,10 @@ function Parametres() {
           value={editValue}
           onEdit={isEdit}
           onSave={handleSave}
+          selected={selected}
+          marque={productMarques.data}
+          setMarqueId={setMarqueId}
+          marqueId={marqueId}
         />
       </SheetContent>
     </Sheet>
@@ -325,18 +371,31 @@ function DialogEdit({
   open,
   setOpen,
   onSave,
+  selected,
+  marque,
+  setMarqueId,
+  marqueId,
 }: {
   onEdit?: boolean;
   value?: string;
   open?: boolean;
   setOpen?: (open: boolean) => void;
-  onSave?: (value: string) => void;
+  onSave?: (inputValue: string, marqueValue?: string) => void;
+  selected?: string;
+  marque?: marqueTypes[];
+  setMarqueId?: (marqueId: string) => void;
+  marqueId?: string;
 }) {
   const [inputValue, setInputValue] = useState(value || "");
+  const [marqueValue, setMarqueValue] = useState(marqueId || "");
 
   React.useEffect(() => {
     setInputValue(value || "");
-  }, [value, open]);
+    // Mettre à jour marqueValue quand le dialogue s'ouvre avec un nouveau marqueId
+    if (open) {
+      setMarqueValue(marqueId || "");
+    }
+  }, [value, open, marqueId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -344,7 +403,12 @@ function DialogEdit({
       alert("Le champ ne peut pas être vide.");
       return;
     }
-    if (onSave) onSave(inputValue);
+    // Validation spéciale pour les modèles - une marque doit être sélectionnée
+    if (selected === "modèles" && !onEdit && !marqueValue.trim()) {
+      alert("Veuillez sélectionner une marque pour ce modèle.");
+      return;
+    }
+    if (onSave) onSave(inputValue, marqueValue);
   };
 
   return (
@@ -354,6 +418,37 @@ function DialogEdit({
           <DialogHeader>
             <DialogTitle>{onEdit ? "Editer" : "Nouveau"}</DialogTitle>
           </DialogHeader>
+          {selected === "modèles" && !onEdit && (
+            <>
+              <Label className="text-sm text-gray-500">Marque</Label>
+              <Select
+                defaultValue={marqueId}
+                value={marqueValue}
+                onValueChange={(value) => {
+                  setMarqueValue(value);
+                  setMarqueId?.(value);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    defaultValue={marqueId}
+                    placeholder="Sélectionner une marque"
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {marque?.map((item) => (
+                    <SelectItem
+                      key={item.id_marque}
+                      value={item.id_marque.toString()}
+                    >
+                      {item.libelle_marque}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+          <Label className="text-sm text-gray-500">{selected}</Label>
           <div className="grid gap-4">
             <div className="grid gap-3">
               <Input
@@ -365,9 +460,9 @@ function DialogEdit({
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" type="button">
+              <div className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md">
                 Annuler
-              </Button>
+              </div>
             </DialogClose>
             <Button onClick={handleSubmit} type="submit">
               {onEdit ? "Sauvegarder" : "Ajouter"}

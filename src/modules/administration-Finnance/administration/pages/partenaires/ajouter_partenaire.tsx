@@ -15,17 +15,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Save, Building, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
-import {
-  usePartenaireApi
-} from '@/modules/administration-Finnance/services/partenaireService';
-import { useApiCall } from '@/hooks/useAPiCall';
+import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
+import { useApiCall } from "@/hooks/useAPiCall";
 import { omit } from "@/lib/utils";
 import axios from "axios";
 import { toast } from "sonner";
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from "@tanstack/react-query";
 
 // Interface pour les interlocuteurs temporaires (sans id_partenaire)
-interface TempInterlocuteur extends Omit<Interlocuteur, 'id_partenaire' | 'id_interlocuteur'> {
+interface TempInterlocuteur
+  extends Omit<Interlocuteur, "id_partenaire" | "id_interlocuteur"> {
   id_interlocuteur: number;
 }
 
@@ -34,10 +33,10 @@ const AddPartnerForm: React.FC = () => {
   const queryClient = useQueryClient();
   const { addPartner, addMultipleInterlocuteurs } = usePartenaireApi();
 
-  const {
-    call: submitPartnerData,
-    loading: isSubmitting
-  } = useApiCall<Partenaires, [Omit<Partenaires, 'id_partenaire'>]>(addPartner);
+  const { call: submitPartnerData, loading: isSubmitting } = useApiCall<
+    Partenaires,
+    [Omit<Partenaires, "id_partenaire">]
+  >(addPartner);
 
   // État pour les données du partenaire
   const [formData, setFormData] = useState<Partenaires>({
@@ -52,10 +51,14 @@ const AddPartnerForm: React.FC = () => {
   });
 
   // État séparé pour les interlocuteurs temporaires
-  const [tempInterlocuteurs, setTempInterlocuteurs] = useState<TempInterlocuteur[]>([]);
+  const [tempInterlocuteurs, setTempInterlocuteurs] = useState<
+    TempInterlocuteur[]
+  >([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [interlocuteurErrors, setInterlocuteurErrors] = useState<Record<number, Record<string, string>>>({});
+  const [interlocuteurErrors, setInterlocuteurErrors] = useState<
+    Record<number, Record<string, string>>
+  >({});
   const [newInterlocuteur, setNewInterlocuteur] = useState<TempInterlocuteur>({
     id_interlocuteur: 0,
     nom_interlocuteur: "",
@@ -86,13 +89,7 @@ const AddPartnerForm: React.FC = () => {
     "Autres",
   ];
 
-  const statuts = [
-    "Actif",
-    "Inactif",
-    "En attente",
-    "Suspendu",
-    "Archivé"
-  ];
+  const statuts = ["Actif", "Inactif", "En attente", "Suspendu", "Archivé"];
 
   const getInitials = (name: string): string => {
     return name
@@ -117,7 +114,9 @@ const AddPartnerForm: React.FC = () => {
   };
 
   const handleSelectChange = (field: string, value: string | number) => {
-    console.log(`handleSelectChange - field: ${field}, value: ${value}, type: ${typeof value}`);
+    console.log(
+      `handleSelectChange - field: ${field}, value: ${value}, type: ${typeof value}`
+    );
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
@@ -128,9 +127,11 @@ const AddPartnerForm: React.FC = () => {
     }
   };
 
-  const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInterlocuteurChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const { name, value } = e.target;
-    setNewInterlocuteur(prev => ({ ...prev, [name]: value }));
+    setNewInterlocuteur((prev) => ({ ...prev, [name]: value }));
   };
 
   const addInterlocuteur = () => {
@@ -140,37 +141,44 @@ const AddPartnerForm: React.FC = () => {
       prenom_interlocuteur: "Prénom",
       contact_interlocuteur: "Contact",
       email_interlocuteur: "Email",
-      fonction_interlocuteur: "Fonction"
+      fonction_interlocuteur: "Fonction",
     };
 
     const missingFields = Object.entries(requiredFields)
-      .filter(([key]) => !newInterlocuteur[key as keyof typeof newInterlocuteur])
+      .filter(
+        ([key]) => !newInterlocuteur[key as keyof typeof newInterlocuteur]
+      )
       .map(([, label]) => label);
 
     if (missingFields.length > 0) {
-      setInterlocuteurErrors(prev => ({
+      setInterlocuteurErrors((prev) => ({
         ...prev,
         [tempInterlocuteurs.length]: {
-          general: `Les champs suivants sont obligatoires : ${missingFields.join(", ")}`
-        }
+          general: `Les champs suivants sont obligatoires : ${missingFields.join(
+            ", "
+          )}`,
+        },
       }));
       return;
     }
 
     // Validation de l'email
     if (!/^\S+@\S+\.\S+$/.test(newInterlocuteur.email_interlocuteur)) {
-      setInterlocuteurErrors(prev => ({
+      setInterlocuteurErrors((prev) => ({
         ...prev,
         [tempInterlocuteurs.length]: {
-          email_interlocuteur: "Format d'email invalide"
-        }
+          email_interlocuteur: "Format d'email invalide",
+        },
       }));
       return;
     }
 
     // Ajouter l'interlocuteur à la liste temporaire
-    setTempInterlocuteurs(prev => [...prev, { ...newInterlocuteur, id_interlocuteur: Date.now() }]);
-    
+    setTempInterlocuteurs((prev) => [
+      ...prev,
+      { ...newInterlocuteur, id_interlocuteur: Date.now() },
+    ]);
+
     // Réinitialiser le formulaire d'interlocuteur
     setNewInterlocuteur({
       id_interlocuteur: 0,
@@ -182,7 +190,7 @@ const AddPartnerForm: React.FC = () => {
     });
 
     // Effacer les erreurs
-    setInterlocuteurErrors(prev => {
+    setInterlocuteurErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[tempInterlocuteurs.length];
       return newErrors;
@@ -190,8 +198,8 @@ const AddPartnerForm: React.FC = () => {
   };
 
   const removeInterlocuteur = (index: number) => {
-    setTempInterlocuteurs(prev => prev.filter((_, i) => i !== index));
-    setInterlocuteurErrors(prev => {
+    setTempInterlocuteurs((prev) => prev.filter((_, i) => i !== index));
+    setInterlocuteurErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[index];
       return newErrors;
@@ -209,11 +217,7 @@ const AddPartnerForm: React.FC = () => {
       newErrors.telephone_partenaire = "Le numéro de téléphone est obligatoire";
     }
 
-    if (!formData.email_partenaire.trim()) {
-      newErrors.email_partenaire = "L'email est obligatoire";
-    } else if (!/^\S+@\S+\.\S+$/.test(formData.email_partenaire)) {
-      newErrors.email_partenaire = "Format d'email invalide";
-    }
+
 
     if (!formData.specialite) {
       newErrors.specialite = "La spécialité est obligatoire";
@@ -247,29 +251,36 @@ const AddPartnerForm: React.FC = () => {
       const partenaireData = {
         ...omit(formData, ["id_partenaire"]),
       };
-      
+
       console.log("Données du partenaire à envoyer:", partenaireData);
-      
+
       const createdPartenaire = await submitPartnerData(partenaireData);
       console.log("Partenaire créé:", createdPartenaire);
-      
+
       // 2. Si des interlocuteurs ont été ajoutés, les créer avec l'ID du partenaire
       if (tempInterlocuteurs.length > 0 && createdPartenaire?.id_partenaire) {
-        const interlocuteursToCreate = tempInterlocuteurs.map(inter => ({
+        const interlocuteursToCreate = tempInterlocuteurs.map((inter) => ({
           nom_interlocuteur: inter.nom_interlocuteur,
           prenom_interlocuteur: inter.prenom_interlocuteur,
           contact_interlocuteur: inter.contact_interlocuteur,
           email_interlocuteur: inter.email_interlocuteur,
           fonction_interlocuteur: inter.fonction_interlocuteur,
-          id_partenaire: createdPartenaire.id_partenaire
+          id_partenaire: createdPartenaire.id_partenaire,
         }));
-        
+
         try {
-          await addMultipleInterlocuteurs(interlocuteursToCreate, createdPartenaire.id_partenaire);
+          await addMultipleInterlocuteurs(
+            interlocuteursToCreate,
+            createdPartenaire.id_partenaire
+          );
         } catch (error) {
           console.error("Erreur lors de l'ajout des interlocuteurs:", error);
           if (axios.isAxiosError(error)) {
-            toast.error(`Erreur lors de l'ajout des interlocuteurs: ${error.response?.data?.message || error.message}`);
+            toast.error(
+              `Erreur lors de l'ajout des interlocuteurs: ${
+                error.response?.data?.message || error.message
+              }`
+            );
           } else {
             toast.error("Erreur lors de l'ajout des interlocuteurs");
           }
@@ -279,12 +290,16 @@ const AddPartnerForm: React.FC = () => {
 
       toast.success("Partenaire ajouté avec succès !");
       console.log("Invalidation des requêtes partenaires...");
-      queryClient.invalidateQueries(['partenaires']);
+      queryClient.invalidateQueries(["partenaires"]);
       navigate("/gestion-administrative/partenaires");
     } catch (error) {
       console.error("Error details:", error);
       if (axios.isAxiosError(error)) {
-        toast.error(`Erreur lors de l'ajout du partenaire: ${error.response?.data?.message || error.message}`);
+        toast.error(
+          `Erreur lors de l'ajout du partenaire: ${
+            error.response?.data?.message || error.message
+          }`
+        );
       } else {
         toast.error("Erreur lors de l'ajout du partenaire");
       }
@@ -333,7 +348,9 @@ const AddPartnerForm: React.FC = () => {
                   className={errors.nom_partenaire ? "border-red-500" : ""}
                 />
                 {errors.nom_partenaire && (
-                  <p className="text-red-500 text-sm">{errors.nom_partenaire}</p>
+                  <p className="text-red-500 text-sm">
+                    {errors.nom_partenaire}
+                  </p>
                 )}
               </div>
 
@@ -345,10 +362,14 @@ const AddPartnerForm: React.FC = () => {
                     name="telephone_partenaire"
                     value={formData.telephone_partenaire}
                     onChange={handleChange}
-                    className={errors.telephone_partenaire ? "border-red-500" : ""}
+                    className={
+                      errors.telephone_partenaire ? "border-red-500" : ""
+                    }
                   />
                   {errors.telephone_partenaire && (
-                    <p className="text-red-500 text-sm">{errors.telephone_partenaire}</p>
+                    <p className="text-red-500 text-sm">
+                      {errors.telephone_partenaire}
+                    </p>
                   )}
                 </div>
 
@@ -363,7 +384,9 @@ const AddPartnerForm: React.FC = () => {
                     className={errors.email_partenaire ? "border-red-500" : ""}
                   />
                   {errors.email_partenaire && (
-                    <p className="text-red-500 text-sm">{errors.email_partenaire}</p>
+                    <p className="text-red-500 text-sm">
+                      {errors.email_partenaire}
+                    </p>
                   )}
                 </div>
               </div>
@@ -373,9 +396,13 @@ const AddPartnerForm: React.FC = () => {
                   <Label htmlFor="specialite">Spécialité</Label>
                   <Select
                     value={formData.specialite}
-                    onValueChange={(value) => handleSelectChange("specialite", value)}
+                    onValueChange={(value) =>
+                      handleSelectChange("specialite", value)
+                    }
                   >
-                    <SelectTrigger className={errors.specialite ? "border-red-500" : ""}>
+                    <SelectTrigger
+                      className={errors.specialite ? "border-red-500" : ""}
+                    >
                       <SelectValue placeholder="Sélectionner une spécialité" />
                     </SelectTrigger>
                     <SelectContent>
@@ -395,9 +422,13 @@ const AddPartnerForm: React.FC = () => {
                   <Label htmlFor="type_partenaire">Type de partenaire</Label>
                   <Select
                     value={formData.type_partenaire}
-                    onValueChange={(value) => handleSelectChange("type_partenaire", value)}
+                    onValueChange={(value) =>
+                      handleSelectChange("type_partenaire", value)
+                    }
                   >
-                    <SelectTrigger className={errors.type_partenaire ? "border-red-500" : ""}>
+                    <SelectTrigger
+                      className={errors.type_partenaire ? "border-red-500" : ""}
+                    >
                       <SelectValue placeholder="Sélectionner un type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -409,7 +440,9 @@ const AddPartnerForm: React.FC = () => {
                     </SelectContent>
                   </Select>
                   {errors.type_partenaire && (
-                    <p className="text-red-500 text-sm">{errors.type_partenaire}</p>
+                    <p className="text-red-500 text-sm">
+                      {errors.type_partenaire}
+                    </p>
                   )}
                 </div>
               </div>
@@ -434,7 +467,9 @@ const AddPartnerForm: React.FC = () => {
                   value={formData.statut}
                   onValueChange={(value) => handleSelectChange("statut", value)}
                 >
-                  <SelectTrigger className={errors.statut ? "border-red-500" : ""}>
+                  <SelectTrigger
+                    className={errors.statut ? "border-red-500" : ""}
+                  >
                     <SelectValue placeholder="Sélectionner un statut" />
                   </SelectTrigger>
                   <SelectContent>
@@ -471,12 +506,16 @@ const AddPartnerForm: React.FC = () => {
                     >
                       <div className="flex-1">
                         <p className="font-medium">
-                          {interlocuteur.nom_interlocuteur} {interlocuteur.prenom_interlocuteur}
+                          {interlocuteur.nom_interlocuteur}{" "}
+                          {interlocuteur.prenom_interlocuteur}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {interlocuteur.fonction_interlocuteur} • {interlocuteur.contact_interlocuteur}
+                          {interlocuteur.fonction_interlocuteur} •{" "}
+                          {interlocuteur.contact_interlocuteur}
                         </p>
-                        <p className="text-sm text-gray-500">{interlocuteur.email_interlocuteur}</p>
+                        <p className="text-sm text-gray-500">
+                          {interlocuteur.email_interlocuteur}
+                        </p>
                       </div>
                       <Button
                         type="button"
@@ -564,9 +603,13 @@ const AddPartnerForm: React.FC = () => {
                     {interlocuteurErrors[tempInterlocuteurs.length].general}
                   </p>
                 )}
-                {interlocuteurErrors[tempInterlocuteurs.length]?.email_interlocuteur && (
+                {interlocuteurErrors[tempInterlocuteurs.length]
+                  ?.email_interlocuteur && (
                   <p className="text-red-500 text-sm mt-2">
-                    {interlocuteurErrors[tempInterlocuteurs.length].email_interlocuteur}
+                    {
+                      interlocuteurErrors[tempInterlocuteurs.length]
+                        .email_interlocuteur
+                    }
                   </p>
                 )}
               </div>

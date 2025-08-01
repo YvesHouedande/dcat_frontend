@@ -31,9 +31,7 @@ const AddFinanceCompta: React.FC = () => {
   });
 
   const [natures, setNatures] = useState<NatureDocument[]>([]);
-  const [id_comptabilité, setId_comptabilité] = useState<number | undefined>(
-    undefined
-  );
+ 
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
@@ -47,18 +45,13 @@ const AddFinanceCompta: React.FC = () => {
     const fetchNatures = async () => {
       try {
         const naturesData = await getAllNatureDocument();
-        setNatures(naturesData);
 
-        const comptabiliteNature = naturesData.find(
-          (n) =>
-            n.libelle &&
-            (n.libelle.toLowerCase().includes("comptabilite") ||
-              n.libelle.toLowerCase().includes("comptable") ||
-              n.libelle.toLowerCase().includes("compta"))
+        setNatures(
+          naturesData.filter(
+            (n) => n.libelle == "Comptabilité" || n.libelle == "Finance"
+          )
         );
-        if (comptabiliteNature) {
-          setId_comptabilité(comptabiliteNature.id_nature_document);
-        }
+       
 
         // Pré-sélectionner la nature selon le type (finance ou comptabilite)
         if (type === "finance") {
@@ -136,14 +129,13 @@ const AddFinanceCompta: React.FC = () => {
       toast.error("Le titre du document est requis");
       return;
     }
-
-    if (!selectedFile) {
-      toast.error("Veuillez sélectionner un fichier");
+    if (!formData.id_nature_document) {
+      toast.error("Veuillez sélectionner un type de document");
       return;
     }
 
-    if (!formData.id_nature_document) {
-      toast.error("Veuillez sélectionner un type de document");
+    if (!selectedFile) {
+      toast.error("Veuillez sélectionner un fichier");
       return;
     }
 
@@ -163,7 +155,14 @@ const AddFinanceCompta: React.FC = () => {
       toast.success("Document ajouté avec succès");
 
       // Rediriger vers la liste
-      navigate(-1);
+      // navigate(-1);
+      navigate(
+        `/finance-et-compatibilite/${
+          type_dossier?.toLowerCase() === "comptabilité"
+            ? "comptabilite"
+            : "finance"
+        }/dossier/${formData.id_dossier}`
+      );
     } catch (error: unknown) {
       console.error("Erreur lors de l'ajout du document:", error);
       if (typeof error === "object" && error !== null && "response" in error) {
@@ -236,6 +235,7 @@ const AddFinanceCompta: React.FC = () => {
                     <SelectValue placeholder="Sélectionnez un type" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="0">Sélectionnez un type</SelectItem>
                     {natures.map((nature) => (
                       <SelectItem
                         key={nature.id_nature_document}
@@ -261,25 +261,7 @@ const AddFinanceCompta: React.FC = () => {
                 />
               </div>
 
-              {/* Classification du document */}
-              {formData.id_nature_document === id_comptabilité && (
-                <div className="space-y-2">
-                  <Label htmlFor="classification_document">
-                    Classification
-                  </Label>
-                  <Input
-                    id="classification_document"
-                    value={formData.classification_document}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "classification_document",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Ex: confidentiel, public, interne..."
-                  />
-                </div>
-              )}
+              
               {/* État du document */}
               <div className="space-y-2">
                 <Label htmlFor="etat_document">État du document</Label>
