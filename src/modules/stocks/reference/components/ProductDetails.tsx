@@ -65,7 +65,7 @@ export default function ProductDetails({ product }: { product?: Produit }) {
               Caractéristiques
             </p>
             <p className="text-slate-700 bg-slate-50 p-3 rounded-lg">
-              {product?.caracteristiques ?? "Aucune caractéristique disponible"}
+              {product?.caracteristiques_produit ?? "Aucune caractéristique disponible"}
             </p>
           </div>
         </CardContent>
