@@ -31,7 +31,7 @@ const EditEntiteForm: React.FC = () => {
 
   // Charger les partenaires pour la sélection
   const { data: partenairesData, isLoading: loadingPartenaires } = useQuery({
-    queryKey: ["partenaires"],
+    queryKey: ["partenaires-editer-entite"],
     queryFn: () => fetchPartners(1, 1000), // Récupérer tous les partenaires
   });
 
