@@ -36,6 +36,7 @@ import {
   RefreshCw,
   BarChart3,
   TrendingUp,
+  ShoppingCart,
 } from "lucide-react";
 import { useCommandes, useDeleteCommande } from "../hooks/useCommandes";
 import { Commande, CommandeData, etat_commande } from "../types/commande";
@@ -72,7 +73,7 @@ const getStatusInfo = (status: Commande["etat_commande"]) => {
     },
     en_cours: {
       label: "En Cours",
-      color: "bg-amber-50 text-amber-700 border-amber-200",
+      color: "bg-blue-50 text-blue-700 border-blue-200",
       icon: Clock,
       dotColor: "bg-blue-500",
     },
@@ -562,7 +563,7 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <Package className="w-6 h-6 text-white" />
+                            <ShoppingCart className="w-6 h-6 text-white" />
                           </div>
                           <div>
                             <div className="font-bold text-gray-900">
@@ -629,14 +630,18 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
                               <Eye className="mr-2 h-4 w-4" />
                               Voir les détails
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                onEdit(commande.commande.id_commande)
-                              }
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Modifier
-                            </DropdownMenuItem>
+                            {commande.commande.etat_commande !==
+                              etat_commande.annulee && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  onEdit(commande.commande.id_commande)
+                                }
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Modifier
+                              </DropdownMenuItem>
+                            )}
+
                             <DropdownMenuSeparator />
                             {commande.commande.etat_commande ===
                               etat_commande.annulee && (
