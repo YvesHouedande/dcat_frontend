@@ -82,7 +82,7 @@ const ProductInfoDialog: React.FC<ProductInfoDialogProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pb-4">
           <DialogTitle className="text-xl font-semibold text-slate-900">
-            Détails du produit
+            Détails d'un outil
           </DialogTitle>
         </DialogHeader>
 
@@ -123,7 +123,7 @@ const ProductInfoDialog: React.FC<ProductInfoDialogProps> = ({
               <div className="flex items-center gap-1.5 text-sm text-slate-600">
                 <Hash className="w-4 h-4" />
                 <span>
-                  Quantité en stock:{" "}
+                  Quantité disponible:{" "}
                   <span className="font-medium">
                     {product.qte_produit || 0}
                   </span>
@@ -199,18 +199,30 @@ const ProductInfoDialog: React.FC<ProductInfoDialogProps> = ({
 
           {/* Métadonnées */}
           <Separator />
-          <div className="flex items-center gap-4 text-xs text-slate-500">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-4 text-xs text-slate-500 justify-between w-full">
+            <div className="flex items-center gap-1 w-28">
               <Calendar className="w-3 h-3" />
               <span>ID: {product.id_produit}</span>
             </div>
             {product.created_at && (
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                <span>
-                  Créé le{" "}
-                  {new Date(product.created_at).toLocaleDateString("fr-FR")}
-                </span>
+              <div className="flex items-center gap-1 justify-between  w-full">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  <span>
+                    Créé le{" "}
+                    {new Date(product.created_at).toLocaleDateString("fr-FR")}
+                  </span>
+                </div>
+
+                {product.updated_at && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    <span>
+                      mis à jour le{" "}
+                      {new Date(product.updated_at).toLocaleDateString("fr-FR")}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

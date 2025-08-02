@@ -23,7 +23,7 @@ export const useProductInstances = (filters = {}) => {
     productInstanceService.getAll({
       ...params,
       pageSize: PAGE_SIZE,
-      filter: filters,
+      ...filters,
     });
 
   // Utilisation de useInfiniteQuery pour la pagination et les filtres
@@ -40,7 +40,7 @@ export const useProductInstances = (filters = {}) => {
       fetchProductInstances({
         page: pageParam,
         pageSize: PAGE_SIZE,
-        filter: filters,
+        ...filters,
       }),
     getNextPageParam: (lastPage) => {
       if (lastPage.page < lastPage.totalPages) {

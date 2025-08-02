@@ -346,7 +346,7 @@ export default function CataloguePage() {
                       <TableHead>Famille</TableHead>
                       <TableHead>Marque</TableHead>
                       <TableHead>Modèle</TableHead>
-                      <TableHead>Stock</TableHead>
+                      <TableHead>Disponible</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>

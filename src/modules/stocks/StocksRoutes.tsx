@@ -4,7 +4,6 @@ import { Routes, Route } from "react-router-dom";
 import NotFound from "@/pages/NotFound";
 import StockLayout from "./stockLayout";
 import CataloguePage from "./reference/pages/cataloguePage";
-import ReferencePage from "./reference/pages/referencePage";
 import ReferenceEditForm from "./reference/pages/referenceEdit";
 import LivraisonPage from "./livraison/pages/LivraisonPage";
 import GestionStock from "../dashboard/pages/gestionDesStocks/gestionStock";
@@ -17,7 +16,7 @@ const StocksRoutes: React.FC = () => {
       <Route path="/creation-reference-produit/" element={<StockLayout />}>
         <Route index element={<CataloguePage />} />
         <Route path="nouveau" element={<ReferenceEditForm />} />
-        <Route path=":id" element={<ReferencePage />} />
+        <Route path=":id" element={<ReferenceEditForm />} />
         <Route path=":id/edit" element={<ReferenceEditForm />} />
       </Route>
       <Route path="/entrees" element={<StockLayout />}>

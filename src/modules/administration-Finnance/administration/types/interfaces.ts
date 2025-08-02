@@ -73,6 +73,16 @@ export interface Entite {
   id_partenaire: number; // Relation avec le partenaire
 }
 
+export interface EntiteResponse {
+  data: Entite[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface NatureDocument {
   //Table nature_document
   id_nature_document: number;
