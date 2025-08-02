@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { Intervention } from '../interface/interface';
 import { getInterventions } from '../api/intervention';
 import { Search, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 interface InterventionsListProps {
   onDelete: (intervention: Intervention) => void;
@@ -41,31 +42,22 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
   onDelete,
 }) => {
   const navigate = useNavigate();
-  const [allInterventions, setAllInterventions] = useState<Intervention[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterDefaillance, setFilterDefaillance] = useState<string>('');
   const itemsPerPage = 10;
 
-  const loadInterventions = async () => {
-    setIsLoading(true);
-    try {
-      // Charger toutes les interventions pour permettre le filtrage local
-      const response = await getInterventions(1, 1000); // Charger beaucoup d'interventions
-      setAllInterventions(response.data || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des interventions:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Utiliser TanStack Query pour charger les interventions
+  const { data: interventionsResponse, isLoading, error } = useQuery({
+    queryKey: ['interventions', 'list'],
+    queryFn: () => getInterventions(1, 1000), // Charger beaucoup d'interventions pour le filtrage local
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => {
-    loadInterventions();
-  }, []);
+  const allInterventions = interventionsResponse?.data || [];
 
   // Filtrage des interventions
   const filteredInterventions = useMemo(() => {
@@ -117,7 +109,7 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
   );
 
   // Réinitialiser la page courante quand les filtres changent
-  useEffect(() => {
+  useMemo(() => {
     setCurrentPage(1);
   }, [searchTerm, filterType, filterStatus, filterDefaillance]);
 
@@ -298,6 +290,17 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
                     Chargement...
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  <div className="text-center">
+                    <p className="text-red-500 mb-2">Erreur lors du chargement des interventions</p>
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                      Réessayer
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

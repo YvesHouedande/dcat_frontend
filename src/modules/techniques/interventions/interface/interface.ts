@@ -70,7 +70,9 @@ export interface Intervention {
 }
   
 // Payload pour la création d'une intervention
-export type CreateInterventionPayload = Omit<Intervention, 'id_intervention' | 'documents' | 'employes'>;
+export type CreateInterventionPayload = Omit<Intervention, 'id_intervention' | 'documents' | 'employes' | 'superviseur'> & {
+  superviseur?: number; // Rendre le superviseur optionnel car il sera traité séparément
+};
   
 // Payload pour la mise à jour d'une intervention (tous les champs peuvent être optionnels pour un PATCH,
 // mais pour un PUT, on enverrait l'objet complet sans id_intervention)

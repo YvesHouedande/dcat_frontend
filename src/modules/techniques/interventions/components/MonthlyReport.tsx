@@ -222,7 +222,7 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Rapport Mensuel des Interventions - ${monthName}</title>
+        <title>TABLEAU RÉCAPITULATIF DES INTERVENTIONS MENSUELLES - ${monthName}</title>
         <style>
           @page { size: A4 landscape; margin: 2cm; }
           body { 
