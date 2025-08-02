@@ -46,11 +46,6 @@ export const extractInterventionId = (response: ApiResponse<Intervention>): numb
     return response.intervention.id_intervention;
   }
   
-  // Essayer response.data.id_intervention (si data est directement l'intervention)
-  if (response.data && hasInterventionId(response.data)) {
-    return response.data.id_intervention;
-  }
-  
   // Essayer response.id_intervention (si la réponse est directement l'intervention)
   if (hasInterventionId(response)) {
     return response.id_intervention;
