@@ -51,6 +51,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useContratsApi } from '@/modules/administration-Finnance/services/contratService';
 import { Contrat } from '@/modules/administration-Finnance/administration/types/interfaces';
+import { useEmployesApi } from '../../projects/projet/api/employes';
 
 
 interface InterventionDetailsProps {
@@ -58,12 +59,7 @@ interface InterventionDetailsProps {
   onDocumentAdded: () => void;
   onDocumentDeleted: () => void;
 }
-// Get API_URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
-
-// Determine the base URL for static files (media, documents, etc.)
-// Assumes API_BASE_URL ends with /api (e.g., https://erpback.dcat.ci/api)
-// and static files are served from the root domain (e.g., https://erpback.dcat.ci/media/...)
 const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
   ? API_BASE_URL.slice(0, -4) // Remove '/api' from the end
   : API_BASE_URL; // Otherwise, use it as is
@@ -80,8 +76,10 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
   const [contrat, setContrat] = useState<Contrat | null>(null);
+  const [superviseur, setSuperviseur] = useState<Employe | null>(null);
   const { fetchContratById } = useContratsApi();
   const { getPartenaires } = usePartenairesApi();
+  const { getEmployes } = useEmployesApi();
   const loadData = useCallback(async () => {
     try {
       const [documentsResponse, employesResponse, partenairesResponse] =
@@ -134,8 +132,27 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
         setContrat(null);
       }
     };
+    
+    // Charger le superviseur si superviseur existe
+    const loadSuperviseur = async () => {
+      if (intervention.superviseur) {
+        try {
+          const employesResponse = await getEmployes({ limit: 100, page: 1 });
+          const superviseurFound = employesResponse.find(
+            (e) => e.id_employes === intervention.superviseur
+          );
+          setSuperviseur(superviseurFound || null);
+        } catch {
+          setSuperviseur(null);
+        }
+      } else {
+        setSuperviseur(null);
+      }
+    };
+    
     loadContrat();
-  }, [loadData, intervention.id_contrat, fetchContratById]);
+    loadSuperviseur();
+  }, [loadData, intervention.id_contrat, intervention.superviseur, fetchContratById, getEmployes]);
 
   const handleDeleteDocument = async (documentId: number) => {
     try {
@@ -241,6 +258,13 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
           >
             <Plus className="h-4 w-4" />
             Ajouter un document
+          </Button>
+          <Button
+            onClick={() => navigate(`/gestion-des-interventions/interventions/${intervention.id_intervention}/edit`)}
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Modifier
           </Button>
         </div>
       </div>
@@ -374,6 +398,35 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
             )}
           </CardContent>
         </Card>
+
+        {/* Superviseur */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Superviseur
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {superviseur ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{superviseur.prenom_employes} {superviseur.nom_employes}</p>
+                    <p className="text-sm text-muted-foreground">{superviseur.email_employes}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Aucun superviseur assigné
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Analyse technique */}
@@ -404,9 +457,69 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
             <div>
               <h4 className="font-medium mb-2">Détail de la cause</h4>
               <p className="text-sm text-muted-foreground">
-                {intervention.detail_cause}
+                {intervention.detail_cause || "Aucun détail fourni"}
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Problème signalé */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Problème signalé
+          </CardTitle>
+          <CardDescription>
+            Description du problème initialement signalé
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <p className="text-sm whitespace-pre-wrap">
+              {intervention.probleme_signale || "Aucun problème signalé"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rapport d'intervention */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Rapport d'intervention
+          </CardTitle>
+          <CardDescription>
+            Détails des actions réalisées lors de l'intervention
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <p className="text-sm whitespace-pre-wrap">
+              {intervention.rapport_intervention || "Aucun rapport fourni"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recommandations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            Recommandations
+          </CardTitle>
+          <CardDescription>
+            Suggestions et recommandations suite à l'intervention
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <p className="text-sm whitespace-pre-wrap">
+              {intervention.recommandation || "Aucune recommandation fournie"}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -420,30 +533,53 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
               Équipe d'intervention
             </CardTitle>
             <CardDescription>
+              Personnel affecté à cette intervention ({employes.length} personne{employes.length > 1 ? 's' : ''})
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {employes.map((employe) => (
+                <div key={employe.id_employes} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {employe.prenom_employes} {employe.nom_employes}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {employe.email_employes}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Message si aucun employé */}
+      {(!employes || employes.length === 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Équipe d'intervention
+            </CardTitle>
+            <CardDescription>
               Personnel affecté à cette intervention
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Prénom</TableHead>
-                  <TableHead>Poste</TableHead>
-                  <TableHead>Spécialité</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employes.map((employe) => (
-                  <TableRow key={employe.id_employes}>
-                    <TableCell className="font-medium">
-                      {employe.nom_employes}
-                    </TableCell>
-                    <TableCell>{employe.prenom_employes}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="text-center py-8">
+              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Aucun employé assigné à cette intervention
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Les employés peuvent être assignés lors de la modification de l'intervention
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}

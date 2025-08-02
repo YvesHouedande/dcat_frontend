@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { format } from 'date-fns';
 import {
   Form,
   FormControl,
@@ -30,9 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { FileText, Trash2, } from 'lucide-react';
-import { toast } from 'sonner';
-import { Intervention, Partenaire, Employe, Nature, CreateInterventionDocumentTextPayload } from '../interface/interface';
+import { Intervention, Partenaire, Employe } from '../interface/interface';
 import { usePartenairesApi } from '../../projects/projet/api/partenaires';
 import { useEmployesApi } from '../../projects/projet/api/employes';
 import { useContratsApi } from '@/modules/administration-Finnance/services/contratService';
@@ -42,7 +39,7 @@ import { Contrat } from '@/modules/administration-Finnance/administration/types/
 const formSchema = z.object({
   date_intervention: z.string(),
   id_partenaire: z.number(),
-  id_contrat: z.number().optional(), // <-- ajout du contrat (optionnel ou .nullable() si besoin)
+  id_contrat: z.number().optional(),
   probleme_signale: z.string().min(1, 'Le problème signalé est requis'),
   type_intervention: z.enum(['Corrective', 'Préventive']),
   type_defaillance: z.enum(['Électrique', 'Matérielle', 'Logiciel']),
@@ -52,39 +49,23 @@ const formSchema = z.object({
   recommandation: z.string(),
   duree: z.string().min(1, 'La durée est requise'),
   lieu: z.string().min(1, 'Le lieu est requis'),
-  mode_intervention: z.string(),
+  mode_intervention: z.string().min(1, 'Le mode d\'intervention est requis'),
+  statut_intervention: z.enum(['à faire', 'en cours', 'en attente', 'terminé']),
   employes: z.array(z.number()),
   superviseur: z.number(),
 });
 
 export type FormData = z.infer<typeof formSchema>;
 
-// Interface pour les documents temporaires en attente d'association
-interface PendingDocument {
-  id: string; // ID temporaire unique
-  file: File;
-  textPayload: CreateInterventionDocumentTextPayload;
-}
-
 interface InterventionFormProps {
   intervention?: Intervention;
-  onSubmit: (
-    data: FormData, 
-    pendingDocuments?: PendingDocument[] // Documents à associer après création
-  ) => void;
-  onSaveDocument?: (
-    interventionId: number,
-    documentFile: File,
-    textPayload: CreateInterventionDocumentTextPayload
-  ) => Promise<void>;
-  natureDocumentsDisponibles?: Nature[]; // Liste des natures de documents
+  onSubmit: (data: FormData) => void;
   isLoading?: boolean;
 }
 
 export const InterventionForm: React.FC<InterventionFormProps> = ({
   intervention,
   onSubmit,
-  natureDocumentsDisponibles = [],
   isLoading = false,
 }) => {
   const [partenaires, setPartenaires] = useState<Partenaire[]>([]);
@@ -94,15 +75,12 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
   const { getPartenaires } = usePartenairesApi();
   const { getEmployes } = useEmployesApi();
 
-  // États pour les documents temporaires
-  const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
- 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date_intervention: intervention?.date_intervention || format(new Date(), 'yyyy-MM-dd'),
       id_partenaire: intervention?.id_partenaire || 0,
-      id_contrat: intervention?.id_contrat || undefined, // <-- préremplissage
+      id_contrat: intervention?.id_contrat || undefined,
       probleme_signale: intervention?.probleme_signale || '',
       type_intervention: (intervention?.type_intervention as 'Corrective' | 'Préventive') || 'Corrective',
       type_defaillance: (intervention?.type_defaillance as 'Électrique' | 'Matérielle' | 'Logiciel') || 'Électrique',
@@ -113,6 +91,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
       duree: intervention?.duree || '',
       lieu: intervention?.lieu || '',
       mode_intervention: intervention?.mode_intervention || '',
+      statut_intervention: (intervention?.statut_intervention as 'à faire' | 'en cours' | 'en attente' | 'terminé') || 'à faire',
       employes: intervention?.employes?.map(e => e.id_employes) || [],
       superviseur: 0,
     },
@@ -136,28 +115,15 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
     loadData();
   }, [fetchContrats, getPartenaires, getEmployes]);
 
-
-
-
-
-
-
-  const removePendingDocument = (documentId: string) => {
-    setPendingDocuments(prev => prev.filter(doc => doc.id !== documentId));
-    toast.success("Document retiré de la liste temporaire.");
-  };
-
   // Handler pour la soumission du formulaire principal
   const handleFormSubmit = (data: FormData) => {
-    // Passer les documents temporaires au parent (pour le mode création)
-
-    onSubmit(data, intervention ? undefined : pendingDocuments);
+    onSubmit(data);
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
-        {/* Header avec bouton d'ajout de document */}
+        {/* Header */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
@@ -498,6 +464,20 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="mode_intervention"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mode d'Intervention</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="text" placeholder="Ex: Sur site, À distance, Hybride" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 
@@ -507,6 +487,41 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
             <CardDescription>Superviseur et signatures</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="statut_intervention"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Statut de l'Intervention</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex space-x-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="à faire" id="a-faire" />
+                        <label htmlFor="a-faire">À faire</label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="en cours" id="en-cours" />
+                        <label htmlFor="en-cours">En cours</label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="en attente" id="en-attente" />
+                        <label htmlFor="en-attente">En attente</label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="terminé" id="termine" />
+                        <label htmlFor="termine">Terminé</label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="superviseur"
@@ -539,66 +554,6 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
             />
           </CardContent>
         </Card>
-
-        {/* Documents temporaires (mode création uniquement) */}
-        {!intervention && pendingDocuments.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Documents en attente d'association ({pendingDocuments.length})
-              </CardTitle>
-              <CardDescription>
-                Ces documents seront automatiquement associés à l'intervention après sa création.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {pendingDocuments.map((doc) => {
-                  const natureName = natureDocumentsDisponibles.find(
-                    n => n.id_nature_document === doc.textPayload.id_nature_document
-                  )?.libelle || "Nature inconnue";
-                  
-                  return (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <FileText className="h-5 w-5 text-blue-600" />
-                          <div>
-                            <p className="font-medium text-gray-900">{doc.textPayload.libelle_document}</p>
-                            <p className="text-sm text-gray-600">
-                              {doc.file.name} • {natureName}
-                              {doc.textPayload.date_document && (
-                                <> • {format(parseISO(doc.textPayload.date_document), "dd/MM/yyyy", { locale: fr })}</>
-                              )}
-                            </p>
-                            {doc.textPayload.classification_document && (
-                              <p className="text-xs text-gray-500">Classification: {doc.textPayload.classification_document}</p>
-                            )}
-                            {doc.textPayload.etat_document && (
-                              <p className="text-xs text-gray-500">État: {doc.textPayload.etat_document}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removePendingDocument(doc.id)}
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg mt-4">
-                💡 Ces documents seront automatiquement associés à l'intervention après sa création.
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <div className="flex justify-end space-x-4">
           <Button type="submit" disabled={isLoading}>

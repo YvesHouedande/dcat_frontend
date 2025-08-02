@@ -1,6 +1,6 @@
 // src/pages/ProjetDetailsPage.tsx
 
-import React, { useState, useEffect, FC, useCallback } from "react";
+import React, { useState, useEffect, FC } from "react";
 import {
   useParams,
   useNavigate,
@@ -9,17 +9,15 @@ import {
   Route,
   NavLink,
 } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import {
   Projet,
   Partenaire,
-  Famille,
-  Document,
   Livrable,
   TacheWithAssignedEmployes,
   Employe,
   CreateTachePayload,
-  Tache,
   Operation,
 } from "../../types/types"; // Import Document, Livrable, ApiResponse
 import {
@@ -156,11 +154,13 @@ const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
 interface ProjectTaskDetailWrapperProps {
   taches: TacheWithAssignedEmployes[];
   projet: Projet;
+  operations: Operation[];
   onEdit: (tacheId: number) => void;
 }
 
 const ProjectTaskDetailWrapper: FC<ProjectTaskDetailWrapperProps> = ({
   taches,
+  operations,
   onEdit,
 }) => {
   const { tacheId, id } = useParams<{ tacheId: string; id: string }>();
@@ -177,7 +177,7 @@ const ProjectTaskDetailWrapper: FC<ProjectTaskDetailWrapperProps> = ({
       >
         ← Retour à la liste des tâches
       </Button>
-      <TaskDetail tache={tache} isEmbedded={true} onEdit={onEdit} />
+      <TaskDetail tache={tache} operations={operations} isEmbedded={true} onEdit={onEdit} />
     </div>
   );
 };
@@ -583,24 +583,16 @@ const ProjetDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { getPartenaires } = usePartenairesApi();
   const { getEmployes } = useEmployesApi();
-  const [projet, setProjet] = useState<Projet | undefined>(undefined);
-  const [allPartenaires, setAllPartenaires] = useState<Partenaire[]>([]);
-  const [familles, setFamilles] = useState<Famille[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]); // State for associated direct project documents
-  const [livrables, setLivrables] = useState<Livrable[]>([]); // NEW: State for associated livrables with their documents
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [taches, setTaches] = useState<TacheWithAssignedEmployes[]>([]); // Tâches du projet
-  const [employes, setEmployes] = useState<Employe[]>([]); // Tous les employés
-  const [loadingTaches, setLoadingTaches] = useState(true);
+  
+  // États locaux pour les formulaires et UI
   const [tacheToEdit, setTacheToEdit] =
     useState<TacheWithAssignedEmployes | null>(null);
   const [isSubmittingTache, setIsSubmittingTache] = useState(false);
 
   // États pour la gestion des livrables
-  const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]); // Natures de documents disponibles
   const [showDocumentSheet, setShowDocumentSheet] = useState(false);
   const [documentFormData, setDocumentFormData] = useState<
     CreateDocumentTextPayload & { file: File | null }
@@ -614,167 +606,299 @@ const ProjetDetailsPage: React.FC = () => {
 
   const [showOperationSheet, setShowOperationSheet] = useState(false);
 
-  const loadProjetData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    if (!id) {
-      setError("ID du projet manquant.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const projectId = Number(id);
-      if (isNaN(projectId)) {
-        setError("ID de projet invalide.");
-        setLoading(false);
-        return;
+  // Query pour les données du projet
+  const projectId = id ? Number(id) : 0;
+  
+  const { data: projet, isLoading: loading, error } = useQuery({
+    queryKey: ['projet', projectId],
+    queryFn: async () => {
+      if (!projectId || isNaN(projectId)) {
+        throw new Error("ID de projet invalide.");
       }
-
-      // Fetch project, all partners, families, associated direct project documents, AND livrables with their documents in parallel
-      const [
-        fetchedProjet,
-        fetchedAllPartenaires,
-        fetchedFamilles,
-        fetchedDocumentsResponse,
-        fetchedLivrablesResponse, // NEW: Fetch livrables with documents
-      ] = await Promise.all([
-        getProjetById(projectId),
-        getPartenaires({ limit: 100, page: 1 }),
-        getFamilles(),
-        getDocumentsByProjetId(projectId), // Fetch documents directly associated with the project
-        getLivrablesWithDocumentsByProjetId(projectId), // NEW: Fetch livrables and their nested documents
-      ]);
-
-      setAllPartenaires(fetchedAllPartenaires);
-      setFamilles(fetchedFamilles);
-
+      
+      const fetchedProjet = await getProjetById(projectId);
       if (!fetchedProjet) {
-        setError("Projet introuvable ou erreur de chargement.");
-        setProjet(undefined);
-        return;
+        throw new Error("Projet introuvable ou erreur de chargement.");
       }
-
+      
       // Get associated partner IDs for the project
-      const associatedPartnerIds = await getProjetAssociatedPartenaires(
-        projectId
-      );
-
+      const associatedPartnerIds = await getProjetAssociatedPartenaires(projectId);
+      
       // Enrich the project object with the id_partenaire property
-      const fullProjet: Projet = {
+      return {
         ...fetchedProjet,
-        id_partenaire: associatedPartnerIds || [], // Ensure it's an array
+        id_partenaire: associatedPartnerIds || [],
       };
+    },
+    enabled: !!projectId && !isNaN(projectId),
+  });
 
-      setProjet(fullProjet);
+  // Query pour les partenaires
+  const { data: allPartenaires = [] } = useQuery({
+    queryKey: ['partenaires'],
+    queryFn: () => getPartenaires({ limit: 100, page: 1 }),
+  });
 
-      // Handle direct project documents response
-      let docsToSet: Document[] = [];
-      if (
-        fetchedDocumentsResponse.documents &&
-        Array.isArray(fetchedDocumentsResponse.documents)
-      ) {
-        docsToSet = fetchedDocumentsResponse.documents;
-      } else if (
-        fetchedDocumentsResponse.data &&
-        Array.isArray(fetchedDocumentsResponse.data)
-      ) {
-        docsToSet = fetchedDocumentsResponse.data;
+  // Query pour les familles
+  const { data: familles = [] } = useQuery({
+    queryKey: ['familles'],
+    queryFn: getFamilles,
+  });
+
+  // Query pour les documents du projet
+  const { data: documents = [] } = useQuery({
+    queryKey: ['documents', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+      
+      const fetchedDocumentsResponse = await getDocumentsByProjetId(projectId);
+      
+      if (fetchedDocumentsResponse.documents && Array.isArray(fetchedDocumentsResponse.documents)) {
+        return fetchedDocumentsResponse.documents;
+      } else if (fetchedDocumentsResponse.data && Array.isArray(fetchedDocumentsResponse.data)) {
+        return fetchedDocumentsResponse.data;
       } else if (Array.isArray(fetchedDocumentsResponse)) {
-        // Fallback if API returns direct array
-        docsToSet = fetchedDocumentsResponse; // Assuming fetchedDocumentsResponse could be direct array if no ApiResponse wrapper
+        return fetchedDocumentsResponse;
       }
-      setDocuments(docsToSet);
+      return [];
+    },
+    enabled: !!projectId,
+  });
 
-      // NEW: Handle livrables with documents response
-      let livrablesToSet: Livrable[] = [];
-      if (
-        fetchedLivrablesResponse.livrables &&
-        Array.isArray(fetchedLivrablesResponse.livrables)
-      ) {
-        livrablesToSet = fetchedLivrablesResponse.livrables;
-      } else if (
-        fetchedLivrablesResponse.data &&
-        Array.isArray(fetchedLivrablesResponse.data)
-      ) {
-        livrablesToSet = fetchedLivrablesResponse.data;
+  // Query pour les livrables du projet
+  const { data: livrables = [] } = useQuery({
+    queryKey: ['livrables', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+      
+      const fetchedLivrablesResponse = await getLivrablesWithDocumentsByProjetId(projectId);
+      
+      if (fetchedLivrablesResponse.livrables && Array.isArray(fetchedLivrablesResponse.livrables)) {
+        return fetchedLivrablesResponse.livrables;
+      } else if (fetchedLivrablesResponse.data && Array.isArray(fetchedLivrablesResponse.data)) {
+        return fetchedLivrablesResponse.data;
       } else if (Array.isArray(fetchedLivrablesResponse)) {
-        // Fallback if API returns direct array
-        livrablesToSet = fetchedLivrablesResponse; // Assuming fetchedLivrablesResponse could be direct array
+        return fetchedLivrablesResponse;
       }
-      setLivrables(livrablesToSet);
-    } catch {
-      setError(
-        "Impossible de charger les détails du projet. Veuillez réessayer."
+      return [];
+    },
+    enabled: !!projectId,
+  });
+
+  // Query pour les employés
+  const { data: employes = [] } = useQuery({
+    queryKey: ['employes'],
+    queryFn: () => getEmployes({ limit: 100, page: 1 }),
+  });
+
+  // Query pour les natures de documents
+  const { data: natureDocuments = [] } = useQuery({
+    queryKey: ['natureDocuments'],
+    queryFn: async () => {
+      const natureResponse = await getAllNatureDocuments();
+      if (natureResponse.data && Array.isArray(natureResponse.data)) {
+        return natureResponse.data;
+      } else if (Array.isArray(natureResponse)) {
+        return natureResponse;
+      }
+      return [];
+    },
+  });
+
+  // Query pour les opérations du projet
+  const { data: operations = [], isLoading: loadingOperations } = useQuery({
+    queryKey: ['operations', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+      
+      const operationsResponse = await getOperationsByProjet(projectId);
+      return operationsResponse.data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  // Query pour les tâches du projet
+  const { data: taches = [], isLoading: loadingTaches } = useQuery({
+    queryKey: ['taches', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+      
+      // Charger toutes les opérations du projet, puis toutes les tâches de chaque opération
+      const operationsResponse = await getOperationsByProjet(projectId);
+      const operations = operationsResponse.data || [];
+      const allBaseTaches = [];
+      
+      for (const operation of operations) {
+        const tachesResponse = await getTachesByOperation(operation.id_operation);
+        if (tachesResponse.data && Array.isArray(tachesResponse.data)) {
+          allBaseTaches.push(...tachesResponse.data);
+        }
+      }
+      
+      // Charger les assignés pour chaque tâche
+      const tachesWithAssignes = await Promise.all(
+        allBaseTaches.map(async (tache) => {
+          const assignes = await getEmployesAssignes(tache.id_tache);
+          return { ...tache, id_assigne_a: assignes };
+        })
       );
-      setProjet(undefined);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, getPartenaires]);
+      
+      return tachesWithAssignes;
+    },
+    enabled: !!projectId,
+  });
 
-  // Chargement des tâches et employés pour l'onglet Tâches
-  useEffect(() => {
-    if (!projet?.id_projet) return;
-    setLoadingTaches(true);
-    const loadTaches = async () => {
-      try {
-        // Nouvelle logique : charger toutes les opérations du projet, puis toutes les tâches de chaque opération
-        const operationsResponse = await getOperationsByProjet(
-          projet.id_projet
-        );
-        const operations = operationsResponse.data || [];
-        const allBaseTaches = [];
-        for (const operation of operations) {
-          const tachesResponse = await getTachesByOperation(
-            operation.id_operation
-          );
-          if (tachesResponse.data && Array.isArray(tachesResponse.data)) {
-            allBaseTaches.push(...tachesResponse.data);
-          }
-        }
-        // Charger les assignés pour chaque tâche
-        const tachesWithAssignes = await Promise.all(
-          allBaseTaches.map(async (tache) => {
-            const assignes = await getEmployesAssignes(tache.id_tache);
-            return { ...tache, id_assigne_a: assignes };
-          })
-        );
-        setTaches(tachesWithAssignes);
-        const employesData = await getEmployes({ limit: 100, page: 1 });
-        setEmployes(employesData);
-      } catch {
-        setTaches([]);
-        setEmployes([]);
-      } finally {
-        setLoadingTaches(false);
-      }
-    };
-    loadTaches();
-  }, [projet?.id_projet, getEmployes]);
+  // Mutations pour les tâches
+  const createTacheMutation = useMutation({
+    mutationFn: async ({ formData, employesIds }: { formData: CreateTachePayload; employesIds: number[] }) => {
+      const nouvelleTache = await createTache(formData);
+      const nouvelleTacheWithAssignes: TacheWithAssignedEmployes = {
+        ...nouvelleTache,
+        id_assigne_a: [],
+      };
+      const validEmployeIds = employesIds.filter(
+        (id) => typeof id === "number" && !isNaN(id)
+      );
+      await Promise.all(
+        validEmployeIds.map((empId) =>
+          assignEmployeToTache(nouvelleTacheWithAssignes.id_tache, empId)
+        )
+      );
+      return nouvelleTacheWithAssignes;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
+      toast.success("Tâche créée avec succès !");
+      navigate(`/gestion-des-projets/projets/${id}/taches`);
+    },
+    onError: (err: unknown) => {
+      console.error("Erreur lors de l'enregistrement de la tâche:", err);
+      toast.error("Erreur lors de l'enregistrement de la tâche");
+    },
+  });
 
-  // Chargement des natures de documents pour les livrables
-  useEffect(() => {
-    const loadNatureDocuments = async () => {
-      try {
-        const natureResponse = await getAllNatureDocuments();
-        let naturesToSet: Nature[] = [];
-        if (natureResponse.data && Array.isArray(natureResponse.data)) {
-          naturesToSet = natureResponse.data;
-        } else if (Array.isArray(natureResponse)) {
-          naturesToSet = natureResponse;
-        }
-        setNatureDocuments(naturesToSet);
-      } catch {
-        setNatureDocuments([]);
-      }
-    };
-    loadNatureDocuments();
-  }, []);
+  const updateTacheMutation = useMutation({
+    mutationFn: async ({ formData, employesIds, tacheToEdit }: { 
+      formData: CreateTachePayload; 
+      employesIds: number[];
+      tacheToEdit: TacheWithAssignedEmployes;
+    }) => {
+      await updateTache(tacheToEdit.id_tache, formData);
+      // Gérer les assignations :
+      const currentEmployeesIds = tacheToEdit.id_assigne_a.map(
+        (emp) => emp.id_employes
+      );
+      const employeesToAdd = employesIds.filter(
+        (id) => !currentEmployeesIds.includes(id)
+      );
+      const employeesToRemove = currentEmployeesIds.filter(
+        (id) => !employesIds.includes(id)
+      );
+      await Promise.all([
+        ...employeesToAdd.map((empId) =>
+          assignEmployeToTache(tacheToEdit.id_tache, empId)
+        ),
+        ...employeesToRemove.map((empId) =>
+          removeEmployeFromTache(tacheToEdit.id_tache, empId)
+        ),
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
+      toast.success("Tâche modifiée avec succès !");
+      setTacheToEdit(null);
+    },
+    onError: (err: unknown) => {
+      console.error("Erreur lors de la modification de la tâche:", err);
+      toast.error("Erreur lors de la modification de la tâche");
+    },
+  });
 
-  useEffect(() => {
-    loadProjetData();
-  }, [loadProjetData]);
+  const deleteTacheMutation = useMutation({
+    mutationFn: async (tacheId: number) => {
+      return await deleteTacheSafely(tacheId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
+      toast.success("Tâche supprimée avec succès !");
+    },
+    onError: (err: unknown) => {
+      console.error("Erreur lors de la suppression de la tâche:", err);
+      toast.error("Erreur lors de la suppression de la tâche");
+    },
+  });
+
+  // Mutations pour les livrables
+  const createLivrableMutation = useMutation({
+    mutationFn: async (payload: CreateLivrablePayload) => {
+      return await createLivrable(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['livrables', projectId] });
+      toast.success("Livrable créé avec succès !");
+      navigate(`/gestion-des-projets/projets/${id}/livrables`);
+    },
+    onError: (err: unknown) => {
+      console.error("Erreur lors de la création du livrable:", err);
+      toast.error("Erreur lors de la création du livrable");
+    },
+  });
+
+  const updateLivrableMutation = useMutation({
+    mutationFn: async ({ livrableId, payload }: { livrableId: number; payload: UpdateLivrablePayload }) => {
+      return await updateLivrable(livrableId, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['livrables', projectId] });
+      toast.success("Livrable modifié avec succès !");
+    },
+    onError: (err: unknown) => {
+      console.error("Erreur lors de la modification du livrable:", err);
+      toast.error("Erreur lors de la modification du livrable");
+    },
+  });
+
+  const deleteLivrableMutation = useMutation({
+    mutationFn: async (livrableId: number) => {
+      return await deleteLivrable(livrableId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['livrables', projectId] });
+      toast.success("Livrable supprimé avec succès !");
+    },
+    onError: (err: unknown) => {
+      console.error("Erreur lors de la suppression du livrable:", err);
+      toast.error("Erreur lors de la suppression du livrable");
+    },
+  });
+
+  // Mutation pour ajouter un document à un livrable
+  const addDocumentToLivrableMutation = useMutation({
+    mutationFn: async ({ livrableId, documentFile, textPayload }: {
+      livrableId: number;
+      documentFile: File;
+      textPayload: CreateDocumentTextPayload;
+    }) => {
+      return await addDocumentToLivrable(livrableId, documentFile, textPayload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['livrables', projectId] });
+      toast.success("Document associé avec succès !");
+    },
+    onError: (err: unknown) => {
+      console.error("Erreur lors de l'association du document:", err);
+      toast.error("Échec de l'association du document.");
+    },
+  });
+
+
+
+  // États pour les opérations (pour éviter les conflits de noms)
+  const [operationFormLoading, setOperationFormLoading] = useState(false);
+  const [operationFormError, setOperationFormError] = useState<string | null>(null);
 
   // Function to format amount in CFA Franc
   const formatCFA = (amount: number | string | undefined): string => {
@@ -876,9 +1000,7 @@ const ProjetDetailsPage: React.FC = () => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) {
       try {
         await deleteDocumentFromProjet(projet.id_projet, documentId);
-        setDocuments((prevDocs) =>
-          prevDocs.filter((doc) => doc.id_documents !== documentId)
-        );
+        queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
         toast.success("Document supprimé avec succès !");
       } catch (err) {
         console.error("Erreur lors de la suppression du document :", err);
@@ -891,11 +1013,13 @@ const ProjetDetailsPage: React.FC = () => {
   const handleOpenCreateTache = () => {
     navigate(`/gestion-des-projets/projets/${id}/tache/nouvelle`);
   };
+  
   const handleOpenEditTache = (tache: TacheWithAssignedEmployes) => {
     navigate(
       `/gestion-des-projets/projets/${id}/tache/${tache.id_tache}/editer`
     );
   };
+  
   const handleSaveTache = async (
     formData: CreateTachePayload,
     employesIds: number[]
@@ -904,93 +1028,19 @@ const ProjetDetailsPage: React.FC = () => {
     try {
       if (tacheToEdit) {
         // Edition
-        await updateTache(tacheToEdit.id_tache, formData);
-        // Gérer les assignations :
-        const currentEmployeesIds = tacheToEdit.id_assigne_a.map(
-          (emp) => emp.id_employes
-        );
-        const employeesToAdd = employesIds.filter(
-          (id) => !currentEmployeesIds.includes(id)
-        );
-        const employeesToRemove = currentEmployeesIds.filter(
-          (id) => !employesIds.includes(id)
-        );
-        await Promise.all([
-          ...employeesToAdd.map((empId) =>
-            assignEmployeToTache(tacheToEdit.id_tache, empId)
-          ),
-          ...employeesToRemove.map((empId) =>
-            removeEmployeFromTache(tacheToEdit.id_tache, empId)
-          ),
-        ]);
-        toast.success("Tâche modifiée avec succès !");
+        updateTacheMutation.mutate({ formData, employesIds, tacheToEdit });
       } else {
         // Création
-        const nouvelleTache = await createTache(formData);
-        const nouvelleTacheWithAssignes: TacheWithAssignedEmployes = {
-          ...nouvelleTache,
-          id_assigne_a: [],
-        };
-        const validEmployeIds = employesIds.filter(
-          (id) => typeof id === "number" && !isNaN(id)
-        );
-        await Promise.all(
-          validEmployeIds.map((empId) =>
-            assignEmployeToTache(nouvelleTacheWithAssignes.id_tache, empId)
-          )
-        );
-        toast.success("Tâche créée avec succès !");
+        createTacheMutation.mutate({ formData, employesIds });
       }
-      // Après succès, rafraîchir la liste
-      if (projet?.id_projet) {
-        setLoadingTaches(true);
-        const tachesResponse = await getTachesByOperation(projet.id_projet);
-        const tachesArray = Array.isArray(tachesResponse.data)
-          ? tachesResponse.data
-          : [];
-        const tachesWithAssignes = await Promise.all(
-          tachesArray.map(async (tache: Tache) => {
-            const assignes = await getEmployesAssignes(tache.id_tache);
-            return { ...tache, id_assigne_a: assignes };
-          })
-        );
-        setTaches(tachesWithAssignes);
-      }
-      setTacheToEdit(null);
-    } catch (err: unknown) {
-      console.error("Erreur lors de l'enregistrement de la tâche:", err);
-      toast.error("Erreur lors de l'enregistrement de la tâche");
     } finally {
       setIsSubmittingTache(false);
-      setLoadingTaches(false);
     }
   };
+  
   const handleDeleteTache = async (id: number) => {
     if (!window.confirm("Supprimer cette tâche ?")) return;
-    try {
-      await deleteTacheSafely(id);
-      toast.success("Tâche supprimée avec succès !");
-      // Rafraîchir la liste
-      if (projet?.id_projet) {
-        setLoadingTaches(true);
-        const tachesResponse = await getTachesByOperation(projet.id_projet);
-        const tachesArray = Array.isArray(tachesResponse.data)
-          ? tachesResponse.data
-          : [];
-        const tachesWithAssignes = await Promise.all(
-          tachesArray.map(async (tache: Tache) => {
-            const assignes = await getEmployesAssignes(tache.id_tache);
-            return { ...tache, id_assigne_a: assignes };
-          })
-        );
-        setTaches(tachesWithAssignes);
-      }
-    } catch (err: unknown) {
-      console.error("Erreur lors de la suppression de la tâche:", err);
-      toast.error("Erreur lors de la suppression de la tâche");
-    } finally {
-      setLoadingTaches(false);
-    }
+    deleteTacheMutation.mutate(id);
   };
 
   // === HANDLER POUR LA VUE DÉTAIL DE TÂCHE ===
@@ -1024,25 +1074,22 @@ const ProjetDetailsPage: React.FC = () => {
       // Vérifier si c'est une édition en cherchant l'id_livrable dans le payload
       const livrableId = (payload as Livrable).id_livrable;
       if (livrableId && typeof livrableId === "number" && !isNaN(livrableId)) {
-        // Édition - créer un payload sans id_livrable pour updateLivrable
-        const updatePayload = payload;
-        await updateLivrable(
-          livrableId,
-          updatePayload as UpdateLivrablePayload
-        );
-        toast.success("Livrable modifié avec succès !");
+        // Édition - utiliser la mutation updateLivrableMutation
+        const updatePayload = payload as UpdateLivrablePayload;
+        await updateLivrableMutation.mutateAsync({ 
+          livrableId, 
+          payload: updatePayload 
+        });
       } else {
         // Création - s'assurer que le projet est assigné
         if (!projet) {
           toast.error("Projet non trouvé");
           return;
         }
-        const createPayload = { ...payload, id_projet: projet.id_projet };
-        await createLivrable(createPayload as CreateLivrablePayload);
-        toast.success("Livrable créé avec succès !");
+        const createPayload = { ...payload, id_projet: projet.id_projet } as CreateLivrablePayload;
+        await createLivrableMutation.mutateAsync(createPayload);
+        return; // La navigation est gérée dans onSuccess de la mutation
       }
-      // Rafraîchir la liste des livrables
-      await loadProjetData();
     } catch (err) {
       console.error("Erreur lors de l'enregistrement du livrable:", err);
       toast.error("Échec de l'enregistrement du livrable.");
@@ -1056,12 +1103,9 @@ const ProjetDetailsPage: React.FC = () => {
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce livrable ?"))
       return;
     try {
-      await deleteLivrable(livrableId);
-      toast.success("Livrable supprimé avec succès !");
-      // Rafraîchir la liste des livrables
-      await loadProjetData();
+      await deleteLivrableMutation.mutateAsync(livrableId);
     } catch {
-      toast.error("Erreur lors de la suppression du livrable.");
+      // L'erreur est gérée dans onError de la mutation
     }
   };
 
@@ -1071,16 +1115,11 @@ const ProjetDetailsPage: React.FC = () => {
     documentFile: File,
     textPayload: CreateDocumentTextPayload
   ) => {
-    try {
-      await addDocumentToLivrable(livrableId, documentFile, textPayload);
-      toast.success("Document associé avec succès !");
-      // Optionnel: Recharger les données du livrable
-      await loadProjetData();
-    } catch (err) {
-      console.error("Erreur lors de l'association du document:", err);
-      toast.error("Échec de l'association du document.");
-      throw err;
-    }
+    await addDocumentToLivrableMutation.mutateAsync({ 
+      livrableId, 
+      documentFile, 
+      textPayload 
+    });
   };
 
   const handleDocumentInputChange = (
@@ -1165,26 +1204,14 @@ const ProjetDetailsPage: React.FC = () => {
         file: null,
       });
       // Rafraîchir la liste des documents
-      const docsRes = await getDocumentsByProjetId(projet.id_projet);
-      let docsToSet: Document[] = [];
-      if (docsRes.documents && Array.isArray(docsRes.documents))
-        docsToSet = docsRes.documents;
-      else if (docsRes.data && Array.isArray(docsRes.data))
-        docsToSet = docsRes.data;
-      setDocuments(docsToSet);
+      queryClient.invalidateQueries({ queryKey: ['documents', projectId] });
     } catch (error) {
       console.error("Erreur lors de l'ajout du document:", error);
       toast.error("Échec de l'ajout du document.");
     }
   };
 
-  // === AJOUTER EN HAUT DU COMPONENT ProjetDetailsPage ===
-  const [operations, setOperations] = useState<Operation[]>([]);
-  const [loadingOperations, setLoadingOperations] = useState(true);
-  const [operationFormLoading, setOperationFormLoading] = useState(false);
-  const [operationFormError, setOperationFormError] = useState<string | null>(
-    null
-  );
+  // === HANDLERS POUR LA GESTION DES OPÉRATIONS ===
 
   const handleOpenEditOperation = (operationId: number) => {
     navigate(`/gestion-des-projets/projets/operations/${operationId}/editer`, {
@@ -1199,13 +1226,14 @@ const ProjetDetailsPage: React.FC = () => {
     if (!projet || !projet.id_projet) return;
     try {
       await deleteOperation(operationId);
-      const res = await getOperationsByProjet(projet.id_projet);
-      setOperations(res.data || []);
+      queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
       toast.success("Opération supprimée avec succès !");
     } catch {
       toast.error("Erreur lors de la suppression de l'opération.");
     }
   };
+  
   const handleSaveOperation = async (
     payload: Omit<Operation, "id_operation">,
     operationId?: number
@@ -1221,8 +1249,8 @@ const ProjetDetailsPage: React.FC = () => {
         await createOperation({ ...payload, id_projet: projet.id_projet });
         toast.success("Opération créée avec succès !");
       }
-      const res = await getOperationsByProjet(projet.id_projet);
-      setOperations(res.data || []);
+      queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
       navigate(`/gestion-des-projets/projets/${id}/operations`);
     } catch {
       setOperationFormError("Erreur lors de l'enregistrement de l'opération.");
@@ -1231,24 +1259,6 @@ const ProjetDetailsPage: React.FC = () => {
       setOperationFormLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!projet?.id_projet) return;
-    setLoadingOperations(true);
-    const loadOperations = async () => {
-      try {
-        const operationsResponse = await getOperationsByProjet(
-          projet.id_projet
-        );
-        setOperations(operationsResponse.data || []);
-      } catch {
-        setOperations([]);
-      } finally {
-        setLoadingOperations(false);
-      }
-    };
-    loadOperations();
-  }, [projet?.id_projet]);
 
   if (loading) {
     return (
@@ -1280,10 +1290,10 @@ const ProjetDetailsPage: React.FC = () => {
             <TriangleAlert className="h-4 w-4" />
             <AlertTitle>Erreur de chargement</AlertTitle>
             <AlertDescription>
-              {error}
+              {error?.toString() || "Une erreur inconnue s'est produite"}
               <Button
                 variant="ghost"
-                onClick={loadProjetData}
+                onClick={() => queryClient.invalidateQueries({ queryKey: ['projet', projectId] })}
                 className="ml-2 px-2 py-1 h-auto text-sm"
               >
                 <RefreshCcw className="h-3 w-3 mr-1" /> Réessayer
@@ -1852,6 +1862,7 @@ const ProjetDetailsPage: React.FC = () => {
                     <ProjectTaskDetailWrapper
                       taches={taches}
                       projet={projet}
+                      operations={operations}
                       onEdit={(tacheId: number) =>
                         navigate(
                           `/gestion-des-projets/projets/${id}/tache/${tacheId}/editer`
@@ -2029,38 +2040,36 @@ const ProjetDetailsPage: React.FC = () => {
                       <p>Aucun document associé à ce projet</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {documents.map((doc) => (
                         <Card
                           key={`projet-doc-${doc.id_documents}`}
-                          className="border border-gray-200 hover:border-blue-300 transition-colors"
+                          className="border border-gray-200 hover:border-blue-300 transition-all duration-200 hover:shadow-md"
                         >
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                                <h4 className="font-medium text-gray-900">
+                          <CardContent className="p-3">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                <h4 className="font-medium text-gray-900 text-sm truncate">
                                   {doc.libelle_document}
                                 </h4>
                               </div>
                               <Button
                                 variant="ghost"
-                                size="icon"
+                                size="sm"
                                 onClick={() =>
                                   handleDeleteDocument(doc.id_documents)
                                 }
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0 flex-shrink-0"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
 
-                            <div className="space-y-2 text-sm text-gray-600">
+                            <div className="space-y-1 text-xs text-gray-600 mb-3">
                               {doc.classification_document && (
-                                <p>
-                                  <span className="font-medium">
-                                    Classification:
-                                  </span>{" "}
+                                <p className="truncate">
+                                  <span className="font-medium">Classif.:</span>{" "}
                                   {doc.classification_document}
                                 </p>
                               )}
@@ -2069,7 +2078,7 @@ const ProjetDetailsPage: React.FC = () => {
                                   <span className="font-medium">Date:</span>{" "}
                                   {format(
                                     parseISO(doc.date_document),
-                                    "dd MMM yyyy",
+                                    "dd/MM/yyyy",
                                     { locale: fr }
                                   )}
                                 </p>
@@ -2077,15 +2086,15 @@ const ProjetDetailsPage: React.FC = () => {
                             </div>
 
                             {doc.lien_document && (
-                              <div className="mt-4">
+                              <div className="pt-2 border-t border-gray-100">
                                 <a
                                   href={`${STATIC_FILES_BASE_URL}/${doc.lien_document}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                                  className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-xs transition-colors w-full justify-center py-1 px-2 bg-blue-50 hover:bg-blue-100 rounded"
                                   download
                                 >
-                                  <Download className="mr-2 h-4 w-4" />
+                                  <Download className="mr-1 h-3 w-3" />
                                   Télécharger
                                 </a>
                               </div>

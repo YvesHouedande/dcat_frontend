@@ -38,7 +38,32 @@ import { usePartenaireApi } from "@/modules/administration-Finnance/services/par
 import { FileDown, Eye, ChevronDown, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
-const logoSrc = "/dcat-logo.png";
+const logoSrc = "/Logodcat.jpg";
+
+// Fonction utilitaire pour charger l'image en base64
+const loadImageAsBase64 = (src: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL("image/jpeg");
+        resolve(dataUrl);
+      } else {
+        reject(new Error("Impossible de créer le contexte canvas"));
+      }
+    };
+    img.onerror = () => {
+      reject(new Error("Erreur lors du chargement de l'image"));
+    };
+    img.src = src;
+  });
+};
 
 // Interface pour la structure de données reçue de l'API
 interface InterventionData {
@@ -81,20 +106,15 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     }
   }, [fetchPartners, selectedPartenaireId]);
   useEffect(() => {
-    // Convertir l'image en base64 au chargement du composant
-    const img = new Image();
-    img.src = logoSrc;
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        const dataUrl = canvas.toDataURL("image/jpeg");
+    // Charger l'image en base64 au chargement du composant
+    loadImageAsBase64(logoSrc)
+      .then((dataUrl) => {
         setLogoDataUrl(dataUrl);
-      }
-    };
+      })
+      .catch((error) => {
+        console.error("Erreur lors du chargement du logo:", error);
+        setLogoDataUrl("");
+      });
 
     // Charger la liste des partenaires
     loadPartenaires();
@@ -173,19 +193,31 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
 
   const generateExcelContent = () => {
     const selectedPartenaire = getSelectedPartenaire();
-    const headers = ["Date", "Type", "Problème", "Cause", "Actions", "Durée"];
+    const headers = ["Date", "Problème signalé", "Cause", "Mode d'intervention", "Action menée", "Recommandation", "Durée"];
     const rows = interventionsData.map((item) => [
       // Itérez sur interventionsData
       (() => {
         const date = new Date(item.intervention.date_intervention); // Accès corrigé
         return isNaN(date.getTime()) ? "-" : format(date, "dd/MM/yyyy");
       })(),
-      item.intervention.type_intervention ?? "",
-      item.intervention.probleme_signale ?? "",
-      item.intervention.cause_defaillance ?? "",
-      item.intervention.rapport_intervention ?? "",
-      item.intervention.duree ?? "",
+      item.intervention.probleme_signale || "",
+      item.intervention.cause_defaillance || "",
+      item.intervention.mode_intervention || "",
+      item.intervention.rapport_intervention || "",
+      item.intervention.recommandation || "",
+      item.intervention.duree || "",
     ]);
+
+    // Ajouter la ligne de durée totale
+    const totalDurationRow = [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "DURÉE TOTALE",
+      calculateTotalDuration(),
+    ];
 
     const csvContent = [
       `Rapport d'interventions - ${
@@ -197,6 +229,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
       ...rows.map((row) =>
         row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
       ),
+      totalDurationRow.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
     ].join("\n");
 
     return csvContent;
@@ -213,11 +246,12 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
         const date = new Date(item.intervention.date_intervention); // Accès corrigé
         return isNaN(date.getTime()) ? "-" : format(date, "dd/MM/yyyy");
       })(),
-      item.intervention.type_intervention ?? "",
-      item.intervention.probleme_signale ?? "",
-      item.intervention.cause_defaillance ?? "",
-      item.intervention.rapport_intervention ?? "",
-      item.intervention.duree ?? "",
+      item.intervention.probleme_signale || "",
+      item.intervention.cause_defaillance || "",
+      item.intervention.mode_intervention || "",
+      item.intervention.rapport_intervention || "",
+      item.intervention.recommandation || "",
+      item.intervention.duree || "",
     ]);
 
     const content = `
@@ -271,53 +305,53 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
           }
           .stats { margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background-color: #2563eb; color: white; padding: 10px; text-align: left; }
-          td { padding: 8px; border: 1px solid #ddd; vertical-align: top; }
+          th { background-color: #2563eb; color: white; padding: 10px; text-align: left; font-size: 11px; }
+          td { padding: 8px; border: 1px solid #ddd; vertical-align: top; font-size: 10px; }
           tr:nth-child(even) { background-color: #f8f9fa; }
+          .total-row { 
+            background-color: #2563eb !important; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 11px;
+          }
+          .total-row td { 
+            border: 1px solid #1d4ed8; 
+            color: white; 
+          }
           .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
         </style>
       </head>
       <body>
         <div class="logo-container">
+          ${logoDataUrl ? `
           <img 
             src="${logoDataUrl}"
             alt="Logo DCAT"
             class="logo"
             style="display: block !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;"
           />
+          ` : `
+          <div class="logo-placeholder" style="width: 150px; height: 60px; background-color: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px; margin: 0 auto;">
+            DCAT
+          </div>
+          `}
         </div>
-        <div class="header">
-          <h1>Rapport d'Interventions par Partenaire</h1>
-          <p style="text-align: center;">Partenaire : ${partenaireName}</p>
-        </div>
-        
-        <div class="partenaire-info">
-          <h3>Informations du partenaire</h3>
-          <p><strong>Nom :</strong> ${
-            selectedPartenaire?.nom_partenaire || "N/A"
-          }</p>
-        </div>
-        
-        <div class="stats">
-          <p><strong>Nombre total d'interventions :</strong> ${
-            interventionsData.length
-          }</p>
-          <p><strong>Durée totale :</strong> ${calculateTotalDuration()}</p>
-          <p><strong>Date de génération :</strong> ${format(
-            new Date(),
-            "dd MMMM yyyy HH:mm",
-            { locale: fr }
-          )}</p>
-        </div>
+                 <div class="header">
+           <h1>Rapport d'Interventions par Partenaire</h1>
+           <p style="text-align: center;">Partenaire : ${partenaireName}</p>
+         </div>
+         
+         
 
-        <table>
+         <table>
           <thead>
             <tr>
               <th>Date</th>
-              <th>Type</th>
-              <th>Problème</th>
+              <th>Problème signalé</th>
               <th>Cause</th>
-              <th>Actions</th>
+              <th>Mode d'intervention</th>
+              <th>Action menée</th>
+              <th>Recommandation</th>
               <th>Durée</th>
             </tr>
           </thead>
@@ -331,12 +365,31 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
             `
               )
               .join("")}
-          </tbody>
-        </table>
+            <tr class="total-row">
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td><strong>DURÉE TOTALE</strong></td>
+              <td><strong>${calculateTotalDuration()}</strong></td>
+            </tr>
+                     </tbody>
+         </table>
 
-        <div class="footer">
-          <p>Document généré automatiquement par le système de gestion des interventions</p>
-        </div>
+                   <div class="stats">
+            <p><strong>Nombre total d'interventions :</strong> ${
+              interventionsData.length
+            } | <strong>Durée totale :</strong> ${calculateTotalDuration()} | <strong>Date de génération :</strong> ${format(
+              new Date(),
+              "dd MMMM yyyy HH:mm",
+              { locale: fr }
+            )}</p>
+          </div>
+
+         <div class="footer">
+           <p>Document généré automatiquement par le système de gestion des interventions</p>
+         </div>
       </body>
       </html>
     `;
@@ -389,7 +442,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
           printWindow.document.close();
           setTimeout(() => {
             printWindow.print();
-          }, 1000);
+          }, 2000); // Augmenté à 2 secondes pour s'assurer que l'image est chargée
         }
       } else {
         const url = window.URL.createObjectURL(blob);
@@ -533,11 +586,11 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Problème</TableHead>
+                      <TableHead>Problème signalé</TableHead>
                       <TableHead>Cause</TableHead>
-                      <TableHead>Actions</TableHead>
-                      <TableHead>Recommandations</TableHead>
+                      <TableHead>Mode d'intervention</TableHead>
+                      <TableHead>Action menée</TableHead>
+                      <TableHead>Recommandation</TableHead>
                       <TableHead>Durée</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -561,14 +614,14 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                                 "dd/MM/yyyy"
                               )}
                             </TableCell>
-                            <TableCell>
-                              {item.intervention.type_intervention}
-                            </TableCell>
                             <TableCell className="max-w-xs truncate">
                               {item.intervention.probleme_signale}
                             </TableCell>
                             <TableCell>
                               {item.intervention.cause_defaillance}
+                            </TableCell>
+                            <TableCell>
+                              {item.intervention.mode_intervention}
                             </TableCell>
                             <TableCell className="max-w-xs truncate">
                               {item.intervention.rapport_intervention}
@@ -593,6 +646,21 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                           </TableRow>
                         )
                       )
+                    )}
+                    {/* Ligne de durée totale */}
+                    {interventionsData.length > 0 && (
+                      <TableRow className="bg-blue-50 font-semibold">
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-blue-600">DURÉE TOTALE</TableCell>
+                        <TableCell className="text-blue-600 font-bold">
+                          {calculateTotalDuration()}
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
                     )}
                   </TableBody>
                 </Table>

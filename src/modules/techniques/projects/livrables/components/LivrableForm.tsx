@@ -315,11 +315,23 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       setIsSubmitting(false);
       return;
     }
+    
+    // Validation pour la date (toujours requise)
     if (!formData.date) {
       toast.error("Veuillez sélectionner une date pour le livrable.");
       setIsSubmitting(false);
       return;
     }
+    
+    // Validation conditionnelle pour le client (seulement pour Procès-verbal)
+    if (isFullLivrableType(formData.type_livrable)) {
+      if (!formData.client) {
+        toast.error("Veuillez sélectionner un client pour le livrable.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+    
     if (formData.id_projet === 0) {
       toast.error("Veuillez sélectionner un projet parent pour ce livrable.");
       setIsSubmitting(false);
@@ -331,15 +343,21 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       | CreateLivrablePayload
       | Partial<Omit<Livrable, "documents" | "id_livrable">> = {
       libelle_livrable: formData.libelle_livrable,
-      date: formData.date,
-      realisations: formData.realisations,
-      reserves: formData.reserves,
-      approbation: formData.approbation,
-      recommandation: formData.recommandation,
       type_livrable: formData.type_livrable,
-      client: formData.client,
       id_projet: formData.id_projet,
+      date: formData.date, // Date toujours incluse
     };
+
+    // Ajouter les champs conditionnels seulement pour "Procès-verbal de réalisation"
+    if (isFullLivrableType(formData.type_livrable)) {
+      Object.assign(payload, {
+        realisations: formData.realisations,
+        reserves: formData.reserves,
+        approbation: formData.approbation,
+        recommandation: formData.recommandation,
+        client: formData.client,
+      });
+    }
 
     try {
       // Passer les documents temporaires au parent (pour le mode création)
@@ -656,7 +674,7 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                     {/* Select Projet Parent */}
                     <div className="space-y-2">
                       <Label htmlFor="id_projet">
-                        Projet Parent <span className="text-red-500">*</span>
+                        Projet <span className="text-red-500">*</span>
                       </Label>
                       <Select
                         onValueChange={(value) =>
@@ -686,89 +704,74 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {/* Client/Partenaire */}
-                    <div className="space-y-2">
-                      <Label htmlFor="client">
-                        Client/Partenaire{" "}
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          handleSelectChange("client", value)
-                        }
-                        value={formData.client}
-                        required
-                        disabled={(partenairesProjet || []).length === 0}
-                      >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              formData.id_projet === 0
+                    {/* Client/Partenaire - Seulement pour Procès-verbal */}
+                    {isFullLivrableType(formData.type_livrable) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="client">
+                          Client <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          onValueChange={(value) => handleSelectChange("client", value)}
+                          value={formData.client}
+                          required
+                          disabled={(partenairesProjet || []).length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              formData.id_projet === 0 
                                 ? "Sélectionnez d'abord un projet"
                                 : (partenairesProjet || []).length === 0
                                 ? "Aucun partenaire pour ce projet"
                                 : "Sélectionnez un partenaire"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(partenairesProjet || []).map((partenaire) => (
-                            <SelectItem
-                              key={partenaire.id_partenaire}
-                              value={String(partenaire.id_partenaire)}
-                            >
-                              {partenaire.nom_partenaire}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Date du livrable - Seulement pour Procès-verbal */}
-                    {isFullLivrableType(formData.type_livrable) && (
-                      <div className="space-y-2">
-                        <Label htmlFor="date">
-                          Date du livrable{" "}
-                          <span className="text-red-500">*</span>
-                        </Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {formData.date ? (
-                                format(
-                                  parseISO(formData.date),
-                                  "dd MMMM yyyy",
-                                  {
-                                    // Corrected format string
-                                    locale: fr,
-                                  }
-                                )
-                              ) : (
-                                <span>Sélectionner une date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={
-                                formData.date
-                                  ? parseISO(formData.date)
-                                  : undefined
-                              }
-                              onSelect={(date) =>
-                                handleDateChange("date", date)
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(partenairesProjet || []).map((partenaire) => (
+                              <SelectItem
+                                key={partenaire.id_partenaire}
+                                value={String(partenaire.id_partenaire)}
+                              >
+                                {partenaire.nom_partenaire}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
+
+                    {/* Date du livrable - Toujours visible */}
+                    <div className="space-y-2">
+                      <Label htmlFor="date">
+                        Date du livrable <span className="text-red-500">*</span>
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formData.date ? (
+                              format(parseISO(formData.date), "dd MMMM yyyy", { // Corrected format string
+                                locale: fr,
+                              })
+                            ) : (
+                              <span>Sélectionner une date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={formData.date ? parseISO(formData.date) : undefined}
+                            onSelect={(date) =>
+                              handleDateChange("date", date)
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
 
                   {/* Approbation Select - Seulement pour Procès-verbal */}

@@ -3,10 +3,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { addDocumentToIntervention, getAllNatureDocuments } from '../api/intervention';
-import { Nature } from '../interface/interface';
+import { addDocumentToIntervention } from '../api/intervention';
 
 interface AddDocumentSheetProps {
   interventionId: number;
@@ -23,46 +26,10 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [libelle, setLibelle] = useState('');
-  const [classification, setClassification] = useState('');
-  const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
-  const [selectedNature, setSelectedNature] = useState<string>('');
+  const [dateDocument, setDateDocument] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const loadNatureDocuments = async () => {
-      if (!isOpen) return;
-      
-      setIsLoading(true);
-      try {
-        const natures = await getAllNatureDocuments();
-        if (isMounted) {
-          setNatureDocuments(natures);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error('Erreur lors du chargement des natures de documents:', error);
-          toast.error('Erreur lors du chargement des natures de documents');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    if (isOpen) {
-      loadNatureDocuments();
-    }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen]);
 
   // Réinitialiser l'état isSubmitting si la sheet se ferme
   useEffect(() => {
@@ -75,14 +42,13 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
   const resetForm = () => {
     setFile(null);
     setLibelle('');
-    setClassification('');
-    setSelectedNature('');
+    setDateDocument(new Date());
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Validation améliorée
+  // Validation simplifiée
   const validateForm = (): boolean => {
     if (!file) {
       toast.error('Veuillez sélectionner un fichier');
@@ -91,11 +57,6 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
 
     if (!libelle.trim()) {
       toast.error('Veuillez saisir un libellé');
-      return false;
-    }
-
-    if (!selectedNature) {
-      toast.error('Veuillez sélectionner une nature de document');
       return false;
     }
 
@@ -123,9 +84,9 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
         file!,
         {
           libelle_document: libelle.trim(),
-          classification_document: classification.trim() || 'standard',
-          date_document: new Date().toISOString(),
-          id_nature_document: parseInt(selectedNature),
+          classification_document: '',
+          date_document: dateDocument ? dateDocument.toISOString() : new Date().toISOString(),
+          id_nature_document: 1, // Valeur par défaut
         }
       );
 
@@ -155,94 +116,81 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
           <SheetTitle>Ajouter un document</SheetTitle>
         </SheetHeader>
         
-        {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="text-sm text-gray-500">Chargement des natures de documents...</div>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="file">Fichier*</Label>
+            <Input
+              ref={fileInputRef}
+              id="file"
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              required
+              disabled={isSubmitting}
+            />
+            {file && (
+              <div className="text-sm text-gray-500">
+                Fichier sélectionné: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              </div>
+            )}
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="file">Fichier*</Label>
-              <Input
-                ref={fileInputRef}
-                id="file"
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                required
-                disabled={isSubmitting}
-              />
-              {file && (
-                <div className="text-sm text-gray-500">
-                  Fichier sélectionné: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="libelle">Libellé*</Label>
-              <Input
-                id="libelle"
-                value={libelle}
-                onChange={(e) => setLibelle(e.target.value)}
-                required
-                disabled={isSubmitting}
-                placeholder="Saisir le libellé du document"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="classification">Classification</Label>
-              <Input
-                id="classification"
-                value={classification}
-                onChange={(e) => setClassification(e.target.value)}
-                disabled={isSubmitting}
-                placeholder="Classification du document (optionnel)"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="nature">Nature du document*</Label>
-              <Select 
-                value={selectedNature} 
-                onValueChange={setSelectedNature} 
-                required
-                disabled={isSubmitting}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner une nature" />
-                </SelectTrigger>
-                <SelectContent>
-                  {natureDocuments.map((nature) => (
-                    <SelectItem 
-                      key={nature.id_nature_document} 
-                      value={nature.id_nature_document.toString()}
-                    >
-                      {nature.libelle}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex justify-end space-x-2 mt-6">
-              <Button 
-                variant="outline" 
-                type="button" 
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Annuler
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting || isLoading}
-              >
-                {isSubmitting ? 'Ajout en cours...' : 'Ajouter'}
-              </Button>
-            </div>
-          </form>
-        )}
+          
+          <div className="space-y-2">
+            <Label htmlFor="libelle">Libellé*</Label>
+            <Input
+              id="libelle"
+              value={libelle}
+              onChange={(e) => setLibelle(e.target.value)}
+              required
+              disabled={isSubmitting}
+              placeholder="Saisir le libellé du document"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="date_document">Date du document</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                  disabled={isSubmitting}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateDocument ? (
+                    format(dateDocument, "dd MMMM yyyy", { locale: fr })
+                  ) : (
+                    <span>Sélectionner une date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateDocument}
+                  onSelect={setDateDocument}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          
+          <div className="flex justify-end space-x-2 mt-6">
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
+              Annuler
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Ajout en cours...' : 'Ajouter'}
+            </Button>
+          </div>
+        </form>
       </SheetContent>
     </Sheet>
   );

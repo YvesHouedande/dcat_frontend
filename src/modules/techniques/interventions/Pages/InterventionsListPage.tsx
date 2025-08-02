@@ -18,10 +18,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Intervention, Nature } from "../interface/interface";
+import { Intervention } from "../interface/interface";
 import { InterventionForm } from "../components/InterventionForm";
 import { InterventionsList } from "../components/InterventionsList";
-import { createIntervention, deleteIntervention, getAllNatureDocuments } from "../api/intervention";
+import { createIntervention, deleteIntervention } from "../api/intervention";
 import Layout from "@/components/Layout";
 import { Plus, Home, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -35,22 +35,6 @@ export const InterventionsListPage: React.FC = () => {
   const [selectedIntervention, setSelectedIntervention] =
     useState<Intervention | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
-
-  // Charger les natures de documents au montage
-  React.useEffect(() => {
-    const loadNatureDocuments = async () => {
-      try {
-        const naturesResponse = await getAllNatureDocuments();
-        if (Array.isArray(naturesResponse)) {
-          setNatureDocuments(naturesResponse);
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des natures de documents:", error);
-      }
-    };
-    loadNatureDocuments();
-  }, []);
 
   // Type pour les données du formulaire
   type FormData = {
@@ -70,6 +54,7 @@ export const InterventionsListPage: React.FC = () => {
     duree: string;
     lieu: string;
     mode_intervention: string;
+    statut_intervention: "à faire" | "en cours" | "en attente" | "terminé";
     employes: number[];
     superviseur: number;
   };
@@ -113,7 +98,9 @@ export const InterventionsListPage: React.FC = () => {
         ),
         type: truncateText(data.type_intervention, 50),
         id_contrat: null,
-        statut_intervention: "à faire",
+        superviseur: data.superviseur,
+        employes: data.employes,
+        statut_intervention: data.statut_intervention,
       };
 
       // Vérification que tous les champs requis sont présents et non vides
@@ -229,9 +216,9 @@ export const InterventionsListPage: React.FC = () => {
           <InterventionsList onDelete={handleDeleteClick} />
         </div>
 
-        {/* Dialog de création */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                {/* Dialog de création */}
+                        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                          <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nouvelle Intervention</DialogTitle>
               <DialogDescription>
@@ -241,7 +228,6 @@ export const InterventionsListPage: React.FC = () => {
             <InterventionForm
               onSubmit={handleCreateSubmit}
               isLoading={isLoading}
-              natureDocumentsDisponibles={natureDocuments}
             />
           </DialogContent>
         </Dialog>

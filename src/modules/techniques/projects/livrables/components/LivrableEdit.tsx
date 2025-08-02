@@ -1,6 +1,6 @@
 // src/pages/EditerLivrablePage.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { LivrableForm } from '../components/LivrableForm'; // Chemin correct vers votre LivrableForm
@@ -31,7 +31,7 @@ const EditerLivrablePage = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Fonction pour charger les données avec cache clearing
-  const loadData = async (forceFresh = false) => {
+  const loadData = useCallback(async (forceFresh = false) => {
     setLoading(true);
     setError(null);
     
@@ -108,16 +108,16 @@ const EditerLivrablePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, queryClient]);
 
   useEffect(() => {
     loadData(true); // Charger avec des données fraîches au montage
-  }, [id, loadData]);
+  }, [loadData]);
 
   // Fonction pour rafraîchir les données manuellement
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     await loadData(true);
-  };
+  }, [loadData]);
 
   // Gère la sauvegarde du livrable (appelé depuis LivrableForm)
   const handleSaveLivrable = async (

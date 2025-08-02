@@ -236,17 +236,7 @@ const TacheForm: React.FC<TacheFormProps> = ({
   const maxDate = operationDates?.date_fin ? new Date(operationDates.date_fin) : undefined;
 
   const handleCancel = () => {
-    toast.info("Opération annulée", {
-      description: "Aucune modification n'a été enregistrée",
-      action: {
-        label: 'Continuer',
-        onClick: () => onCancel()
-      },
-      cancel: {
-        label: 'Rester',
-        onClick: () => {}
-      }
-    });
+    onCancel();
   };
 
   // Lors du changement d'opération dans le select, notifier le parent
