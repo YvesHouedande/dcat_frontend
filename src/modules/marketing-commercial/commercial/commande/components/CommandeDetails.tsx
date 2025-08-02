@@ -129,8 +129,8 @@ const CommandeDetails = () => {
       livree: "bg-green-100 text-green-800 border-green-300",
       annulee: "bg-red-100 text-red-800 border-red-300",
       en_cours: "bg-blue-100 text-blue-800 border-blue-300",
+      
     };
-
     return colors[status] || colors["en_attente"];
   };
 
@@ -587,6 +587,19 @@ const CommandeDetails = () => {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="bg-red-50 p-4 rounded-md mb-4">
+            <p className="text-red-500">
+              Information importante:
+              <br />
+              <span className="font-bold">
+                Il faut reserver les produits avant de les faire sortir.
+              </span>
+              <br />
+              <span className="font-bold">
+                le bouton reserver est disponible uniquement si la quantité en stock des produits est supérieure à la quantité commandée.
+              </span>
+            </p>
           </div>
         </div>
 

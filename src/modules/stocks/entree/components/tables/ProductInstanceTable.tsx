@@ -56,7 +56,7 @@ export function ProductInstanceTable({
     hasNextPage,
     isFetchingNextPage,
     loading,
-  } = useProductInstances({ search: debouncedSearchTerm, typeId: 1 });
+  } = useProductInstances({ search: debouncedSearchTerm, id_type_produit: 1 });
 
   // Pagination calculée à partir des pages
   const total = pages?.[0]?.total ? pages?.[0]?.total : 0;
@@ -97,6 +97,23 @@ export function ProductInstanceTable({
     setSearchTerm(e.target.value);
   };
 
+  const EtatColor = (etat: string) => {
+    switch (etat) {
+      case "vendu":
+        return "text-red-500 bg-red-500/10";
+      case "invendu":
+        return "text-green-500 bg-green-500/10";
+      case "bon":
+        return "text-blue-500 bg-blue-500/10";
+      case "disponible":
+        return "text-green-500 bg-green-500/10";
+      case "endommage":
+        return "text-yellow-500 bg-yellow-500/10";
+      default:
+        return "text-gray-500";
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -123,6 +140,7 @@ export function ProductInstanceTable({
               <TableHead className="font-semibold">N° Série</TableHead>
               <TableHead className="font-semibold">Prix de vente</TableHead>
               <TableHead className="font-semibold">Date d'entrée</TableHead>
+              <TableHead className="font-semibold">Etat</TableHead>
               <TableHead className="w-[80px] font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -161,6 +179,16 @@ export function ProductInstanceTable({
                     )}
                   </TableCell>
                   <TableCell>{instance.date_entree}</TableCell>
+                  <TableCell>
+                    <div
+                      className={`${EtatColor(
+                        String(instance.etat_exemplaire).toLowerCase()
+                      )} rounded-md px-2 py-1 w-max`}
+                    >
+                      {instance.etat_exemplaire.charAt(0).toUpperCase() +
+                        instance.etat_exemplaire.slice(1)}
+                    </div>
+                  </TableCell>
                   {/* <TableCell>
                     <LivraisonReference Id={instance.id_livraison} />
                   </TableCell> */}

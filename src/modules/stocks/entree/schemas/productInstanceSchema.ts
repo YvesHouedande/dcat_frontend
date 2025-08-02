@@ -15,8 +15,8 @@ export const productInstanceSchema = z.object({
   marge_haute: z.union([z.string(), z.number()]).optional(),
   marge_basse: z.union([z.string(), z.number()]).optional(),
   prix_de_revient: z.union([z.string(), z.number()]).optional(),
-  etat_vente: z
-    .enum(["vendu", "invendu", "bon", "endommage"])
+  etat_exemplaire: z
+    .enum(["vendu", "invendu", "bon", "endommage", "disponible"])
     .default("invendu"),
   id_livraison: z.union([
     z.string().min(1, "L'identifiant est requis"),
