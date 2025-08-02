@@ -37,7 +37,32 @@ import { getInterventions } from "../api/intervention";
 import { FileDown, Eye, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
-const logoSrc = "/dcat-logo.png";
+const logoSrc = "/Logodcat.jpg";
+
+// Fonction utilitaire pour charger l'image en base64
+const loadImageAsBase64 = (src: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL("image/jpeg");
+        resolve(dataUrl);
+      } else {
+        reject(new Error("Impossible de créer le contexte canvas"));
+      }
+    };
+    img.onerror = () => {
+      reject(new Error("Erreur lors du chargement de l'image"));
+    };
+    img.src = src;
+  });
+};
 
 interface MonthlyReportProps {
   onViewIntervention?: (intervention: Intervention) => void;
@@ -56,20 +81,15 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
   const [logoDataUrl, setLogoDataUrl] = useState("");
 
   useEffect(() => {
-    // Convertir l'image en base64 au chargement du composant
-    const img = new Image();
-    img.src = logoSrc;
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        const dataUrl = canvas.toDataURL("image/jpeg");
+    // Charger l'image en base64 au chargement du composant
+    loadImageAsBase64(logoSrc)
+      .then((dataUrl) => {
         setLogoDataUrl(dataUrl);
-      }
-    };
+      })
+      .catch((error) => {
+        console.error("Erreur lors du chargement du logo:", error);
+        setLogoDataUrl("");
+      });
   }, []);
 
   const loadInterventions = useCallback(async () => {
@@ -140,23 +160,36 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
   };
 
   const generateExcelContent = () => {
-    // Créer le contenu CSV
-    const headers = ["Date", "Type", "Problème", "Cause", "Actions", "Durée"];
+    // Créer le contenu CSV avec la nouvelle structure
+    const headers = ["Date", "Problème signalé", "Cause", "Mode d'intervention", "Action menée", "Recommandation", "Durée"];
     const rows = interventions.map((intervention) => [
       (() => {
         const date = new Date(intervention.date_intervention);
         return isNaN(date.getTime()) ? '-' : format(date, "dd/MM/yyyy");
       })(),
-      intervention.type_intervention,
-      intervention.probleme_signale,
-      intervention.cause_defaillance,
-      intervention.rapport_intervention,
-      intervention.duree,
+      intervention.probleme_signale || "",
+      intervention.cause_defaillance || "",
+      intervention.mode_intervention || "",
+      intervention.rapport_intervention || "",
+      intervention.recommandation || "",
+      intervention.duree || "",
     ]);
+
+    // Ajouter la ligne de durée totale
+    const totalDurationRow = [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "DURÉE TOTALE",
+      calculateTotalDuration(),
+    ];
 
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+      totalDurationRow.map((cell) => `"${cell}"`).join(","),
     ].join("\n");
 
     return csvContent;
@@ -175,11 +208,12 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
         const date = new Date(intervention.date_intervention);
         return isNaN(date.getTime()) ? '-' : format(date, "dd/MM/yyyy");
       })(),
-      intervention.type_intervention ?? "",
-      intervention.probleme_signale ?? "",
-      intervention.cause_defaillance ?? "",
-      intervention.rapport_intervention ?? "",
-      intervention.duree ?? "",
+      intervention.probleme_signale || "",
+      intervention.cause_defaillance || "",
+      intervention.mode_intervention || "",
+      intervention.rapport_intervention || "",
+      intervention.recommandation || "",
+      intervention.duree || "",
     ]);
 
     // Créer le contenu PDF avec des styles améliorés et le logo
@@ -227,46 +261,53 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
           .header { margin-bottom: 20px; }
           .stats { margin-bottom: 20px; background: #f3f4f6; padding: 10px; border-radius: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background-color: #2563eb; color: white; padding: 10px; }
-          td { padding: 8px; border: 1px solid #ddd; }
+          th { background-color: #2563eb; color: white; padding: 10px; font-size: 11px; }
+          td { padding: 8px; border: 1px solid #ddd; font-size: 10px; }
           tr:nth-child(even) { background-color: #f8f9fa; }
+          .total-row { 
+            background-color: #2563eb !important; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 11px;
+          }
+          .total-row td { 
+            border: 1px solid #1d4ed8; 
+            color: white; 
+          }
           .footer { margin-top: 20px; text-align: center; font-size: 12px; color: #666; }
         </style>
       </head>
       <body>
         <div class="logo-container">
+          ${logoDataUrl ? `
           <img 
             src="${logoDataUrl}"
             alt="Logo DCAT"
             class="logo"
             style="display: block !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;"
           />
+          ` : `
+          <div class="logo-placeholder" style="width: 150px; height: 60px; background-color: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px; margin: 0 auto;">
+            DCAT
+          </div>
+          `}
         </div>
         <div class="header">
           <h1>Rapport Mensuel des Interventions</h1>
           <p style="text-align: center;">Période : ${monthName}</p>
         </div>
         
-        <div class="stats">
-          <p><strong>Nombre total d'interventions :</strong> ${
-            interventions.length
-          }</p>
-          <p><strong>Durée totale :</strong> ${calculateTotalDuration()}</p>
-          <p><strong>Date de génération :</strong> ${format(
-            new Date(),
-            "dd MMMM yyyy HH:mm",
-            { locale: fr }
-          )}</p>
-        </div>
+        
 
         <table>
           <thead>
             <tr>
               <th>Date</th>
-              <th>Type</th>
-              <th>Problème</th>
+              <th>Problème signalé</th>
               <th>Cause</th>
-              <th>Actions</th>
+              <th>Mode d'intervention</th>
+              <th>Action menée</th>
+              <th>Recommandation</th>
               <th>Durée</th>
             </tr>
           </thead>
@@ -280,8 +321,21 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
             `
               )
               .join("")}
+            <tr class="total-row">
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td><strong>DURÉE TOTALE</strong></td>
+              <td><strong>${calculateTotalDuration()}</strong></td>
+            </tr>
           </tbody>
         </table>
+
+        <div class="stats">
+          <p><strong>Nombre total d'interventions :</strong> ${interventions.length} | <strong>Durée totale :</strong> ${calculateTotalDuration()} | <strong>Date de génération :</strong> ${format(new Date(), "dd MMMM yyyy HH:mm", { locale: fr })}</p>
+        </div>
 
         <div class="footer">
           <p>Document généré automatiquement par le système de gestion des interventions</p>
@@ -320,7 +374,7 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
           // Attendre que l'image soit chargée avant d'imprimer
           setTimeout(() => {
             printWindow.print();
-          }, 1000);
+          }, 2000); // Augmenté à 2 secondes pour s'assurer que l'image est chargée
         }
       } else {
         // Pour Excel, télécharger directement
@@ -415,11 +469,11 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Problème</TableHead>
+                      <TableHead>Problème signalé</TableHead>
                       <TableHead>Cause</TableHead>
-                      <TableHead>Actions</TableHead>
-                      <TableHead>Recommandations</TableHead>
+                      <TableHead>Mode d'intervention</TableHead>
+                      <TableHead>Action menée</TableHead>
+                      <TableHead>Recommandation</TableHead>
                       <TableHead>Durée</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -440,14 +494,14 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
                               "dd/MM/yyyy"
                             )}
                           </TableCell>
-                          <TableCell>
-                            {intervention.type_intervention}
-                          </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {intervention.probleme_signale}
                           </TableCell>
                           <TableCell>
                             {intervention.cause_defaillance}
+                          </TableCell>
+                          <TableCell>
+                            {intervention.mode_intervention}
                           </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {intervention.rapport_intervention}
@@ -471,6 +525,21 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
                           </TableCell>
                         </TableRow>
                       ))
+                    )}
+                    {/* Ligne de durée totale */}
+                    {interventions.length > 0 && (
+                      <TableRow className="bg-blue-50 font-semibold">
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-blue-600">DURÉE TOTALE</TableCell>
+                        <TableCell className="text-blue-600 font-bold">
+                          {calculateTotalDuration()}
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
                     )}
                   </TableBody>
                 </Table>

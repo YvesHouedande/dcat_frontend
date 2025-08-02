@@ -201,7 +201,7 @@ const TachesPage = () => {
     };
 
     const handleViewTache = (id: number) => {
-        navigate(`/gestion-des-projets/projets/taches/${id}/details`);
+        navigate(`/gestion-des-projets/projets/taches/${id}`);
     };
 
     const handleAddTask = () => {

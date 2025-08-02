@@ -18,23 +18,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Intervention, Nature, CreateInterventionDocumentTextPayload } from "../interface/interface";
+import { Intervention } from "../interface/interface";
 import { InterventionForm } from "../components/InterventionForm";
 import {
   createIntervention,
   deleteIntervention,
   getInterventions,
-  addDocumentToIntervention,
-  getAllNatureDocuments,
 } from "../api/intervention";
 import Layout from "@/components/Layout";
 import axios from "axios";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
   Legend,
   PieChart,
@@ -55,13 +48,6 @@ import {
 import { Trash2, Plus, FileText, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-// Interface pour les documents temporaires en attente d'association
-interface PendingDocument {
-  id: string; // ID temporaire unique
-  file: File;
-  textPayload: CreateInterventionDocumentTextPayload;
-}
-
 export const InterventionsPage: React.FC = () => {
   const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -70,14 +56,10 @@ export const InterventionsPage: React.FC = () => {
     useState<Intervention | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
-  const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
 
   const refreshData = async () => {
     try {
-      const [interventionsResponse, naturesResponse] = await Promise.all([
-        getInterventions(),
-        getAllNatureDocuments(),
-      ]);
+      const interventionsResponse = await getInterventions();
       
       // Limiter à 2 interventions les plus récentes
       const recentInterventions = (interventionsResponse.data || [])
@@ -88,11 +70,6 @@ export const InterventionsPage: React.FC = () => {
         )
         .slice(0, 2);
       setInterventions(recentInterventions);
-
-      // Charger les natures de documents
-      if (Array.isArray(naturesResponse)) {
-        setNatureDocuments(naturesResponse);
-      }
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
       toast.error("Erreur lors du chargement des données");
@@ -140,11 +117,7 @@ export const InterventionsPage: React.FC = () => {
       return acc;
     }, {} as Record<string, number>);
 
-    // 5. Distribution par lieu
-    const lieuDistribution = recentInterventions.reduce((acc, curr) => {
-      acc[curr.lieu] = (acc[curr.lieu] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+
 
     return {
       totalInterventions: recentInterventions.length,
@@ -161,17 +134,6 @@ export const InterventionsPage: React.FC = () => {
         name,
         value,
       })),
-      lieux: Object.entries(lieuDistribution).map(([name, value]) => ({
-        name,
-        value,
-      })),
-      tauxUrgence: (
-        (recentInterventions.filter((int) =>
-          int.mode_intervention?.toLowerCase().includes("urgence")
-        ).length /
-          recentInterventions.length) *
-        100
-      ).toFixed(1),
     };
   }, [interventions]);
 
@@ -195,15 +157,13 @@ export const InterventionsPage: React.FC = () => {
     duree: string;
     lieu: string;
     mode_intervention: string;
+    statut_intervention: "à faire" | "en cours" | "en attente" | "terminé";
     employes: number[];
     superviseur: number;
     id_contrat?: number | null;
   };
 
-  const handleCreateSubmit = async (
-    data: FormData,
-    pendingDocuments?: PendingDocument[]
-  ) => {
+  const handleCreateSubmit = async (data: FormData) => {
     setIsLoading(true);
     try {
       // Validation des champs requis
@@ -241,7 +201,7 @@ export const InterventionsPage: React.FC = () => {
         id_contrat: data.id_contrat ?? null, // Correction : on prend la valeur du formulaire
         employes: data.employes, // Correction : on envoie les employés sélectionnés
         superviseur: data.superviseur, // Correction : on envoie le superviseur sélectionné
-        statut_intervention: "à faire",
+        statut_intervention: data.statut_intervention,
       };
 
       // Vérification que tous les champs requis sont présents et non vides
@@ -277,38 +237,7 @@ export const InterventionsPage: React.FC = () => {
           );
         }
 
-        // Associer les documents temporaires si présents
-        if (pendingDocuments && pendingDocuments.length > 0 && response.intervention?.id_intervention) {
-          toast.success(`Intervention créée avec succès ! Association de ${pendingDocuments.length} document(s)...`);
-          
-          let successCount = 0;
-          let errorCount = 0;
-          
-          for (const pendingDoc of pendingDocuments) {
-            try {
-              await addDocumentToIntervention(
-                response.intervention.id_intervention,
-                pendingDoc.file,
-                pendingDoc.textPayload
-              );
-              successCount++;
-            } catch (docError) {
-              console.error(`Erreur lors de l'association du document ${pendingDoc.textPayload.libelle_document}:`, docError);
-              errorCount++;
-            }
-          }
-          
-          // Afficher le résultat final
-          if (errorCount === 0) {
-            toast.success(`Intervention créée et ${successCount} document(s) associé(s) avec succès !`);
-          } else if (successCount > 0) {
-            toast.warning(`Intervention créée avec succès ! ${successCount} document(s) associé(s), ${errorCount} échec(s).`);
-          } else {
-            toast.error(`Intervention créée mais échec de l'association de tous les documents (${errorCount} échec(s)).`);
-          }
-        } else {
-          toast.success("L'intervention a été créée avec succès.");
-        }
+        toast.success("L'intervention a été créée avec succès.");
 
         setIsCreateDialogOpen(false);
 
@@ -436,18 +365,7 @@ export const InterventionsPage: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Taux d'Urgence
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {dashboardData.tauxUrgence}%
-                  </div>
-                </CardContent>
-              </Card>
+
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -507,27 +425,6 @@ export const InterventionsPage: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Distribution par lieu */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Répartition par Lieu</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={dashboardData.lieux}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="value" fill="#2563eb" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         )}
@@ -576,7 +473,7 @@ export const InterventionsPage: React.FC = () => {
 
         {/* Dialog de création */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nouvelle Intervention</DialogTitle>
               <DialogDescription>
@@ -586,7 +483,6 @@ export const InterventionsPage: React.FC = () => {
             <InterventionForm
               onSubmit={handleCreateSubmit}
               isLoading={isLoading}
-              natureDocumentsDisponibles={natureDocuments}
             />
           </DialogContent>
         </Dialog>

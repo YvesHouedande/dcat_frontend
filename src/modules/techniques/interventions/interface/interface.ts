@@ -6,7 +6,6 @@ export interface Nature {
     libelle: string; // Libellé de la nature du document (selon votre table)
   }
 
-
 export interface InterventionDocument {
     id_documents: number;
     libelle_document: string;
@@ -65,6 +64,7 @@ export interface Intervention {
     type: string; // Ce champ 'type' est un doublon avec type_intervention dans la BDD, mais présent dans l'API
     id_partenaire: number; // Clé étrangère vers Partenaire
     id_contrat: number | null; // Clé étrangère vers Contrat, peut être null
+    superviseur: number; // ID du superviseur (employé)
     documents?: InterventionDocument[]; // Optionnel: documents directement associés à l'intervention
     employes?: Employe[]; // Optionnel: employés assignés à l'intervention
 }
@@ -84,7 +84,6 @@ export interface CreateInterventionDocumentTextPayload {
   id_nature_document: number; 
   etat_document?: string;
 }
-
 // --- Interface de réponse API générique pour le module Intervention ---
 export interface ApiResponse<T> {
   natures: Nature[];

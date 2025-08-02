@@ -88,7 +88,7 @@ const OperationDetailsPage: React.FC<OperationDetailsPageProps> = ({ embedded = 
 
   const handleEdit = () => {
     if (operation) {
-      navigate(`/technique/projets/operations/${operation.id_operation}/editer`, { state: { fromDetails: true } });
+      navigate(`/gestion-des-projets/projets/operations/${operation.id_operation}/editer`, { state: { fromDetails: true } });
     }
   };
 
@@ -163,7 +163,7 @@ const OperationDetailsPage: React.FC<OperationDetailsPageProps> = ({ embedded = 
         <CardContent>
           <OperationTasksTable
             taches={taches}
-            onEdit={(tache) => navigate(`/technique/projets/taches/${tache.id_tache}/editer`)}
+            onEdit={(tache) => navigate(`/gestion-des-projets/projets/taches/${tache.id_tache}/editer`)}
             onDelete={undefined} // À brancher si besoin
           />
         </CardContent>

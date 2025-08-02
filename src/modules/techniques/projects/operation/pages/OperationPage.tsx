@@ -122,7 +122,7 @@ const OperationPage: React.FC = () => {
   // --- CORRECTION : Ajout des redirections ici ---
   const handleView = (id: number) => {
     // Redirection vers la page de détails de l'opération
-    navigate(`/gestion-des-projets/projets/operations/${id}/details`);
+    navigate(`/gestion-des-projets/projets/operations/${id}`);
     toast.info(`Navigation vers les détails de l'opération #${id}`);
   };
 

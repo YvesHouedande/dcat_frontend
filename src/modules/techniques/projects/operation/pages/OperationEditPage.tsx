@@ -32,7 +32,7 @@ const OperationEditPage: React.FC = () => {
     try {
       await updateOperation(Number(id), payload);
       toast.success("Opération modifiée avec succès !");
-      navigate(`/technique/projets/operations/${id}/details`);
+      navigate(`/gestion-des-projets/projets/operations/${id}`);
     } catch {
       toast.error("Erreur lors de la modification de l'opération.");
     } finally {

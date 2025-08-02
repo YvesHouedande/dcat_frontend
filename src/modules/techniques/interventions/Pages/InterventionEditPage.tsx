@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
-import { Intervention, Nature, CreateInterventionDocumentTextPayload } from "../interface/interface";
-import { getInterventionById, updateIntervention, addDocumentToIntervention, getAllNatureDocuments } from "../api/intervention";
+import { Intervention } from "../interface/interface";
+import { getInterventionById, updateIntervention } from "../api/intervention";
 import { InterventionForm } from "../components/InterventionForm";
 
 // Type pour les données du formulaire
@@ -24,10 +24,12 @@ type FormData = {
   duree: string;
   lieu: string;
   mode_intervention: string;
+  statut_intervention: "à faire" | "en cours" | "en attente" | "terminé";
   employes: number[];
   superviseur: number;
   id_contrat?: number | null;
 };
+
 import { Button } from "@/components/ui/button";
 import { Home, FileText, BarChart3, ArrowLeft } from "lucide-react";
 
@@ -35,7 +37,6 @@ export const InterventionEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [intervention, setIntervention] = useState<Intervention | null>(null);
-  const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -43,21 +44,13 @@ export const InterventionEditPage: React.FC = () => {
       if (!id) return;
 
       try {
-        const [interventionResponse, naturesResponse] = await Promise.all([
-          getInterventionById(parseInt(id)),
-          getAllNatureDocuments(),
-        ]);
+        const interventionResponse = await getInterventionById(parseInt(id));
         
         if (interventionResponse.data) {
           setIntervention(interventionResponse.data);
         } else {
           toast.error("Intervention non trouvée");
           navigate("/gestion-des-interventions/interventions");
-        }
-
-        // Charger les natures de documents
-        if (Array.isArray(naturesResponse)) {
-          setNatureDocuments(naturesResponse);
         }
       } catch (error) {
         console.error("Erreur lors du chargement des données:", error);
@@ -80,16 +73,14 @@ export const InterventionEditPage: React.FC = () => {
       const interventionData: Partial<Intervention> = {
         ...data,
         id_intervention: parseInt(id),
-        statut_intervention: intervention?.statut_intervention || "en cours",
         type: intervention?.type || "intervention",
-        id_contrat: data.id_contrat ?? null, // Correction : valeur du formulaire
+        id_contrat: data.id_contrat ?? null,
         employes: data.employes
           ? data.employes.map((id) => ({
               id_employes: id,
               nom_employes: '',
               prenom_employes: '',
               email_employes: '',
-              // Ajoute d'autres champs requis par le type Employe si besoin
             }))
           : [],
       };
@@ -104,23 +95,6 @@ export const InterventionEditPage: React.FC = () => {
       );
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Handler pour l'ajout de documents
-  const handleSaveDocument = async (
-    interventionId: number,
-    documentFile: File,
-    textPayload: CreateInterventionDocumentTextPayload
-  ) => {
-    try {
-      await addDocumentToIntervention(interventionId, documentFile, textPayload);
-      toast.success("Document ajouté avec succès !");
-      // Optionnel: recharger les données de l'intervention
-    } catch (err) {
-      console.error("Erreur lors de l'ajout du document:", err);
-      toast.error("Échec de l'ajout du document.");
-      throw err;
     }
   };
 
@@ -184,8 +158,6 @@ export const InterventionEditPage: React.FC = () => {
               <InterventionForm
                 intervention={intervention}
                 onSubmit={handleSubmit}
-                onSaveDocument={handleSaveDocument}
-                natureDocumentsDisponibles={natureDocuments}
                 isLoading={isLoading}
               />
             </div>
