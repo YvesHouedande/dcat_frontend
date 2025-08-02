@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +13,6 @@ import {
   Building,
   FileSignature,
   ChevronRight,
-  AlarmClock,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -30,7 +29,7 @@ const InfoContract: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const queryClient = useQueryClient();
-  const [showFilePreview, setShowFilePreview] = useState(false);
+  
   const { fetchContratById, deleteDocumentFromContrat } = useContratsApi();
   const { fetchPartnerById } = usePartenaireApi();
   const { fetchEntiteById } = useEntiteApi();
@@ -92,7 +91,7 @@ const InfoContract: React.FC = () => {
 
   // Mutation pour supprimer un document
   const deleteDocumentMutation = useMutation({
-    mutationFn: (documentId: number) => deleteDocumentFromContrat(documentId),
+    mutationFn: ({ contratId, documentId }: { contratId: number; documentId: number }) => deleteDocumentFromContrat(contratId, documentId),
     onSuccess: () => {
       toast.success("Document supprimé avec succès");
       queryClient.invalidateQueries({ queryKey: ["contrat", id] });
@@ -104,8 +103,8 @@ const InfoContract: React.FC = () => {
     },
   });
 
-  const handleDeleteDocument = (documentId: number) => {
-    deleteDocumentMutation.mutate(documentId);
+  const handleDeleteDocument = (contratId: number, documentId: number) => {
+    deleteDocumentMutation.mutate({ contratId, documentId });
   };
 
   // Get API_URL from environment variables
@@ -228,13 +227,7 @@ const InfoContract: React.FC = () => {
                 </div>
               </div>
             </div>
-            <Button
-              className="bg-white text-emerald-700 hover:bg-emerald-50"
-              onClick={() => setShowFilePreview(!showFilePreview)}
-            >
-              <FileText size={18} className="mr-2" />
-              VOIR LE CONTRAT
-            </Button>
+            
           </div>
           <div className="mt-6">
             <div className="flex justify-between text-sm mb-1">
@@ -253,7 +246,7 @@ const InfoContract: React.FC = () => {
             <TabsTrigger value="documents">Documents</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1  gap-6">
               <Card className="md:col-span-2">
                 <CardContent className="p-6">
                   <div className="flex justify-between items-center mb-4">
@@ -348,19 +341,7 @@ const InfoContract: React.FC = () => {
                       <p className="text-sm text-gray-500">Modalités de paiement</p>
                       <p className="font-medium">{contrat.modalite_paiement || 'Non renseigné'}</p>
                     </div>
-                    {/* Contenu du contrat */}
-                    <div className="md:col-span-2">
-                      <p className="text-sm text-gray-500">Contenu du contrat</p>
-                      <div className="font-medium whitespace-pre-line bg-gray-50 rounded-md p-3 border border-gray-100">
-                        {contrat.contenu_contrat || 'Non renseigné'}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="mb-4">
+                    <div className="mb-4">
                     <h2 className="text-xl font-bold text-gray-800 mb-4">
                       Partenaire associé
                     </h2>
@@ -370,7 +351,7 @@ const InfoContract: React.FC = () => {
                         className="w-full flex items-center justify-between text-left p-4 mb-4"
                         onClick={() =>
                           navigate(
-                            `/gestion-administrative/partenaires/profil/${partenaire.id_partenaire}`
+                            `/gestion-administrative/partenaires/${partenaire.id_partenaire}`
                           )
                         }
                       >
@@ -395,34 +376,17 @@ const InfoContract: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-4">
-                    Actions rapides
-                  </h2>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-emerald-600 hover:border-emerald-200 group"
-                    >
-                      <Download
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-emerald-500"
-                      />
-                      Télécharger le contrat
-                    </Button>
-                    <Button
-                      disabled
-                      variant="outline"
-                      className="w-full justify-start text-gray-700 hover:text-emerald-600 hover:border-emerald-200 group"
-                    >
-                      <AlarmClock
-                        size={18}
-                        className="mr-2 text-gray-400 group-hover:text-emerald-500"
-                      />
-                      Ajouter une échéance
-                    </Button>
+                    {/* Contenu du contrat */}
+                    <div className="md:col-span-2">
+                      <p className="text-sm text-gray-500">Contenu du contrat</p>
+                      <div className="font-medium whitespace-pre-line bg-gray-50 rounded-md p-3 border border-gray-100">
+                        {contrat.contenu_contrat || 'Non renseigné'}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+              
             </div>
           </TabsContent>
           <TabsContent value="documents" className="p-6">
@@ -498,7 +462,7 @@ const InfoContract: React.FC = () => {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                handleDeleteDocument(doc.id_documents)
+                                handleDeleteDocument(parseInt(id!), doc.id_documents)
                               }
                               disabled={deleteDocumentMutation.isLoading}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -529,48 +493,7 @@ const InfoContract: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
-      {/* Modal pour la prévisualisation du fichier (simulé) */}
-      {showFilePreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-3/4 flex flex-col">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="font-medium text-lg">
-                Aperçu du contrat: {contrat.nom_contrat}
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFilePreview(false)}
-              >
-                ✕
-              </Button>
-            </div>
-            <div className="flex-1 bg-gray-100 p-4 overflow-auto">
-              <div className="bg-white h-full w-full flex items-center justify-center border shadow">
-                <div className="text-center p-8">
-                  <FileText size={64} className="mx-auto text-gray-300 mb-4" />
-                  <p className="text-gray-500">Aperçu du contrat</p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    Dans une application réelle, le PDF serait affiché ici
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 border-t flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilePreview(false)}
-              >
-                Fermer
-              </Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Download size={16} className="mr-2" />
-                Télécharger
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+     
     </div>
   );
 };

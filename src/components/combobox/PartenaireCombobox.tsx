@@ -46,7 +46,7 @@ const usePartenaire = () => {
   // Query pour les livraisons
   const partenaireServie = PartenaireService();
   const partenaires = useQuery({
-    queryKey: ["livraisons"],
+    queryKey: ["partenairesCombobox"],
     queryFn: partenaireServie.fetchPartenaire,
     staleTime: 15 * 60 * 1000, // 15 minutes (optionnel)
   });

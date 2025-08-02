@@ -57,7 +57,7 @@ export interface ExemplaireSortieFormProps {
 import { Textarea } from "@/components/ui/textarea";
 import { EmployesCombobox } from "@/components/combobox/EmployesCombobox";
 import { OutilsCombobox } from "@/components/combobox/OutilsCombobox";
-import DebugZod from "@/modules/stocks/utils/debug";
+// import DebugZod from "@/modules/stocks/utils/debug";
 export function ExemplaireSortieForm({
   defaultValues,
   onSubmit,
@@ -221,7 +221,7 @@ export function ExemplaireSortieForm({
             </FormItem>
           )}
         />
-        <DebugZod form={form} />
+        {/* <DebugZod form={form} /> */}
         {/* Boutons d'action */}
         <div className="flex justify-end space-x-2 pt-2">
           <div

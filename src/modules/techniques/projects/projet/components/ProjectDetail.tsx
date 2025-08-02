@@ -216,13 +216,17 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         }
 
         // Récupérer toutes les données nécessaires en parallèle
-        const [livrableData, projetData, natureDocumentsData, fetchedAllPartenaires] =
-          await Promise.all([
-            getLivrableById(livrableIdNum),
-            getProjetById(projetId),
-            getAllNatureDocuments(),
-            getPartenaires({ limit: 100, page: 1 }),
-          ]);
+        const [
+          livrableData,
+          projetData,
+          natureDocumentsData,
+          fetchedAllPartenaires,
+        ] = await Promise.all([
+          getLivrableById(livrableIdNum),
+          getProjetById(projetId),
+          getAllNatureDocuments(),
+          getPartenaires({ limit: 100, page: 1 }),
+        ]);
 
         if (!livrableData) {
           setError("Livrable introuvable");
@@ -275,7 +279,9 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
+          onClick={() =>
+            navigate(`/gestion-des-projets/projets/${id}/livrables`)
+          }
           className="mt-4"
         >
           ← Retour à la liste des livrables
@@ -310,11 +316,13 @@ const ProjectLivrableEditWrapper: FC<ProjectLivrableEditWrapperProps> = ({
             throw err;
           }
         }}
-        onCancel={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
+        onCancel={() =>
+          navigate(`/gestion-des-projets/projets/${id}/livrables`)
+        }
         projetsDisponibles={[projet]}
         partenairesDisponibles={allPartenaires.map((p: Partenaire) => ({
           id_partenaire: p.id_partenaire,
-          nom_partenaire: p.nom_partenaire
+          nom_partenaire: p.nom_partenaire,
         }))}
         natureDocumentsDisponibles={natureDocuments}
         onSaveDocument={async (livrableId, documentFile, textPayload) => {
@@ -401,7 +409,9 @@ const ProjectLivrableDetailsWrapper: FC = () => {
         {error || "Données introuvables"}
         <Button
           variant="outline"
-          onClick={() => navigate(`/gestion-des-projets/projets/${id}/livrables`)}
+          onClick={() =>
+            navigate(`/gestion-des-projets/projets/${id}/livrables`)
+          }
           className="mt-4"
         >
           ← Retour à la liste des livrables
@@ -1209,9 +1219,7 @@ const ProjetDetailsPage: React.FC = () => {
     });
   };
   const handleViewOperation = (operationId: number) => {
-    navigate(
-      `/gestion-des-projets/projets/${id}/operations/${operationId}`
-    );
+    navigate(`/gestion-des-projets/projets/${id}/operations/${operationId}`);
   };
   const handleDeleteOperation = async (operationId: number) => {
     if (!window.confirm("Supprimer cette opération ?")) return;
@@ -1358,30 +1366,22 @@ const ProjetDetailsPage: React.FC = () => {
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="operations">
-                <NavLink
-                  to={`/gestion-des-projets/projets/${id}/operations`}
-                >
+                <NavLink to={`/gestion-des-projets/projets/${id}/operations`}>
                   Opérations
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="taches">
-                <NavLink
-                  to={`/gestion-des-projets/projets/${id}/taches`}
-                >
+                <NavLink to={`/gestion-des-projets/projets/${id}/taches`}>
                   Tâches
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="documents">
-                <NavLink
-                  to={`/gestion-des-projets/projets/${id}/documents`}
-                >
+                <NavLink to={`/gestion-des-projets/projets/${id}/documents`}>
                   Documents
                 </NavLink>
               </TabsTrigger>
               <TabsTrigger asChild value="livrables">
-                <NavLink
-                  to={`/gestion-des-projets/projets/${id}/livrables`}
-                >
+                <NavLink to={`/gestion-des-projets/projets/${id}/livrables`}>
                   Livrables
                 </NavLink>
               </TabsTrigger>
@@ -1616,7 +1616,7 @@ const ProjetDetailsPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Sidebar */}
+                {/* Panel de droite */}
                 <div className="space-y-6">
                   {/* Statut rapide */}
                   <Card className="shadow-lg border-0">
@@ -2164,10 +2164,12 @@ const ProjetDetailsPage: React.FC = () => {
                       onSave={handleSaveLivrable}
                       onCancel={() => navigate(-1)}
                       projetsDisponibles={[projet]}
-                      partenairesDisponibles={allPartenaires.map((p: Partenaire) => ({
-                        id_partenaire: p.id_partenaire,
-                        nom_partenaire: p.nom_partenaire
-                      }))}
+                      partenairesDisponibles={allPartenaires.map(
+                        (p: Partenaire) => ({
+                          id_partenaire: p.id_partenaire,
+                          nom_partenaire: p.nom_partenaire,
+                        })
+                      )}
                       onSaveDocument={handleSaveDocument}
                       natureDocumentsDisponibles={natureDocuments}
                       embedded={true}

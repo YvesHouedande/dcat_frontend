@@ -30,12 +30,12 @@ const AddEntiteForm: React.FC = () => {
 
   // Invalider le cache des partenaires quand on revient sur la page
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ["partenaires"] });
+    queryClient.invalidateQueries({ queryKey: ["partenaires-entites"] });
   }, [queryClient]);
 
   // Charger les partenaires pour la sélection
   const { data: partenairesData, isLoading: loadingPartenaires } = useQuery({
-    queryKey: ["partenaires"],
+    queryKey: ["partenaires-entites"],
     queryFn: () => fetchPartners(1, 1000), // Récupérer tous les partenaires
     refetchOnMount: true, // Recharger à chaque montage
     refetchOnWindowFocus: true, // Recharger quand la fenêtre reprend le focus

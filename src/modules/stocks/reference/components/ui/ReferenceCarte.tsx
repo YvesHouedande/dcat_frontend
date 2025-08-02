@@ -1,19 +1,18 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { ReferenceProduit } from "@/modules/stocks/types/reference";
-import { useNavigate } from "react-router-dom";
 
-import { Package} from "lucide-react";
+import { Package } from "lucide-react";
 import { useState } from "react";
+import ProductInfoDialog from "../ProductInfoDialog";
 
 interface ReferenceCarteProps {
   product: ReferenceProduit;
 }
 
 function ReferenceCarte({ product }: ReferenceCarteProps) {
-  const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
-
+  const [showInfoDialog, setShowInfoDialog] = useState(false);
   const handleImageError = () => {
     setImageError(true);
   };
@@ -21,9 +20,8 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
   return (
     <>
       <Card
-        onClick={(e) => {
-          e.stopPropagation();
-          navigate(`${product.id_produit}`);
+        onClick={() => {
+          setShowInfoDialog(true);
         }}
         className="group relative overflow-hidden bg-white border-0 shadow-sm hover:shadow-2xl transition-all duration-500 ease-out transform hover:-translate-y-2 cursor-pointer rounded-xl"
       >
@@ -70,8 +68,6 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
               )}
             </div>
           </div>
-          
-         
         </div>
 
         {/* Content Section */}
@@ -108,6 +104,12 @@ function ReferenceCarte({ product }: ReferenceCarteProps) {
         {/* Corner Accent */}
         <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-blue-500/20 to-transparent rounded-bl-full" />
       </Card>
+      {/* Dialogue d'informations du produit */}
+      <ProductInfoDialog
+        open={showInfoDialog}
+        onOpenChange={setShowInfoDialog}
+        product={product}
+      />
     </>
   );
 }

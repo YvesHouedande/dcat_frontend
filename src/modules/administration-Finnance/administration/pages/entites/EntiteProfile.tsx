@@ -18,8 +18,8 @@ import {
   Users,
   ExternalLink,
 } from "lucide-react";
-import { useEntiteApi } from '@/modules/administration-Finnance/services/entiteService';
-import { usePartenaireApi } from '@/modules/administration-Finnance/services/partenaireService';
+import { useEntiteApi } from "@/modules/administration-Finnance/services/entiteService";
+import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
 
 const EntiteProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,15 +28,19 @@ const EntiteProfile: React.FC = () => {
   const { fetchPartnerById } = usePartenaireApi();
 
   // Charger l'entité
-  const { data: entite, isLoading, error } = useQuery({
-    queryKey: ['entite', id],
+  const {
+    data: entite,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["entite", id],
     queryFn: () => fetchEntiteById(parseInt(id!)),
     enabled: !!id,
   });
 
   // Charger le partenaire associé si l'entité en a un
   const { data: partenaire, isLoading: loadingPartenaire } = useQuery({
-    queryKey: ['partenaire', entite?.id_partenaire],
+    queryKey: ["partenaire", entite?.id_partenaire],
     queryFn: () => fetchPartnerById(entite!.id_partenaire),
     enabled: !!entite && entite.id_partenaire > 0,
   });
@@ -50,7 +54,6 @@ const EntiteProfile: React.FC = () => {
       .substring(0, 2);
   };
 
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -62,7 +65,9 @@ const EntiteProfile: React.FC = () => {
   if (error || !entite) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-500">Erreur lors du chargement de l'entité</div>
+        <div className="text-red-500">
+          Erreur lors du chargement de l'entité
+        </div>
       </div>
     );
   }
@@ -93,8 +98,12 @@ const EntiteProfile: React.FC = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Informations générales</CardTitle>
-                  <Link to={`/gestion-administrative/entites/${entite.id_entite}/editer`}>
+                  <CardTitle className="text-lg">
+                    Informations générales
+                  </CardTitle>
+                  <Link
+                    to={`/gestion-administrative/entites/${entite.id_entite}/editer`}
+                  >
                     <Button variant="outline" size="sm">
                       <Edit className="mr-2 h-4 w-4" />
                       Modifier
@@ -133,8 +142,12 @@ const EntiteProfile: React.FC = () => {
                     <div className="flex items-center space-x-3">
                       <Phone className="h-5 w-5 text-gray-400" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Contact</p>
-                        <p className="text-sm text-gray-600">{entite.contact}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          Contact
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {entite.contact}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -143,8 +156,12 @@ const EntiteProfile: React.FC = () => {
                     <div className="flex items-center space-x-3">
                       <MapPin className="h-5 w-5 text-gray-400" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Localisation</p>
-                        <p className="text-sm text-gray-600">{entite.localisation}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          Localisation
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {entite.localisation}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -153,8 +170,12 @@ const EntiteProfile: React.FC = () => {
                     <div className="flex items-start space-x-3 sm:col-span-2">
                       <Home className="h-5 w-5 text-gray-400 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Adresse postale</p>
-                        <p className="text-sm text-gray-600">{entite.adresse_postal}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          Adresse postale
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {entite.adresse_postal}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -174,21 +195,35 @@ const EntiteProfile: React.FC = () => {
                       <div className="flex items-center space-x-3">
                         <Users className="h-5 w-5 text-blue-500" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Partenaire associé</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Partenaire associé
+                          </p>
                           {loadingPartenaire ? (
-                            <p className="text-sm text-gray-600">Chargement...</p>
+                            <p className="text-sm text-gray-600">
+                              Chargement...
+                            </p>
                           ) : partenaire ? (
                             <div className="space-y-1">
-                              <p className="text-sm text-gray-600 font-medium">{partenaire.nom_partenaire}</p>
-                              <p className="text-xs text-gray-500">{partenaire.specialite}</p>
-                              <p className="text-xs text-gray-500">{partenaire.type_partenaire}</p>
+                              <p className="text-sm text-gray-600 font-medium">
+                                {partenaire.nom_partenaire}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {partenaire.specialite}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {partenaire.type_partenaire}
+                              </p>
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-600">Partenaire ID: {entite.id_partenaire}</p>
+                            <p className="text-sm text-gray-600">
+                              Partenaire ID: {entite.id_partenaire}
+                            </p>
                           )}
                         </div>
                       </div>
-                      <Link to={`/gestion-administrative/partenaires/${entite.id_partenaire}`}>
+                      <Link
+                        to={`/gestion-administrative/partenaires/${entite.id_partenaire}`}
+                      >
                         <Button variant="outline" size="sm">
                           <ExternalLink className="mr-2 h-4 w-4" />
                           Voir le partenaire
@@ -211,7 +246,7 @@ const EntiteProfile: React.FC = () => {
             </Card>
           </div>
 
-          {/* Sidebar */}
+          {/* Panel de droite */}
           <div className="space-y-6">
             {/* Actions rapides */}
             <Card>
@@ -219,15 +254,17 @@ const EntiteProfile: React.FC = () => {
                 <CardTitle className="text-lg">Actions rapides</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Link to={`/gestion-administrative/entites/${entite.id_entite}/editer`}>
+                <Link
+                  to={`/gestion-administrative/entites/${entite.id_entite}/editer`}
+                >
                   <Button className="w-full" variant="outline">
                     <Edit className="mr-2 h-4 w-4" />
                     Modifier l'entité
                   </Button>
                 </Link>
-                
-                <Button 
-                  className="w-full" 
+
+                <Button
+                  className="w-full"
                   variant="outline"
                   onClick={() => navigate("/gestion-administrative/entites")}
                 >
@@ -250,15 +287,17 @@ const EntiteProfile: React.FC = () => {
                   </div>
                   <Badge variant="secondary">0</Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Users className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Interlocuteurs</span>
+                    <span className="text-sm text-gray-600">
+                      Interlocuteurs
+                    </span>
                   </div>
                   <Badge variant="secondary">0</Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-gray-400" />
@@ -277,18 +316,22 @@ const EntiteProfile: React.FC = () => {
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">ID Entité</span>
-                  <span className="text-sm font-medium">{entite.id_entite}</span>
+                  <span className="text-sm font-medium">
+                    {entite.id_entite}
+                  </span>
                 </div>
-                
+
                 {entite.id_partenaire > 0 && (
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">ID Partenaire</span>
-                    <span className="text-sm font-medium">{entite.id_partenaire}</span>
+                    <span className="text-sm font-medium">
+                      {entite.id_partenaire}
+                    </span>
                   </div>
                 )}
-                
+
                 <Separator />
-                
+
                 <div className="text-xs text-gray-500">
                   <p>Dernière mise à jour: Récente</p>
                   <p>Statut: Actif</p>
@@ -302,4 +345,4 @@ const EntiteProfile: React.FC = () => {
   );
 };
 
-export default EntiteProfile; 
+export default EntiteProfile;

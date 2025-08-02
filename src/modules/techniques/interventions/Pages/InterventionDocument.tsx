@@ -25,7 +25,7 @@ import { fr } from "date-fns/locale";
 
 import {
   useDeleteDocumentDossier,
-  useDocumentsByDossier,
+  useDocumentsDossierIntervention,
 } from "@/modules/administration-Finnance/dossier/hooks/useDosier";
 import { useDebounce } from "@/modules/stocks/entree/utils/helpers";
 import { DemandeDocument } from "@/modules/administration-Finnance/administration/types/interfaces";
@@ -61,7 +61,8 @@ export const InterventionDocument: React.FC = () => {
     fetchNextPageInfiniteDocumentsByDossier,
     hasNextPageInfiniteDocumentsByDossier,
     isFetchingNextPageInfiniteDocumentsByDossier,
-  } = useDocumentsByDossier(String(id), {
+  } = useDocumentsDossierIntervention({
+    limit: 20,
     libelle_document: debouncedSearchTerm,
   });
 
@@ -78,9 +79,7 @@ export const InterventionDocument: React.FC = () => {
 
   useEffect(() => {
     refetchDocumentsByDossier();
-    setDocuments(
-      documentsByDossier?.pages.flatMap((page) => page.documents.data) || []
-    );
+    setDocuments(documentsByDossier?.pages.flatMap((page) => page.data) || []);
   }, [activeTab, refetchDocumentsByDossier, documentsByDossier?.pages]); // L'effet se déclenchera uniquement lorsque l'onglet change
 
   // Fonction pour extraire le type de fichier à partir de l'extension
@@ -88,8 +87,6 @@ export const InterventionDocument: React.FC = () => {
     const extension = filename.split(".").pop()?.toLowerCase() || "";
     return extension.toUpperCase();
   };
-
-
 
   const handleViewDocument = (idDoc: number) => {
     navigate(`/gestion-des-interventions/documents/${id}/detail`, {
@@ -194,7 +191,7 @@ export const InterventionDocument: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <div>
             <h1 className="text-xl font-bold text-gray-800">
-              Gestion des Documents Resources Humaines
+              Gestion des Documents des Interventions
             </h1>
             <p className="text-sm text-gray-500">
               {documents.length} document

@@ -36,7 +36,7 @@ export const referenceSchema = z.object({
   desc_produit: z.string().optional(),
   images: z.array(imageProduitSchema).optional(),
   emplacement_produit: z.string().min(1, "L'emplacement est obligatoire"),
-  caracteristiques: z.string().optional(),
+  caracteristiques_produit: z.string().optional(),
   prix_produit: z.number().optional(),
   id_categorie: z.number().min(1, "La catégorie est obligatoire"),
   id_type_produit: z.number().min(1, "Le type est obligatoire"),

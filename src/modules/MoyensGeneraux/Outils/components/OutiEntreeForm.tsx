@@ -23,7 +23,7 @@ import React from "react";
 
 import { UseFormReturn } from "react-hook-form";
 import { ExemplaireProduitFormValues } from "@/modules/stocks/exemplaire";
-import DebugZod from "@/modules/stocks/utils/debug";
+// import DebugZod from "@/modules/stocks/utils/debug";
 import { OutilEntreeType } from "../types/OutilsType";
 import { useExemplaireOutilsForm } from "../exemplaire/hooks/useExemplaireOutilsForm";
 
@@ -160,7 +160,7 @@ export const OutilEntreeForm = React.forwardRef<
             )}
           />
 
-          <DebugZod form={form} />
+          {/* <DebugZod form={form} /> */}
           {/* Composant pour le champ "Achat" */}
 
           {error && (

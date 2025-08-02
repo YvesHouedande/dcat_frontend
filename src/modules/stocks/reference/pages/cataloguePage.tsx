@@ -13,9 +13,9 @@ import { Package, Search, Wrench } from "lucide-react";
 import ReferenceCarte from "@/modules/stocks/reference/components/ui/ReferenceCarte";
 import { useProducts } from "../hooks/useProducts";
 import {
-  useModeleByProduct,
   useProductFamilies,
   useProductMarques,
+  useProductModels,
 } from "../hooks/useOthers";
 import ProductCatalogSkeleton from "../../../../components/skeleton/ProductCatalogSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,20 +30,17 @@ interface CataloguePageProps {
 export default function CataloguePage({
   showSocialSharing = false,
 }: CataloguePageProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [modelFilter, setModelFilter] = useState("all");
-  const [brandFilter, setBrandFilter] = useState("all");
-  const [familyFilter, setFamilyFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [modelFilter, setModelFilter] = useState<string>("all");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [marqueId, setMarqueId] = useState<string | null>(null);
+  const [familyFilter, setFamilyFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [qteMax, setQteMax] = useState<number | null>(null);
   const [qteMin, setQteMin] = useState<number | null>(null);
   const [prixMax, setPrixMax] = useState<number | null>(null);
   const [prixMin, setPrixMin] = useState<number | null>(null);
 
-  const [productTypeFilter, setProductTypeFilter] = useState("all");
-  const [marqueId, setMarqueId] = useState<string | number | undefined>(
-    undefined
-  );
   const navigate = useNavigate();
 
   const {
@@ -52,11 +49,10 @@ export default function CataloguePage({
     hasNextPage,
     isFetchingNextPage,
   } = useProducts({
-    searchTerm,
-    modelFilter,
-    brandFilter,
-    familyFilter,
-    productTypeFilter,
+    searchTerm: searchTerm || undefined,
+    modeleLibelle: modelFilter !== "all" ? modelFilter : undefined,
+    marqueLibelle: brandFilter !== "all" ? brandFilter : undefined,
+    familleLibelle: familyFilter !== "all" ? familyFilter : undefined,
     sortOrder,
     qteMax,
     qteMin,
@@ -65,42 +61,26 @@ export default function CataloguePage({
   });
   const { productFamilies } = useProductFamilies();
   const { productMarques } = useProductMarques();
-  const { productModels } = useModeleByProduct(marqueId);
+  const { modelesByMarque } = useProductModels(
+    undefined,
+    marqueId && marqueId !== "all" ? marqueId : undefined
+  );
 
   const allProducts =
     productsQuery.data?.pages?.flatMap((page) => page.data) || [];
-
-  const filteredProducts = allProducts
-    .filter((product) => {
-      const matchesSearch = product.desi_produit
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchesProductType =
-        productTypeFilter === "all" ||
-        String(product.id_type_produit) === productTypeFilter;
-      const matchesModel =
-        modelFilter === "all" || String(product.id_modele) === modelFilter;
-      const matchesBrand =
-        brandFilter === "all" || String(product.id_marque) === brandFilter;
-      const matchesFamily =
-        familyFilter === "all" || String(product.id_famille) === familyFilter;
-      return (
-        matchesSearch &&
-        matchesProductType &&
-        matchesModel &&
-        matchesBrand &&
-        matchesFamily
-      );
-    })
-    .sort((a, b) => {
-      if (sortOrder === "asc") {
-        return Number(a.prix_produit) - Number(b.prix_produit);
-      } else {
-        return Number(b.prix_produit) - Number(a.prix_produit);
-      }
-    });
+  const filteredProducts = allProducts;
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  // Réinitialiser le filtre modèle quand la marque change
+  useEffect(() => {
+    if (marqueId === null) {
+      setModelFilter("all");
+    } else {
+      // Réinitialiser le modèle car les modèles disponibles ont changé
+      setModelFilter("all");
+    }
+  }, [marqueId]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -162,10 +142,14 @@ export default function CataloguePage({
               size="sm"
               onClick={() => {
                 setSearchTerm("");
-                setProductTypeFilter("all");
                 setFamilyFilter("all");
                 setModelFilter("all");
                 setBrandFilter("all");
+                setMarqueId(null);
+                setQteMax(null);
+                setQteMin(null);
+                setPrixMax(null);
+                setPrixMin(null);
               }}
               className="h-9 whitespace-nowrap"
               style={{ display: showSocialSharing ? "none" : undefined }}
@@ -186,7 +170,7 @@ export default function CataloguePage({
               {productFamilies.data.map((family) => (
                 <SelectItem
                   key={family.id_famille}
-                  value={String(family.id_famille)}
+                  value={family.libelle_famille}
                 >
                   {family.libelle_famille}
                 </SelectItem>
@@ -194,17 +178,30 @@ export default function CataloguePage({
             </SelectContent>
           </Select>
 
-          <Select value={brandFilter} onValueChange={setBrandFilter}>
+          <Select
+            value={brandFilter}
+            onValueChange={(value) => {
+              setBrandFilter(value);
+              // Trouver l'ID de la marque correspondant au libellé sélectionné
+              if (value === "all" || value === null) {
+                setMarqueId(null);
+              } else {
+                const selectedMarque = productMarques.data.find(
+                  (brand) => brand.libelle_marque === value
+                );
+                setMarqueId(
+                  selectedMarque ? String(selectedMarque.id_marque) : null
+                );
+              }
+            }}
+          >
             <SelectTrigger className="w-40 h-9">
               <SelectValue placeholder="Marque" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes marques</SelectItem>
               {productMarques.data.map((brand) => (
-                <SelectItem
-                  key={brand.id_marque}
-                  value={String(brand.id_marque)}
-                >
+                <SelectItem key={brand.id_marque} value={brand.libelle_marque}>
                   {brand.libelle_marque}
                 </SelectItem>
               ))}
@@ -213,21 +210,22 @@ export default function CataloguePage({
 
           <Select
             value={modelFilter}
-            onValueChange={(value) => {
-              setModelFilter(value);
-              setMarqueId(value);
-            }}
+            onValueChange={setModelFilter}
+            disabled={marqueId === null}
           >
             <SelectTrigger className="w-40 h-9">
-              <SelectValue placeholder="Modèle" />
+              <SelectValue
+                placeholder={
+                  marqueId === null
+                    ? "Sélectionnez d'abord une marque"
+                    : "Modèle"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous modèles</SelectItem>
-              {productModels.data?.map((model) => (
-                <SelectItem
-                  key={model.id_modele}
-                  value={String(model.id_modele)}
-                >
+              {modelesByMarque.data?.map((model) => (
+                <SelectItem key={model.id_modele} value={model.libelle_modele}>
                   {model.libelle_modele}
                 </SelectItem>
               ))}
@@ -252,6 +250,7 @@ export default function CataloguePage({
             <Label>Quantité min</Label>
             <Input
               type="number"
+              value={qteMin || ""}
               onChange={(e) => setQteMin(Number(e.target.value))}
               min={0}
             ></Input>
@@ -260,6 +259,7 @@ export default function CataloguePage({
             <Label>Quantité max</Label>
             <Input
               type="number"
+              value={qteMax || ""}
               onChange={(e) => setQteMax(Number(e.target.value))}
               min={0}
             ></Input>
@@ -268,6 +268,7 @@ export default function CataloguePage({
             <Label>Prix min</Label>
             <Input
               type="number"
+              value={prixMin || ""}
               onChange={(e) => setPrixMin(Number(e.target.value))}
               min={0}
             ></Input>
@@ -276,6 +277,7 @@ export default function CataloguePage({
             <Label>Prix max</Label>
             <Input
               type="number"
+              value={prixMax || ""}
               onChange={(e) => setPrixMax(Number(e.target.value))}
               min={0}
             ></Input>
@@ -312,9 +314,7 @@ export default function CataloguePage({
                           "/produit/" +
                           product.id_produit,
                         image:
-                          product.images?.[0]?.url ||
-                          product .imagesMeta ||
-                          "",
+                          product.images?.[0]?.url || product.imagesMeta || "",
                       }}
                     />
                   </div>

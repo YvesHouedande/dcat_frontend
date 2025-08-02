@@ -148,6 +148,37 @@ export const useDocumentsByDossier = (
     refetchDocumentsByDossier: infiniteDocumentsByDossierQuery.refetch,
   };
 };
+export const useDocumentsDossierIntervention = (
+  params: PaginationParams = {}
+) => {
+  const { getDossierIntervention } = useDossier();
+
+  const infiniteDocumentsByDossierQuery = useInfiniteQuery({
+    queryKey: [...dossierKeys.lists(), "infinite", params],
+    queryFn: ({ pageParam = 1 }) =>
+      getDossierIntervention({ ...params, page: pageParam }),
+    getNextPageParam: (lastPage) => {
+      const { page, limit, total } = lastPage.pagination;
+      const hasNext = page * limit < total;
+      return hasNext ? page + 1 : undefined;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  return {
+    infiniteDocumentsByDossier: infiniteDocumentsByDossierQuery.data,
+    isLoadingInfiniteDocumentsByDossier:
+      infiniteDocumentsByDossierQuery.isLoading,
+    isErrorInfiniteDocumentsByDossier: infiniteDocumentsByDossierQuery.isError,
+    hasNextPageInfiniteDocumentsByDossier:
+      infiniteDocumentsByDossierQuery.hasNextPage,
+    fetchNextPageInfiniteDocumentsByDossier:
+      infiniteDocumentsByDossierQuery.fetchNextPage,
+    isFetchingNextPageInfiniteDocumentsByDossier:
+      infiniteDocumentsByDossierQuery.isFetchingNextPage,
+    refetchDocumentsByDossier: infiniteDocumentsByDossierQuery.refetch,
+  };
+};
 
 // Hook pour créer un dossier
 export const useCreateDossier = () => {

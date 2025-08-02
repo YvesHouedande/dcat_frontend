@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Save, Building, MapPin, Phone, Home, ArrowLeft } from "lucide-react";
 import { Entite } from "../../types/interfaces";
-import { useEntiteApi } from '@/modules/administration-Finnance/services/entiteService';
-import { usePartenaireApi } from '@/modules/administration-Finnance/services/partenaireService';
+import { useEntiteApi } from "@/modules/administration-Finnance/services/entiteService";
+import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
 import { toast } from "sonner";
 import {
   Select,
@@ -20,12 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import { omit } from "@/lib/utils";
 const EditEntiteForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
   const { fetchEntiteById, updateEntite } = useEntiteApi();
   const { fetchPartners } = usePartenaireApi();
 
@@ -38,8 +38,12 @@ const EditEntiteForm: React.FC = () => {
   const partenaires = partenairesData?.data || [];
 
   // Charger l'entité
-  const { data: entiteData, isLoading: loadingEntite, error: entiteError } = useQuery({
-    queryKey: ['entite', id],
+  const {
+    data: entiteData,
+    isLoading: loadingEntite,
+    error: entiteError,
+  } = useQuery({
+    queryKey: ["entite", id],
     queryFn: () => fetchEntiteById(parseInt(id!)),
     enabled: !!id,
   });
@@ -70,20 +74,22 @@ const EditEntiteForm: React.FC = () => {
       .substring(0, 2);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const handlePartenaireChange = (value: string) => {
     const idPartenaire = value === "none" ? 0 : parseInt(value);
-    setFormData(prev => ({ ...prev, id_partenaire: idPartenaire }));
-    
+    setFormData((prev) => ({ ...prev, id_partenaire: idPartenaire }));
+
     if (errors["id_partenaire"]) {
-      setErrors(prev => ({ ...prev, ["id_partenaire"]: "" }));
+      setErrors((prev) => ({ ...prev, ["id_partenaire"]: "" }));
     }
   };
 
@@ -99,7 +105,8 @@ const EditEntiteForm: React.FC = () => {
     }
 
     if (formData.localisation && formData.localisation.length < 2) {
-      newErrors.localisation = "La localisation doit contenir au moins 2 caractères";
+      newErrors.localisation =
+        "La localisation doit contenir au moins 2 caractères";
     }
 
     setErrors(newErrors);
@@ -111,8 +118,8 @@ const EditEntiteForm: React.FC = () => {
     mutationFn: (data: Partial<Entite>) => updateEntite(parseInt(id!), data),
     onSuccess: () => {
       toast.success("Entité mise à jour avec succès !");
-      queryClient.invalidateQueries({ queryKey: ['entites'] });
-      queryClient.invalidateQueries({ queryKey: ['entite', id] });
+      queryClient.invalidateQueries({ queryKey: ["entites"] });
+      queryClient.invalidateQueries({ queryKey: ["entite", id] });
       navigate("/gestion-administrative/entites");
     },
     onError: (error: unknown) => {
@@ -124,7 +131,7 @@ const EditEntiteForm: React.FC = () => {
     },
   });
 
-  const isPending = status === 'loading';
+  const isPending = status === "loading";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,12 +142,7 @@ const EditEntiteForm: React.FC = () => {
 
     // Utiliser la mutation updateEntiteMutation de TanStack Query
     updateEntiteMutation({
-      denomination: formData.denomination,
-      abreviation_nom: formData.abreviation_nom,
-      contact: formData.contact,
-      adresse_postal: formData.adresse_postal,
-      localisation: formData.localisation,
-      id_partenaire: formData.id_partenaire,
+      ...omit(formData, ["id_partenaire"]),
     });
   };
 
@@ -155,7 +157,9 @@ const EditEntiteForm: React.FC = () => {
   if (entiteError) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-500">Erreur lors du chargement de l'entité</div>
+        <div className="text-red-500">
+          Erreur lors du chargement de l'entité
+        </div>
       </div>
     );
   }
@@ -177,9 +181,7 @@ const EditEntiteForm: React.FC = () => {
               Modifier l'entité
             </h1>
           </div>
-          <p className="text-gray-500">
-            Modifiez les informations de l'entité
-          </p>
+          <p className="text-gray-500">Modifiez les informations de l'entité</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -200,7 +202,9 @@ const EditEntiteForm: React.FC = () => {
                     )}
                   </AvatarFallback>
                 </Avatar>
-                <p className="text-sm text-gray-500 mt-2">ID: {formData.id_entite}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  ID: {formData.id_entite}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -237,17 +241,23 @@ const EditEntiteForm: React.FC = () => {
               <div className="space-y-2">
                 <Label htmlFor="id_partenaire">Partenaire associé</Label>
                 <Select
-                  value={formData.id_partenaire === 0 ? "none" : formData.id_partenaire.toString()}
+                  value={
+                    formData.id_partenaire === 0 ||
+                    formData.id_partenaire === undefined ||
+                    formData.id_partenaire === null
+                      ? "none"
+                      : formData.id_partenaire.toString()
+                  }
                   onValueChange={handlePartenaireChange}
                   disabled={loadingPartenaires}
                 >
-                  <SelectTrigger className={errors["id_partenaire"] ? "border-red-500" : ""}>
+                  <SelectTrigger
+                    className={errors["id_partenaire"] ? "border-red-500" : ""}
+                  >
                     <SelectValue placeholder="Sélectionner un partenaire (optionnel)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">
-                      Aucun partenaire
-                    </SelectItem>
+                    <SelectItem value="none">Aucun partenaire</SelectItem>
                     {partenaires.map((partenaire) => (
                       <SelectItem
                         key={partenaire.id_partenaire}
@@ -259,7 +269,9 @@ const EditEntiteForm: React.FC = () => {
                   </SelectContent>
                 </Select>
                 {errors["id_partenaire"] && (
-                  <p className="text-red-500 text-sm">{errors["id_partenaire"]}</p>
+                  <p className="text-red-500 text-sm">
+                    {errors["id_partenaire"]}
+                  </p>
                 )}
                 <p className="text-sm text-gray-500">
                   Associer cette entité à un partenaire existant (optionnel)
@@ -277,7 +289,9 @@ const EditEntiteForm: React.FC = () => {
                       placeholder="ex: +225 0123456789"
                       value={formData.contact}
                       onChange={handleChange}
-                      className={`pl-10 ${errors.contact ? "border-red-500" : ""}`}
+                      className={`pl-10 ${
+                        errors.contact ? "border-red-500" : ""
+                      }`}
                     />
                   </div>
                   {errors.contact && (
@@ -295,11 +309,15 @@ const EditEntiteForm: React.FC = () => {
                       placeholder="ex: Abidjan, Côte d'Ivoire"
                       value={formData.localisation}
                       onChange={handleChange}
-                      className={`pl-10 ${errors.localisation ? "border-red-500" : ""}`}
+                      className={`pl-10 ${
+                        errors.localisation ? "border-red-500" : ""
+                      }`}
                     />
                   </div>
                   {errors.localisation && (
-                    <p className="text-red-500 text-sm">{errors.localisation}</p>
+                    <p className="text-red-500 text-sm">
+                      {errors.localisation}
+                    </p>
                   )}
                 </div>
               </div>
@@ -322,15 +340,29 @@ const EditEntiteForm: React.FC = () => {
                 </p>
               </div>
 
-              {formData.id_partenaire > 0 && (
+              {formData.id_partenaire && (
                 <div className="space-y-2">
                   <Label>Partenaire associé</Label>
                   <div className="p-3 bg-gray-50 rounded-lg border">
                     <p className="text-sm text-gray-600">
-                      Cette entité est associée au partenaire ID: {formData.id_partenaire}
+                      Cette entité est associée au partenaire{" "}
+                      {
+                        partenaires.find(
+                          (paternaire) =>
+                            paternaire.id_partenaire === formData.id_partenaire
+                        )?.nom_partenaire
+                      }{" "}
+                      -
+                      {
+                        partenaires.find(
+                          (paternaire) =>
+                            paternaire.id_partenaire === formData.id_partenaire
+                        )?.specialite
+                      }
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      La modification du partenaire associé se fait depuis la gestion des partenaires
+                      La modification du partenaire associé se fait depuis la
+                      gestion des partenaires
                     </p>
                   </div>
                 </div>
@@ -348,7 +380,9 @@ const EditEntiteForm: React.FC = () => {
             </Button>
             <Button type="submit" disabled={isPending}>
               <Save className="mr-2 h-4 w-4" />
-              {isPending ? "Sauvegarde en cours..." : "Sauvegarder les modifications"}
+              {isPending
+                ? "Sauvegarde en cours..."
+                : "Sauvegarder les modifications"}
             </Button>
           </div>
         </form>
@@ -357,4 +391,4 @@ const EditEntiteForm: React.FC = () => {
   );
 };
 
-export default EditEntiteForm; 
+export default EditEntiteForm;

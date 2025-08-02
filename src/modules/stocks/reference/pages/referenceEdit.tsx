@@ -55,7 +55,7 @@ import {
   categorieTypes,
   modeleTypes,
 } from "../../types/reference";
-import DebugZod from "../../utils/debug";
+// import DebugZod from "../../utils/debug";
 
 export type FormValues = z.infer<typeof referenceSchema>;
 
@@ -63,10 +63,9 @@ const DEFAULT_VALUES: Partial<FormValues> = {
   id_type_produit: 1,
   desi_produit: undefined,
   desc_produit: undefined,
-  caracteristiques: undefined,
+  caracteristiques_produit: undefined,
   emplacement_produit: undefined,
   code_produit: undefined,
-  
 };
 
 type ReferenceFieldName =
@@ -88,7 +87,6 @@ export default function ReferenceEditForm() {
   const { productCategories: categories } = useProductCategories();
   const { productFamilies: familles } = useProductFamilies();
   const { productMarques: marques } = useProductMarques();
-  const { productModels: modeles } = useProductModels();
   const { create } = useCreateProduct();
   const { update } = useUpadteProduct();
 
@@ -99,18 +97,8 @@ export default function ReferenceEditForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(referenceSchema),
     defaultValues: {
-      code_produit: product.data?.code_produit,
       id_type_produit: product.data?.id_type_produit ?? 1,
-      id_marque: product.data?.id_marque,
-      id_modele: product.data?.id_modele,
-      id_categorie: product.data?.id_categorie,
-      id_famille: product.data?.id_famille,
-      desi_produit: product.data?.desi_produit,
-      desc_produit: product.data?.desc_produit,
-      caracteristiques: product.data?.caracteristiques,
-      emplacement_produit: product.data?.emplacement_produit,
-      images: product.data?.images,
-      imagesMeta: product.data?.imagesMeta,
+      ...product.data,
     },
   });
 
@@ -120,6 +108,17 @@ export default function ReferenceEditForm() {
     "id_categorie",
     "id_famille",
   ]);
+
+  // Récupérer l'ID de la marque sélectionnée pour filtrer les modèles
+  const selectedMarqueId = form.watch("id_marque");
+  const { modelesByMarque } = useProductModels(undefined, selectedMarqueId);
+
+  // Réinitialiser le modèle quand la marque change (sauf en mode édition lors du chargement initial)
+  useEffect(() => {
+    if (selectedMarqueId && isFormDirty) {
+      form.resetField("id_modele");
+    }
+  }, [selectedMarqueId, form, isFormDirty]);
 
   // Utilities
   const cleanImageData = (images: ImageProduit[]) =>
@@ -150,19 +149,7 @@ export default function ReferenceEditForm() {
   useEffect(() => {
     if (isEditMode && product.data) {
       const formData = {
-        id_produit: product.data?.id_produit,
-        code_produit: product.data?.code_produit,
-        id_type_produit: product.data?.id_type_produit ?? 1,
-        id_marque: product.data?.id_marque,
-        id_modele: product.data?.id_modele,
-        id_categorie: product.data?.id_categorie,
-        id_famille: product.data?.id_famille,
-        desi_produit: product.data?.desi_produit,
-        desc_produit: product.data?.desc_produit,
-        caracteristiques: product.data?.caracteristiques,
-        emplacement_produit: product.data?.emplacement_produit,
-        images: product.data?.images,
-        imagesMeta: product.data?.imagesMeta,
+        ...product.data,
       };
 
       const images = product.data.images
@@ -180,7 +167,7 @@ export default function ReferenceEditForm() {
     if (
       (isEditMode && !isFormDirty) ||
       !marques.data ||
-      !modeles.data ||
+      !modelesByMarque.data ||
       !categories.data ||
       !familles.data ||
       !id_marque ||
@@ -196,7 +183,7 @@ export default function ReferenceEditForm() {
       Number(id_categorie),
       Number(id_famille),
       marques.data,
-      modeles.data,
+      modelesByMarque.data,
       categories.data,
       familles.data
     );
@@ -210,7 +197,7 @@ export default function ReferenceEditForm() {
   }, [
     watchedValues,
     marques.data,
-    modeles.data,
+    modelesByMarque.data,
     categories.data,
     familles.data,
     isEditMode,
@@ -396,6 +383,8 @@ export default function ReferenceEditForm() {
     data: unknown[] | undefined;
     name: ReferenceFieldName;
     label: string;
+    disabled?: boolean;
+    disabledPlaceholder?: string;
     getLabel: (item: unknown) => string;
   }[] = [
     {
@@ -405,9 +394,14 @@ export default function ReferenceEditForm() {
       getLabel: (item: unknown) => (item as marqueTypes).libelle_marque,
     },
     {
-      data: modeles.data?.map((item) => ({ ...item, id: item.id_modele })),
+      data: modelesByMarque.data?.map((item) => ({
+        ...item,
+        id: item.id_modele,
+      })),
       name: "id_modele",
       label: "Modèle",
+      disabled: !selectedMarqueId,
+      disabledPlaceholder: "Sélectionnez d'abord une marque",
       getLabel: (item: unknown) => (item as modeleTypes).libelle_modele,
     },
     {
@@ -449,23 +443,34 @@ export default function ReferenceEditForm() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Classification Section */}
               <div className="px-4 pb-4 rounded-md">
-                <DebugZod form={form} />
+                {/* <DebugZod form={form} /> */}
                 <h3 className="font-medium mb-4 text-lg">
                   Classification du produit
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {referenceData.map(({ data, name, label, getLabel }) => (
-                    <ReferenceSelect
-                      key={name}
-                      items={(data as { id: number }[]) ?? []}
-                      label={label}
-                      name={name}
-                      control={form.control}
-                      isRequired={true}
-                      getLabel={getLabel}
-                      onChange={handleFieldChange}
-                    />
-                  ))}
+                  {referenceData.map(
+                    ({
+                      data,
+                      name,
+                      label,
+                      disabled,
+                      disabledPlaceholder,
+                      getLabel,
+                    }) => (
+                      <ReferenceSelect
+                        key={name}
+                        items={(data as { id: number }[]) ?? []}
+                        label={label}
+                        name={name}
+                        control={form.control}
+                        isRequired={true}
+                        disabled={disabled}
+                        disabledPlaceholder={disabledPlaceholder}
+                        getLabel={getLabel}
+                        onChange={handleFieldChange}
+                      />
+                    )
+                  )}
 
                   <FormField
                     control={form.control}
@@ -672,7 +677,7 @@ export default function ReferenceEditForm() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <FormField
                   control={form.control}
-                  name="caracteristiques"
+                  name="caracteristiques_produit"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Caractéristiques</FormLabel>

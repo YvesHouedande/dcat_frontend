@@ -16,36 +16,41 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Save, Building, X, Plus } from "lucide-react";
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
-import { usePartenaireApi } from '@/modules/administration-Finnance/services/partenaireService';
+import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
 import { toast } from "sonner";
 
 const EditPartnerForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
-  const { 
-    fetchPartnerById, 
-    updatePartner, 
+
+  const {
+    fetchPartnerById,
+    updatePartner,
     fetchInterlocuteursByPartenaire,
     addInterlocuteur,
     updateInterlocuteur,
-    deleteInterlocuteur
+    deleteInterlocuteur,
   } = usePartenaireApi();
 
   // Charger le partenaire
-  const { data: partnerData, isLoading: loadingPartner, error: partnerError } = useQuery({
-    queryKey: ['partner', id],
+  const {
+    data: partnerData,
+    isLoading: loadingPartner,
+    error: partnerError,
+  } = useQuery({
+    queryKey: ["partner", id],
     queryFn: () => fetchPartnerById(parseInt(id!)),
     enabled: !!id,
   });
 
   // Charger les interlocuteurs
-  const { data: initialInterlocuteurs, isLoading: loadingInterlocuteurs } = useQuery({
-    queryKey: ['interlocuteurs', id],
-    queryFn: () => fetchInterlocuteursByPartenaire(parseInt(id!)),
-    enabled: !!id,
-  });
+  const { data: initialInterlocuteurs, isLoading: loadingInterlocuteurs } =
+    useQuery({
+      queryKey: ["interlocuteurs", id],
+      queryFn: () => fetchInterlocuteursByPartenaire(parseInt(id!)),
+      enabled: !!id,
+    });
 
   const [formData, setFormData] = useState<Partenaires>({
     id_partenaire: 0,
@@ -59,7 +64,9 @@ const EditPartnerForm: React.FC = () => {
   });
 
   const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
-  const [newInterlocuteur, setNewInterlocuteur] = useState<Omit<Interlocuteur, 'id_interlocuteur' | 'id_partenaire'>>({
+  const [newInterlocuteur, setNewInterlocuteur] = useState<
+    Omit<Interlocuteur, "id_interlocuteur" | "id_partenaire">
+  >({
     nom_interlocuteur: "",
     prenom_interlocuteur: "",
     fonction_interlocuteur: "",
@@ -68,14 +75,18 @@ const EditPartnerForm: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [interlocuteurErrors, setInterlocuteurErrors] = useState<Record<number, Record<string, string>>>({});
-  const [editingInterlocuteur, setEditingInterlocuteur] = useState<number | null>(null);
+  const [interlocuteurErrors, setInterlocuteurErrors] = useState<
+    Record<number, Record<string, string>>
+  >({});
+  const [editingInterlocuteur, setEditingInterlocuteur] = useState<
+    number | null
+  >(null);
 
   // Mettre à jour le formData et interlocuteurs quand les données sont chargées
   useEffect(() => {
     if (partnerData) setFormData(partnerData);
   }, [partnerData]);
-  
+
   useEffect(() => {
     if (initialInterlocuteurs) setInterlocuteurs(initialInterlocuteurs);
   }, [initialInterlocuteurs]);
@@ -105,22 +116,24 @@ const EditPartnerForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const handleSelectChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
-  const handleInterlocuteurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInterlocuteurChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const { name, value } = e.target;
-    setNewInterlocuteur(prev => ({ ...prev, [name]: value }));
+    setNewInterlocuteur((prev) => ({ ...prev, [name]: value }));
   };
 
   const addInterlocuteurHandler = async () => {
@@ -130,30 +143,34 @@ const EditPartnerForm: React.FC = () => {
       prenom_interlocuteur: "Prénom",
       contact_interlocuteur: "Contact",
       email_interlocuteur: "Email",
-      fonction_interlocuteur: "Fonction"
+      fonction_interlocuteur: "Fonction",
     };
 
     const missingFields = Object.entries(requiredFields)
-      .filter(([key]) => !newInterlocuteur[key as keyof typeof newInterlocuteur])
+      .filter(
+        ([key]) => !newInterlocuteur[key as keyof typeof newInterlocuteur]
+      )
       .map(([, label]) => label);
 
     if (missingFields.length > 0) {
-      setInterlocuteurErrors(prev => ({
+      setInterlocuteurErrors((prev) => ({
         ...prev,
         [-1]: {
-          general: `Les champs suivants sont obligatoires : ${missingFields.join(", ")}`
-        }
+          general: `Les champs suivants sont obligatoires : ${missingFields.join(
+            ", "
+          )}`,
+        },
       }));
       return;
     }
 
     // Validation de l'email
     if (!/^\S+@\S+\.\S+$/.test(newInterlocuteur.email_interlocuteur)) {
-      setInterlocuteurErrors(prev => ({
+      setInterlocuteurErrors((prev) => ({
         ...prev,
         [-1]: {
-          email_interlocuteur: "Format d'email invalide"
-        }
+          email_interlocuteur: "Format d'email invalide",
+        },
       }));
       return;
     }
@@ -161,10 +178,10 @@ const EditPartnerForm: React.FC = () => {
     try {
       const createdInterlocuteur = await addInterlocuteur({
         ...newInterlocuteur,
-        id_partenaire: parseInt(id!)
+        id_partenaire: parseInt(id!),
       });
 
-      setInterlocuteurs(prev => [...prev, createdInterlocuteur]);
+      setInterlocuteurs((prev) => [...prev, createdInterlocuteur]);
       setNewInterlocuteur({
         nom_interlocuteur: "",
         prenom_interlocuteur: "",
@@ -172,7 +189,7 @@ const EditPartnerForm: React.FC = () => {
         contact_interlocuteur: "",
         email_interlocuteur: "",
       });
-      setInterlocuteurErrors(prev => {
+      setInterlocuteurErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[-1];
         return newErrors;
@@ -194,7 +211,7 @@ const EditPartnerForm: React.FC = () => {
       prenom_interlocuteur: "Prénom",
       contact_interlocuteur: "Contact",
       email_interlocuteur: "Email",
-      fonction_interlocuteur: "Fonction"
+      fonction_interlocuteur: "Fonction",
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -202,22 +219,24 @@ const EditPartnerForm: React.FC = () => {
       .map(([, label]) => label);
 
     if (missingFields.length > 0) {
-      setInterlocuteurErrors(prev => ({
+      setInterlocuteurErrors((prev) => ({
         ...prev,
         [index]: {
-          general: `Les champs suivants sont obligatoires : ${missingFields.join(", ")}`
-        }
+          general: `Les champs suivants sont obligatoires : ${missingFields.join(
+            ", "
+          )}`,
+        },
       }));
       return;
     }
 
     // Validation de l'email
     if (!/^\S+@\S+\.\S+$/.test(interlocuteur.email_interlocuteur)) {
-      setInterlocuteurErrors(prev => ({
+      setInterlocuteurErrors((prev) => ({
         ...prev,
         [index]: {
-          email_interlocuteur: "Format d'email invalide"
-        }
+          email_interlocuteur: "Format d'email invalide",
+        },
       }));
       return;
     }
@@ -231,13 +250,15 @@ const EditPartnerForm: React.FC = () => {
           fonction_interlocuteur: interlocuteur.fonction_interlocuteur,
           contact_interlocuteur: interlocuteur.contact_interlocuteur,
           email_interlocuteur: interlocuteur.email_interlocuteur,
-          id_partenaire: interlocuteur.id_partenaire
+          id_partenaire: interlocuteur.id_partenaire,
         }
       );
 
-      setInterlocuteurs(prev => prev.map((item, i) => i === index ? updatedInterlocuteur : item));
+      setInterlocuteurs((prev) =>
+        prev.map((item, i) => (i === index ? updatedInterlocuteur : item))
+      );
       setEditingInterlocuteur(null);
-      setInterlocuteurErrors(prev => {
+      setInterlocuteurErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[index];
         return newErrors;
@@ -250,13 +271,18 @@ const EditPartnerForm: React.FC = () => {
   };
 
   const removeInterlocuteur = async (id: number, index: number) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cet interlocuteur ?")) {
+    if (
+      window.confirm("Êtes-vous sûr de vouloir supprimer cet interlocuteur ?")
+    ) {
       try {
         await deleteInterlocuteur(id);
-        setInterlocuteurs(prev => prev.filter((_, i) => i !== index));
+        setInterlocuteurs((prev) => prev.filter((_, i) => i !== index));
         toast.success("Interlocuteur supprimé avec succès !");
       } catch (error) {
-        console.error("Erreur lors de la suppression de l'interlocuteur:", error);
+        console.error(
+          "Erreur lors de la suppression de l'interlocuteur:",
+          error
+        );
         toast.error("Erreur lors de la suppression de l'interlocuteur");
       }
     }
@@ -300,11 +326,12 @@ const EditPartnerForm: React.FC = () => {
   };
 
   // Mutation pour la mise à jour du partenaire
-  const { mutate: updatePartenaire} = useMutation({
-    mutationFn: (data: Partial<Partenaires>) => updatePartner(parseInt(id!), data),
+  const { mutate: updatePartenaire } = useMutation({
+    mutationFn: (data: Partial<Partenaires>) =>
+      updatePartner(parseInt(id!), data),
     onSuccess: () => {
       toast.success("Partenaire mis à jour avec succès !");
-      queryClient.invalidateQueries(['partenaires']);
+      queryClient.invalidateQueries(["partenaires"]);
       navigate("/gestion-administrative/partenaires");
     },
     onError: (error: unknown) => {
@@ -346,7 +373,9 @@ const EditPartnerForm: React.FC = () => {
   if (partnerError) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-500">Erreur lors du chargement du partenaire</div>
+        <div className="text-red-500">
+          Erreur lors du chargement du partenaire
+        </div>
       </div>
     );
   }
@@ -375,7 +404,12 @@ const EditPartnerForm: React.FC = () => {
                 <Avatar className="h-20 w-20 border-2 border-gray-200">
                   <AvatarFallback className="bg-blue-500 text-white text-lg">
                     {formData.nom_partenaire ? (
-                      formData.nom_partenaire.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2)
+                      formData.nom_partenaire
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .substring(0, 2)
                     ) : (
                       <Building size={24} />
                     )}
@@ -393,7 +427,9 @@ const EditPartnerForm: React.FC = () => {
                   className={errors.nom_partenaire ? "border-red-500" : ""}
                 />
                 {errors.nom_partenaire && (
-                  <p className="text-red-500 text-sm">{errors.nom_partenaire}</p>
+                  <p className="text-red-500 text-sm">
+                    {errors.nom_partenaire}
+                  </p>
                 )}
               </div>
 
@@ -405,10 +441,14 @@ const EditPartnerForm: React.FC = () => {
                     name="telephone_partenaire"
                     value={formData.telephone_partenaire}
                     onChange={handleChange}
-                    className={errors.telephone_partenaire ? "border-red-500" : ""}
+                    className={
+                      errors.telephone_partenaire ? "border-red-500" : ""
+                    }
                   />
                   {errors.telephone_partenaire && (
-                    <p className="text-red-500 text-sm">{errors.telephone_partenaire}</p>
+                    <p className="text-red-500 text-sm">
+                      {errors.telephone_partenaire}
+                    </p>
                   )}
                 </div>
 
@@ -423,7 +463,9 @@ const EditPartnerForm: React.FC = () => {
                     className={errors.email_partenaire ? "border-red-500" : ""}
                   />
                   {errors.email_partenaire && (
-                    <p className="text-red-500 text-sm">{errors.email_partenaire}</p>
+                    <p className="text-red-500 text-sm">
+                      {errors.email_partenaire}
+                    </p>
                   )}
                 </div>
               </div>
@@ -433,9 +475,13 @@ const EditPartnerForm: React.FC = () => {
                   <Label htmlFor="specialite">Spécialité</Label>
                   <Select
                     value={formData.specialite}
-                    onValueChange={(value) => handleSelectChange("specialite", value)}
+                    onValueChange={(value) =>
+                      handleSelectChange("specialite", value)
+                    }
                   >
-                    <SelectTrigger className={errors.specialite ? "border-red-500" : ""}>
+                    <SelectTrigger
+                      className={errors.specialite ? "border-red-500" : ""}
+                    >
                       <SelectValue placeholder="Sélectionner une spécialité" />
                     </SelectTrigger>
                     <SelectContent>
@@ -455,9 +501,13 @@ const EditPartnerForm: React.FC = () => {
                   <Label htmlFor="type_partenaire">Type de partenaire</Label>
                   <Select
                     value={formData.type_partenaire}
-                    onValueChange={(value) => handleSelectChange("type_partenaire", value)}
+                    onValueChange={(value) =>
+                      handleSelectChange("type_partenaire", value)
+                    }
                   >
-                    <SelectTrigger className={errors.type_partenaire ? "border-red-500" : ""}>
+                    <SelectTrigger
+                      className={errors.type_partenaire ? "border-red-500" : ""}
+                    >
                       <SelectValue placeholder="Sélectionner un type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -469,7 +519,9 @@ const EditPartnerForm: React.FC = () => {
                     </SelectContent>
                   </Select>
                   {errors.type_partenaire && (
-                    <p className="text-red-500 text-sm">{errors.type_partenaire}</p>
+                    <p className="text-red-500 text-sm">
+                      {errors.type_partenaire}
+                    </p>
                   )}
                 </div>
               </div>
@@ -494,7 +546,9 @@ const EditPartnerForm: React.FC = () => {
                   value={formData.statut}
                   onValueChange={(value) => handleSelectChange("statut", value)}
                 >
-                  <SelectTrigger className={errors.statut ? "border-red-500" : ""}>
+                  <SelectTrigger
+                    className={errors.statut ? "border-red-500" : ""}
+                  >
                     <SelectValue placeholder="Sélectionner un statut" />
                   </SelectTrigger>
                   <SelectContent>
@@ -539,10 +593,12 @@ const EditPartnerForm: React.FC = () => {
                                 id={`nom_${index}`}
                                 value={interlocuteur.nom_interlocuteur}
                                 onChange={(e) => {
-                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  const updatedInterlocuteurs = [
+                                    ...interlocuteurs,
+                                  ];
                                   updatedInterlocuteurs[index] = {
                                     ...updatedInterlocuteurs[index],
-                                    nom_interlocuteur: e.target.value
+                                    nom_interlocuteur: e.target.value,
                                   };
                                   setInterlocuteurs(updatedInterlocuteurs);
                                 }}
@@ -554,40 +610,50 @@ const EditPartnerForm: React.FC = () => {
                                 id={`prenom_${index}`}
                                 value={interlocuteur.prenom_interlocuteur}
                                 onChange={(e) => {
-                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  const updatedInterlocuteurs = [
+                                    ...interlocuteurs,
+                                  ];
                                   updatedInterlocuteurs[index] = {
                                     ...updatedInterlocuteurs[index],
-                                    prenom_interlocuteur: e.target.value
+                                    prenom_interlocuteur: e.target.value,
                                   };
                                   setInterlocuteurs(updatedInterlocuteurs);
                                 }}
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`fonction_${index}`}>Fonction</Label>
+                              <Label htmlFor={`fonction_${index}`}>
+                                Fonction
+                              </Label>
                               <Input
                                 id={`fonction_${index}`}
                                 value={interlocuteur.fonction_interlocuteur}
                                 onChange={(e) => {
-                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  const updatedInterlocuteurs = [
+                                    ...interlocuteurs,
+                                  ];
                                   updatedInterlocuteurs[index] = {
                                     ...updatedInterlocuteurs[index],
-                                    fonction_interlocuteur: e.target.value
+                                    fonction_interlocuteur: e.target.value,
                                   };
                                   setInterlocuteurs(updatedInterlocuteurs);
                                 }}
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`contact_${index}`}>Contact</Label>
+                              <Label htmlFor={`contact_${index}`}>
+                                Contact
+                              </Label>
                               <Input
                                 id={`contact_${index}`}
                                 value={interlocuteur.contact_interlocuteur}
                                 onChange={(e) => {
-                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  const updatedInterlocuteurs = [
+                                    ...interlocuteurs,
+                                  ];
                                   updatedInterlocuteurs[index] = {
                                     ...updatedInterlocuteurs[index],
-                                    contact_interlocuteur: e.target.value
+                                    contact_interlocuteur: e.target.value,
                                   };
                                   setInterlocuteurs(updatedInterlocuteurs);
                                 }}
@@ -600,10 +666,12 @@ const EditPartnerForm: React.FC = () => {
                                 type="email"
                                 value={interlocuteur.email_interlocuteur}
                                 onChange={(e) => {
-                                  const updatedInterlocuteurs = [...interlocuteurs];
+                                  const updatedInterlocuteurs = [
+                                    ...interlocuteurs,
+                                  ];
                                   updatedInterlocuteurs[index] = {
                                     ...updatedInterlocuteurs[index],
-                                    email_interlocuteur: e.target.value
+                                    email_interlocuteur: e.target.value,
                                   };
                                   setInterlocuteurs(updatedInterlocuteurs);
                                 }}
@@ -643,12 +711,16 @@ const EditPartnerForm: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <p className="font-medium">
-                              {interlocuteur.nom_interlocuteur} {interlocuteur.prenom_interlocuteur}
+                              {interlocuteur.nom_interlocuteur}{" "}
+                              {interlocuteur.prenom_interlocuteur}
                             </p>
                             <p className="text-sm text-gray-500">
-                              {interlocuteur.fonction_interlocuteur} • {interlocuteur.contact_interlocuteur}
+                              {interlocuteur.fonction_interlocuteur} •{" "}
+                              {interlocuteur.contact_interlocuteur}
                             </p>
-                            <p className="text-sm text-gray-500">{interlocuteur.email_interlocuteur}</p>
+                            <p className="text-sm text-gray-500">
+                              {interlocuteur.email_interlocuteur}
+                            </p>
                           </div>
                           <div className="flex gap-2">
                             <Button
@@ -663,7 +735,12 @@ const EditPartnerForm: React.FC = () => {
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => removeInterlocuteur(interlocuteur.id_interlocuteur, index)}
+                              onClick={() =>
+                                removeInterlocuteur(
+                                  interlocuteur.id_interlocuteur,
+                                  index
+                                )
+                              }
                             >
                               <X size={16} />
                             </Button>

@@ -55,7 +55,7 @@ import {
   categorieTypes,
   modeleTypes,
 } from "@/modules/stocks/types/reference";
-import DebugZod from "@/modules/stocks/utils/debug";
+// import DebugZod from "@/modules/stocks/utils/debug";
 import { generateProductCode } from "@/modules/stocks/utils/generateProductCode";
 import { ImageDropzone } from "@/modules/stocks/reference/utils/ImageDropzone";
 
@@ -65,7 +65,7 @@ const DEFAULT_VALUES: Partial<FormValues> = {
   id_type_produit: 1,
   desi_produit: undefined,
   desc_produit: undefined,
-  caracteristiques: undefined,
+  caracteristiques_produit: undefined,
   emplacement_produit: undefined,
   code_produit: undefined,
 };
@@ -108,7 +108,7 @@ export default function ReferenceRegistration() {
       id_famille: product.data?.id_famille,
       desi_produit: product.data?.desi_produit,
       desc_produit: product.data?.desc_produit,
-      caracteristiques: product.data?.caracteristiques,
+      caracteristiques_produit: product.data?.caracteristiques_produit,
       emplacement_produit: product.data?.emplacement_produit,
       images: product.data?.images,
       imagesMeta: product.data?.imagesMeta,
@@ -160,7 +160,7 @@ export default function ReferenceRegistration() {
         id_famille: product.data?.id_famille,
         desi_produit: product.data?.desi_produit,
         desc_produit: product.data?.desc_produit,
-        caracteristiques: product.data?.caracteristiques,
+        caracteristiques_produit: product.data?.caracteristiques_produit,
         emplacement_produit: product.data?.emplacement_produit,
         images: product.data?.images,
         imagesMeta: product.data?.imagesMeta,
@@ -450,7 +450,7 @@ export default function ReferenceRegistration() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Classification Section */}
               <div className="px-4 pb-4 rounded-md">
-                <DebugZod form={form} />
+                {/* <DebugZod form={form} /> */}
                 <h3 className="font-medium mb-4 text-lg">
                   Classification du produit
                 </h3>
@@ -673,7 +673,7 @@ export default function ReferenceRegistration() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <FormField
                   control={form.control}
-                  name="caracteristiques"
+                  name="caracteristiques_produit"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Caractéristiques</FormLabel>

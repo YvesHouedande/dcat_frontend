@@ -200,9 +200,9 @@ export const useContratsApi = () => {
   );
 
   const deleteDocumentFromContrat = useCallback(
-    async (docId: string | number) => {
+    async (contratId: string | number, docId: string | number) => {
       const response = await api.delete(
-        `/administration/contrats/docContrat/${docId}`
+        `/administration/contrats/${contratId}/docContrat/${docId}`
       );
       return response.data;
     },

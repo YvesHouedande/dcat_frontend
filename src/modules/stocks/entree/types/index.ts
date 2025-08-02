@@ -13,13 +13,10 @@ export interface Product {
   // Autres propriétés si nécessaire
 }
 
-export interface PaginationParams<
-  TFilter extends Record<string, unknown> = Record<string, unknown>
-> {
+export interface PaginationParams {
   page: number;
   pageSize: number;
   search?: string;
-  filter?: TFilter;
 }
 
 export interface PaginatedResponse<T> {

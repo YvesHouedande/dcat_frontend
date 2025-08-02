@@ -56,7 +56,7 @@ export function ProductInstanceTable({
     hasNextPage,
     isFetchingNextPage,
     loading,
-  } = useProductInstances({ search: debouncedSearchTerm });
+  } = useProductInstances({ search: debouncedSearchTerm, typeId: 1 });
 
   // Pagination calculée à partir des pages
   const total = pages?.[0]?.total ? pages?.[0]?.total : 0;
