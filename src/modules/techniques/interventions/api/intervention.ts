@@ -88,10 +88,10 @@ export const deleteIntervention = async (id: number): Promise<ApiResponse<void>>
       // Supprimer tous les documents
       for (const document of documents) {
         try {
-          await removeDocumentFromIntervention(id, document.id_document);
-          console.log(`[API] Document ${document.id_document} supprimé de l'intervention ${id}`);
+          await removeDocumentFromIntervention(id, document.id_documents);
+          console.log(`[API] Document ${document.id_documents} supprimé de l'intervention ${id}`);
         } catch (documentError) {
-          console.error(`[API] Erreur lors de la suppression du document ${document.id_document}:`, documentError);
+          console.error(`[API] Erreur lors de la suppression du document ${document.id_documents}:`, documentError);
         }
       }
     } catch (documentsError) {

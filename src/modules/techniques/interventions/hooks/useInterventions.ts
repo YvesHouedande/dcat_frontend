@@ -36,9 +36,9 @@ type AssignmentResult = {
 
 // Fonction utilitaire pour extraire l'ID de l'intervention depuis la réponse API
 export const extractInterventionId = (response: ApiResponse<Intervention>): number => {
-  // Essayer response.data.intervention.id_intervention (structure réelle de l'API)
-  if (response.data?.intervention?.id_intervention) {
-    return response.data.intervention.id_intervention;
+  // Essayer response.data.id_intervention (si data est directement l'intervention)
+  if (response.data && hasInterventionId(response.data)) {
+    return response.data.id_intervention;
   }
   
   // Essayer response.intervention.id_intervention (fallback)

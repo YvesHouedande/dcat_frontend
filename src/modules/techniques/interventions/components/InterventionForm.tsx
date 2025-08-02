@@ -265,7 +265,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              field.onChange(field.value.filter((id) => id !== employeId));
+                              field.onChange((field.value || []).filter((id) => id !== employeId));
                             }}
                           >
                             ×
