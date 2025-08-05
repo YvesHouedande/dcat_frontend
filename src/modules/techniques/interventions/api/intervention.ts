@@ -50,10 +50,30 @@ export const createIntervention = async (payload: CreateInterventionPayload): Pr
 
 export const updateIntervention = async (id: number, payload: UpdateInterventionPayload): Promise<ApiResponse<Intervention>> => {
   try {
-    const response = await axios.put(`${BASE_PATH}/${id}`, payload);
+    console.log(`[API] Tentative de mise à jour de l'intervention ${id}`);
+    console.log(`[API] Payload envoyé:`, payload);
+    console.log(`[API] URL: ${BASE_PATH}/${id}`);
+    
+    // Configuration avec timeout plus long pour les textes longs
+    const config = {
+      timeout: 30000, // 30 secondes au lieu du timeout par défaut
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    };
+    
+    const response = await axios.put(`${BASE_PATH}/${id}`, payload, config);
+    
+    console.log(`[API] Réponse de mise à jour:`, response.data);
     return response.data;
   } catch (error) {
-    console.error(`Erreur lors de la mise à jour de l'intervention ${id}:`, error);
+    console.error(`[API] Erreur lors de la mise à jour de l'intervention ${id}:`, error);
+    console.error(`[API] Détails de l'erreur:`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
     throw error;
   }
 };
@@ -126,9 +146,9 @@ export const assignSuperviseurToIntervention = async (interventionId: number, su
   try {
     console.log(`[API] Tentative d'assignation du superviseur: intervention ${interventionId}, superviseur ${superviseurId}`);
     
-    // Essayer d'abord la mise à jour directe du champ superviseur
+    // Essayer d'abord la mise à jour directe du champ id_superviseur
     try {
-      const response = await updateIntervention(interventionId, { superviseur: superviseurId });
+      const response = await updateIntervention(interventionId, { id_superviseur: superviseurId });
       console.log(`[API] Assignation du superviseur réussie via updateIntervention:`, response);
       return response;
     } catch (updateError) {

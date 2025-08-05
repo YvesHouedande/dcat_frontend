@@ -1,29 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  getInterventions,
-  createIntervention,
-  updateIntervention,
+import { toast } from 'sonner';
+import { 
+  getInterventions, 
+  getInterventionById, 
+  createIntervention, 
+  updateIntervention, 
   deleteIntervention,
   assignEmployeeToIntervention,
-  assignSuperviseurToIntervention,
   removeEmployeeFromIntervention,
-  getInterventionById
+  assignSuperviseurToIntervention
 } from '../api/intervention';
-import { Intervention, UpdateInterventionPayload, ApiResponse } from '../interface/interface';
-import { toast } from 'sonner';
+import { Intervention, ApiResponse, UpdateInterventionPayload } from '../interface/interface';
+import { 
+  hasInterventionId, 
+  isRecursiveObject,
+  findInterventionIdRecursively 
+} from '../types/utils';
 
 // Clés de requête pour TanStack Query
-export const interventionKeys = {
+const interventionKeys = {
   all: ['interventions'] as const,
   lists: () => [...interventionKeys.all, 'list'] as const,
   list: (filters: string) => [...interventionKeys.lists(), { filters }] as const,
   details: () => [...interventionKeys.all, 'detail'] as const,
   detail: (id: number) => [...interventionKeys.details(), id] as const,
-};
-
-// Type guard pour vérifier si un objet a une propriété id_intervention
-const hasInterventionId = (obj: unknown): obj is { id_intervention: number } => {
-  return typeof obj === 'object' && obj !== null && 'id_intervention' in obj;
 };
 
 // Types pour les résultats d'assignation
@@ -38,18 +38,38 @@ type AssignmentResult = {
 export const extractInterventionId = (response: ApiResponse<Intervention>): number => {
   // Essayer response.data.id_intervention (si data est directement l'intervention)
   if (response.data && hasInterventionId(response.data)) {
+    console.log("✅ [extractInterventionId] Trouvé dans response.data.id_intervention:", response.data.id_intervention);
     return response.data.id_intervention;
   }
   
-  // Essayer response.intervention.id_intervention (fallback)
-  if (response.intervention?.id_intervention) {
+  // Essayer response.intervention.id_intervention
+  if (response.intervention && hasInterventionId(response.intervention)) {
+    console.log("✅ [extractInterventionId] Trouvé dans response.intervention.id_intervention:", response.intervention.id_intervention);
     return response.intervention.id_intervention;
   }
   
-  // Essayer response.id_intervention (si la réponse est directement l'intervention)
+  // Essayer si la réponse est directement l'intervention (sans wrapper ApiResponse)
   if (hasInterventionId(response)) {
+    console.log("✅ [extractInterventionId] Trouvé directement dans response.id_intervention:", response.id_intervention);
     return response.id_intervention;
   }
+  
+  // Version de secours : chercher récursivement dans l'objet
+  if (isRecursiveObject(response)) {
+    const foundId = findInterventionIdRecursively(response);
+    if (foundId !== null) {
+      console.log("✅ [extractInterventionId] Trouvé récursivement:", foundId);
+      return foundId;
+    }
+  }
+  
+  // Log détaillé pour debug
+  console.error("❌ [extractInterventionId] Impossible de trouver l'ID. Structure de la réponse:");
+  console.error("- response.data:", response.data);
+  console.error("- response.intervention:", response.intervention);
+  console.error("- response.success:", response.success);
+  console.error("- response.message:", response.message);
+  console.error("- JSON complet:", JSON.stringify(response, null, 2));
   
   throw new Error("Impossible de récupérer l'ID de l'intervention depuis la réponse API");
 };

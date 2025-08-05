@@ -48,6 +48,10 @@ import { fr } from "date-fns/locale";
 import { Plus, FileText, BarChart3, TrendingUp, Clock, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAssignEmployeesToIntervention, extractInterventionId } from "../hooks/useInterventions";
+import { 
+  isRecursiveObject,
+  findInterventionIdRecursively 
+} from "../types/utils";
 
 export const InterventionsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -223,13 +227,13 @@ export const InterventionsPage: React.FC = () => {
       const formattedData = {
         date_intervention: data.date_intervention,
         id_partenaire: id_partenaire,
-        probleme_signale: truncateText(data.probleme_signale || "", 50),
+        probleme_signale: data.probleme_signale || "",
         type_intervention: truncateText(data.type_intervention || "", 50),
         type_defaillance: truncateText(data.type_defaillance || "", 50),
         cause_defaillance: truncateText(data.cause_defaillance || "", 50),
         detail_cause: data.detail_cause || "",
-        rapport_intervention: truncateText(data.rapport_intervention || "", 50),
-        recommandation: truncateText(data.recommandation || "", 50),
+        rapport_intervention: data.rapport_intervention || "",
+        recommandation: data.recommandation || "",
         duree: truncateText(data.duree || "", 50),
         lieu: truncateText(data.lieu || "", 50),
         mode_intervention: truncateText(
@@ -276,8 +280,37 @@ export const InterventionsPage: React.FC = () => {
           );
         }
 
+        // Log détaillé avant extraction de l'ID
+        console.log("🔍 [InterventionsPage] Avant extractInterventionId:");
+        console.log("- Type de response:", typeof response);
+        console.log("- Clés de response:", Object.keys(response || {}));
+        console.log("- response.data:", response.data);
+        console.log("- response.intervention:", response.intervention);
+        console.log("- response.success:", response.success);
+
         // Récupérer l'ID de l'intervention créée selon la structure de réponse
-        const interventionId = extractInterventionId(response);
+        let interventionId: number;
+        try {
+          interventionId = extractInterventionId(response);
+        } catch (extractError) {
+          console.error("❌ [InterventionsPage] Erreur lors de l'extraction de l'ID:", extractError);
+          
+          // Solution de secours : chercher l'ID manuellement
+          console.log("🔄 [InterventionsPage] Tentative de récupération manuelle de l'ID...");
+          
+          // Essayer différentes structures possibles
+          if (isRecursiveObject(response)) {
+            const foundId = findInterventionIdRecursively(response);
+            if (foundId !== null) {
+              console.log("✅ [InterventionsPage] ID trouvé manuellement:", foundId);
+              interventionId = foundId;
+            } else {
+              throw new Error("Impossible de récupérer l'ID de l'intervention - aucune méthode n'a fonctionné");
+            }
+          } else {
+            throw new Error("Réponse invalide - impossible de récupérer l'ID");
+          }
+        }
         
         console.log("ID de l'intervention créée:", interventionId);
         

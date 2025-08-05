@@ -153,11 +153,11 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
     // Charger le superviseur via l'API dédiée
     // Charger le superviseur si superviseur existe
     const loadSuperviseur = async () => {
-      if (intervention.superviseur) {
+      if (intervention.id_superviseur) {
         try {
           const employesResponse = await getEmployes({ limit: 100, page: 1 });
           const superviseurFound = employesResponse.find(
-            (e) => e.id_employes === intervention.superviseur
+            (e) => e.id_employes === intervention.id_superviseur
           );
           setSuperviseur(superviseurFound || null);
         } catch {
@@ -170,7 +170,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
     
     loadContrat();
     loadSuperviseur();
-  }, [loadData, intervention.id_contrat, intervention.superviseur, fetchContratById, getEmployes]);
+  }, [loadData, intervention.id_contrat, intervention.id_superviseur, fetchContratById, getEmployes]);
 
   const handleDeleteDocument = async (documentId: number) => {
     try {
@@ -248,7 +248,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
     if (!superviseur) return;
     try {
       // Mettre à jour l'intervention pour retirer le superviseur
-      await updateIntervention(intervention.id_intervention, { superviseur: undefined });
+      await updateIntervention(intervention.id_intervention, { id_superviseur: null });
       toast.success('Superviseur retiré avec succès');
       setSuperviseur(null);
     } catch (error) {

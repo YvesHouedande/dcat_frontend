@@ -44,9 +44,9 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterDefaillance, setFilterDefaillance] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterDefaillance, setFilterDefaillance] = useState<string>('all');
   const itemsPerPage = 10;
 
   // Utiliser TanStack Query pour charger les interventions
@@ -139,9 +139,9 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
 
   const clearFilters = () => {
     setSearchTerm('');
-    setFilterType('');
-    setFilterStatus('');
-    setFilterDefaillance('');
+    setFilterType('all');
+    setFilterStatus('all');
+    setFilterDefaillance('all');
   };
 
   const hasActiveFilters = searchTerm || (filterType && filterType !== 'all') || (filterStatus && filterStatus !== 'all') || (filterDefaillance && filterDefaillance !== 'all');
@@ -215,8 +215,11 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="Corrective">Corrective</SelectItem>
-                <SelectItem value="Préventive">Préventive</SelectItem>
+                {[...new Set(allInterventions.map(i => i.type_intervention).filter(Boolean))].map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -225,10 +228,12 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
                 <SelectValue placeholder="Statut" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="à faire">À faire</SelectItem>
-                <SelectItem value="en cours">En cours</SelectItem>
-                <SelectItem value="terminé">Terminé</SelectItem>
-                <SelectItem value="planifié">Planifié</SelectItem>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                {[...new Set(allInterventions.map(i => i.statut_intervention).filter(Boolean))].map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -238,9 +243,11 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes les défaillances</SelectItem>
-                <SelectItem value="Électrique">Électrique</SelectItem>
-                <SelectItem value="Matérielle">Matérielle</SelectItem>
-                <SelectItem value="Logiciel">Logiciel</SelectItem>
+                {[...new Set(allInterventions.map(i => i.type_defaillance).filter(Boolean))].map((defaillance) => (
+                  <SelectItem key={defaillance} value={defaillance}>
+                    {defaillance}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -267,6 +274,22 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
           {allInterventions.length !== filteredInterventions.length && (
             <span> sur {allInterventions.length} au total</span>
           )}
+          
+          {/* Afficher les filtres actifs */}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {filterType && filterType !== 'all' && (
+              <Badge variant="secondary">Type: {filterType}</Badge>
+            )}
+            {filterStatus && filterStatus !== 'all' && (
+              <Badge variant="secondary">Statut: {filterStatus}</Badge>
+            )}
+            {filterDefaillance && filterDefaillance !== 'all' && (
+              <Badge variant="secondary">Défaillance: {filterDefaillance}</Badge>
+            )}
+            {searchTerm && (
+              <Badge variant="secondary">Recherche: "{searchTerm}"</Badge>
+            )}
+          </div>
         </div>
       )}
 

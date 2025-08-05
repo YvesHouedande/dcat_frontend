@@ -93,7 +93,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
       mode_intervention: intervention?.mode_intervention || '',
       statut_intervention: (intervention?.statut_intervention as 'à faire' | 'en cours' | 'en attente' | 'terminé') || undefined,
       employes: intervention?.employes?.map(e => e.id_employes) || [],
-      superviseur: intervention?.superviseur || undefined,
+      superviseur: intervention?.id_superviseur || undefined,
     },
   });
 
@@ -169,7 +169,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                   <FormLabel>Client</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value.toString()}
+                    value={field.value ? field.value.toString() : ''}
                   >
                     <FormControl>
                       <SelectTrigger>

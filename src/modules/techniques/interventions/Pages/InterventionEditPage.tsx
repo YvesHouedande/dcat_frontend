@@ -7,6 +7,15 @@ import { getInterventionById, updateIntervention, assignEmployeeToIntervention, 
 import { InterventionForm } from "../components/InterventionForm";
 import { useQueryClient } from "@tanstack/react-query";
 
+// Fonction utilitaire pour tronquer les textes très longs
+const truncateLongText = (text: string | undefined, maxLength: number = 5000): string | undefined => {
+  if (!text) return text;
+  if (text.length <= maxLength) return text;
+  
+  console.warn(`⚠️ [InterventionEditPage] Texte tronqué de ${text.length} à ${maxLength} caractères`);
+  return text.substring(0, maxLength) + "...";
+};
+
 // Type pour les données du formulaire
 type FormData = {
   date_intervention: string;
@@ -46,10 +55,26 @@ export const InterventionEditPage: React.FC = () => {
       if (!id) return;
 
       try {
-        const interventionResponse = await getInterventionById(parseInt(id));
+        const [interventionResponse, employeesResponse] = await Promise.all([
+          getInterventionById(parseInt(id)),
+          getInterventionEmployees(parseInt(id))
+        ]);
         
         if (interventionResponse.data) {
-          setIntervention(interventionResponse.data);
+          // Charger les employés assignés et les ajouter à l'intervention
+          const employees = employeesResponse.data || [];
+          
+          console.log("🔍 [InterventionEditPage] Employés chargés:", employees);
+          console.log("🔍 [InterventionEditPage] Nombre d'employés:", employees.length);
+          
+          const interventionWithEmployees = {
+            ...interventionResponse.data,
+            employes: employees
+          };
+          
+          console.log("🔍 [InterventionEditPage] Intervention avec employés:", interventionWithEmployees);
+          
+          setIntervention(interventionWithEmployees);
         } else {
           toast.error("Intervention non trouvée");
           navigate("/gestion-des-interventions/interventions");
@@ -70,81 +95,104 @@ export const InterventionEditPage: React.FC = () => {
     if (!id) return;
     setIsLoading(true);
 
-          try {
-        // Préparer le payload de mise à jour (sans les employés ni le superviseur)
-        const interventionData: Partial<Intervention> = {
-          date_intervention: data.date_intervention,
-          id_partenaire: data.id_partenaire,
-          probleme_signale: data.probleme_signale,
-          type_intervention: data.type_intervention,
-          type_defaillance: data.type_defaillance,
-          cause_defaillance: data.cause_defaillance,
-          detail_cause: data.detail_cause,
-          rapport_intervention: data.rapport_intervention,
-          recommandation: data.recommandation,
-          duree: data.duree,
-          lieu: data.lieu,
-          mode_intervention: data.mode_intervention,
-          statut_intervention: data.statut_intervention,
-          id_intervention: parseInt(id),
-          type: intervention?.type || "intervention",
-          id_contrat: data.id_contrat ?? null,
-        };
+    try {
+      // Préparer le payload de mise à jour (sans les employés ni le superviseur)
+      const interventionData: Partial<Intervention> = {};
       
-        // Mettre à jour l'intervention
-        await updateIntervention(parseInt(id), interventionData as Intervention);
-
-        // Gérer les assignations d'employés séparément
-        const interventionId = parseInt(id);
-        
-        // Récupérer les employés actuellement assignés
-        const currentEmployeesResponse = await getInterventionEmployees(interventionId);
-        const currentEmployees = currentEmployeesResponse.data || [];
-        const currentEmployeeIds = currentEmployees.map(emp => emp.id_employes);
-        
-        // Identifier les employés à ajouter et à supprimer
-        const employeesToAdd = (data.employes || []).filter(id => !currentEmployeeIds.includes(id));
-        const employeesToRemove = currentEmployeeIds.filter(id => !(data.employes || []).includes(id));
-
-        // Supprimer les employés qui ne sont plus assignés
-        for (const employeeId of employeesToRemove) {
-          try {
-            await removeEmployeeFromIntervention(interventionId, employeeId);
-            console.log(`Employé ${employeeId} retiré avec succès`);
-          } catch (error) {
-            console.error(`Erreur lors du retrait de l'employé ${employeeId}:`, error);
-          }
+      // Ajouter seulement les champs avec des valeurs valides
+      if (data.date_intervention) interventionData.date_intervention = data.date_intervention;
+      if (data.id_partenaire) interventionData.id_partenaire = data.id_partenaire;
+      if (data.probleme_signale !== undefined) interventionData.probleme_signale = truncateLongText(data.probleme_signale);
+      if (data.type_intervention) interventionData.type_intervention = data.type_intervention;
+      if (data.type_defaillance) interventionData.type_defaillance = data.type_defaillance;
+      if (data.cause_defaillance) interventionData.cause_defaillance = data.cause_defaillance;
+      if (data.detail_cause !== undefined) interventionData.detail_cause = truncateLongText(data.detail_cause);
+      if (data.rapport_intervention !== undefined) interventionData.rapport_intervention = truncateLongText(data.rapport_intervention);
+      if (data.recommandation !== undefined) interventionData.recommandation = truncateLongText(data.recommandation);
+      if (data.duree) interventionData.duree = data.duree;
+      if (data.lieu) interventionData.lieu = data.lieu;
+      if (data.mode_intervention) interventionData.mode_intervention = data.mode_intervention;
+      if (data.statut_intervention) interventionData.statut_intervention = data.statut_intervention;
+      if (intervention?.type) interventionData.type = intervention.type;
+      if (data.id_contrat !== undefined) interventionData.id_contrat = data.id_contrat;
+    
+      console.log("🔍 [InterventionEditPage] Données envoyées à updateIntervention:", interventionData);
+      console.log("🔍 [InterventionEditPage] ID de l'intervention:", id);
+      
+      // Mesurer la taille des données
+      const payloadSize = JSON.stringify(interventionData).length;
+      console.log("🔍 [InterventionEditPage] Taille du payload:", payloadSize, "caractères");
+      
+      // Vérifier les champs de texte long
+      const longTextFields = {
+        probleme_signale: interventionData.probleme_signale?.length || 0,
+        detail_cause: interventionData.detail_cause?.length || 0,
+        rapport_intervention: interventionData.rapport_intervention?.length || 0,
+        recommandation: interventionData.recommandation?.length || 0
+      };
+      console.log("🔍 [InterventionEditPage] Tailles des champs de texte:", longTextFields);
+      
+      // Avertissement si un champ est très long
+      Object.entries(longTextFields).forEach(([field, length]) => {
+        if (length > 1000) {
+          console.warn(`⚠️ [InterventionEditPage] Champ ${field} très long: ${length} caractères`);
         }
+      });
+    
+      // Mettre à jour l'intervention
+      await updateIntervention(parseInt(id), interventionData as Intervention);
 
-        // Ajouter les nouveaux employés
-        for (const employeeId of employeesToAdd) {
-          try {
-            await assignEmployeeToIntervention(interventionId, employeeId);
-            console.log(`Employé ${employeeId} assigné avec succès`);
-          } catch (error) {
-            console.error(`Erreur lors de l'assignation de l'employé ${employeeId}:`, error);
-          }
-        }
+      // Gérer les assignations d'employés séparément
+      const interventionId = parseInt(id);
+      
+      // Récupérer les employés actuellement assignés
+      const currentEmployeesResponse = await getInterventionEmployees(interventionId);
+      const currentEmployees = currentEmployeesResponse.data || [];
+      const currentEmployeeIds = currentEmployees.map(emp => emp.id_employes);
+      
+      // Identifier les employés à ajouter et à supprimer
+      const employeesToAdd = (data.employes || []).filter(id => !currentEmployeeIds.includes(id));
+      const employeesToRemove = currentEmployeeIds.filter(id => !(data.employes || []).includes(id));
 
-        // Gérer le superviseur séparément
+      // Supprimer les employés qui ne sont plus assignés
+      for (const employeeId of employeesToRemove) {
         try {
-          // Vérifier si le superviseur a changé
-          const currentSuperviseur = intervention?.superviseur;
-          
-          if (currentSuperviseur !== data.superviseur) {
-            // Assigner le nouveau superviseur via la fonction dédiée
-            if (data.superviseur && data.superviseur > 0) {
-              await assignSuperviseurToIntervention(interventionId, data.superviseur);
-              console.log(`Nouveau superviseur ${data.superviseur} assigné avec succès`);
-            } else {
-              // Si aucun superviseur n'est sélectionné, mettre à jour le champ à undefined
-              await updateIntervention(interventionId, { superviseur: undefined });
-              console.log(`Superviseur retiré avec succès`);
-            }
-          }
-        } catch (superviseurError) {
-          console.error(`Erreur lors de la gestion du superviseur:`, superviseurError);
+          await removeEmployeeFromIntervention(interventionId, employeeId);
+          console.log(`Employé ${employeeId} retiré avec succès`);
+        } catch (error) {
+          console.error(`Erreur lors du retrait de l'employé ${employeeId}:`, error);
         }
+      }
+
+      // Ajouter les nouveaux employés
+      for (const employeeId of employeesToAdd) {
+        try {
+          await assignEmployeeToIntervention(interventionId, employeeId);
+          console.log(`Employé ${employeeId} assigné avec succès`);
+        } catch (error) {
+          console.error(`Erreur lors de l'assignation de l'employé ${employeeId}:`, error);
+        }
+      }
+
+      // Gérer le superviseur séparément
+      try {
+        // Vérifier si le superviseur a changé
+        const currentSuperviseur = intervention?.id_superviseur;
+        
+        if (currentSuperviseur !== data.superviseur) {
+          // Assigner le nouveau superviseur via la fonction dédiée
+          if (data.superviseur && data.superviseur > 0) {
+            await assignSuperviseurToIntervention(interventionId, data.superviseur);
+            console.log(`Nouveau superviseur ${data.superviseur} assigné avec succès`);
+          } else {
+            // Si aucun superviseur n'est sélectionné, mettre à jour le champ à null
+            await updateIntervention(interventionId, { id_superviseur: null });
+            console.log(`Superviseur retiré avec succès`);
+          }
+        }
+      } catch (superviseurError) {
+        console.error(`Erreur lors de la gestion du superviseur:`, superviseurError);
+      }
 
       toast.success("L'intervention a été mise à jour avec succès");
       

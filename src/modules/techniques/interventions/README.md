@@ -8,7 +8,7 @@ Ce module gère les interventions techniques avec un système d'assignation d'em
 
 ### Concept clé
 - Le **superviseur est un employé** comme les autres
-- Il est **assigné via le champ `superviseur`** de l'intervention (pas via la relation employé-intervention)
+- Il est **assigné via le champ `id_superviseur`** de l'intervention (pas via la relation employé-intervention)
 - Les **employés** sont assignés via la relation employé-intervention
 - **Contrainte métier** : un seul superviseur par intervention
 
@@ -18,7 +18,7 @@ Ce module gère les interventions techniques avec un système d'assignation d'em
 interface Intervention {
   id_intervention: number;
   // ... autres champs
-  superviseur: number; // ID du superviseur (employé) - champ direct
+  id_superviseur: number | null; // ID du superviseur (employé) - champ direct, peut être null
   employes?: Employe[]; // Relation employés-intervention (via table de liaison)
 }
 ```
@@ -26,10 +26,11 @@ interface Intervention {
 ### Différence entre superviseur et employés
 
 **Le superviseur :**
-- C'est un **champ direct** dans l'objet `Intervention` (`superviseur: number`)
+- C'est un **champ direct** dans l'objet `Intervention` (`id_superviseur: number | null`)
 - Représente l'ID de l'employé qui supervise l'intervention
 - **Un seul superviseur** par intervention
-- **Assigné via** `assignSuperviseurToIntervention()` qui met à jour le champ `superviseur`
+- **Peut être null** si aucun superviseur n'est assigné
+- **Assigné via** `assignSuperviseurToIntervention()` qui met à jour le champ `id_superviseur`
 
 **Les employés :**
 - C'est une **relation** via une table de liaison employé-intervention
@@ -39,14 +40,14 @@ interface Intervention {
 ### API Functions
 
 ```typescript
-// Pour assigner un superviseur (met à jour le champ superviseur)
+// Pour assigner un superviseur (met à jour le champ id_superviseur)
 assignSuperviseurToIntervention(interventionId: number, superviseurId: number)
 
 // Pour assigner un employé (crée une relation employé-intervention)
 assignEmployeeToIntervention(interventionId: number, employeeId: number)
 
-// Pour retirer un superviseur (met à jour le champ superviseur à undefined)
-updateIntervention(interventionId, { superviseur: undefined })
+// Pour retirer un superviseur (met à jour le champ id_superviseur à null)
+updateIntervention(interventionId, { id_superviseur: null })
 
 // Pour retirer un employé (supprime la relation employé-intervention)
 removeEmployeeFromIntervention(interventionId: number, employeeId: number)
@@ -76,12 +77,12 @@ useAssignEmployeesToIntervention()
 
 1. **Mettre à jour l'intervention** avec `updateIntervention()` (sans employés ni superviseur)
 2. **Gérer les employés** : ajouter/supprimer via `assignEmployeeToIntervention()` et `removeEmployeeFromIntervention()`
-3. **Gérer le superviseur** : assigner/retirer via `assignSuperviseurToIntervention()` et `updateIntervention({ superviseur: undefined })`
+3. **Gérer le superviseur** : assigner/retirer via `assignSuperviseurToIntervention()` et `updateIntervention({ id_superviseur: null })`
 
 ### Affichage dans les composants
 
 **Dans InterventionDetails.tsx :**
-- **Superviseur** : Chargé depuis `intervention.superviseur`
+- **Superviseur** : Chargé depuis `intervention.id_superviseur`
 - **Employés** : Chargés via `getInterventionEmployees()`
 
 **Séparation visuelle :**
@@ -94,4 +95,5 @@ useAssignEmployeesToIntervention()
 2. **Contrainte métier** : Un seul superviseur par intervention
 3. **Flexibilité** : Les employés peuvent être multiples
 4. **Cohérence** : Le superviseur est toujours un employé existant
-5. **Performance** : Pas besoin de filtrer les employés pour identifier le superviseur 
+5. **Performance** : Pas besoin de filtrer les employés pour identifier le superviseur
+6. **Nullabilité** : Le superviseur peut être null si non assigné 
