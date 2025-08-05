@@ -68,12 +68,19 @@ export const updateIntervention = async (id: number, payload: UpdateIntervention
     return response.data;
   } catch (error) {
     console.error(`[API] Erreur lors de la mise à jour de l'intervention ${id}:`, error);
-    console.error(`[API] Détails de l'erreur:`, {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message
-    });
+    
+    // Type guard pour vérifier si c'est une erreur Axios
+    if (axios.isAxiosError(error)) {
+      console.error(`[API] Détails de l'erreur:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+    } else {
+      console.error(`[API] Erreur non-Axios:`, error);
+    }
+    
     throw error;
   }
 };
