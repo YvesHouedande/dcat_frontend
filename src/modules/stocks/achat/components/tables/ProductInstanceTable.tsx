@@ -1,5 +1,5 @@
 // src/components/tables/ProductInstanceTable.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
