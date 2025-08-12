@@ -1,5 +1,5 @@
 // src/components/tables/ProductInstanceTable.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -20,26 +20,53 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   MoreHorizontal,
-  Search,
   Edit,
   Trash2,
-  Plus,
+  Filter,
+  X,
+  Calendar as CalendarIcon,
   Package,
+  Plus,
 } from "lucide-react";
 // import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
 import { ProductInstanceFormValues } from "../../schemas/productInstanceSchema";
 import { formatCurrency } from "@/modules/stocks/utils/helpers";
 import { useProductInstances } from "../../hooks/useProductInstances";
 import { useDebounce } from "../../utils/helpers";
+import { ProductCombobox } from "@/components/combobox/ProductCombobox";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 interface ProductInstanceTableProps {
   onEdit: (instance: ProductInstanceFormValues) => void;
   onDelete: (id: string | number) => void;
   onAdd: () => void;
 }
 
-// interface Props {
-//   Id: string | number;
-// }
+interface Filters {
+  search: string;
+  id_type_produit?: number;
+  prix_de_vente_min?: number;
+  prix_de_vente_max?: number;
+  etat_exemplaire?: string;
+  id_produit?: number;
+}
+
 export function ProductInstanceTable({
   onEdit,
   onDelete,
@@ -48,6 +75,19 @@ export function ProductInstanceTable({
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [filters, setFilters] = useState<Filters>({
+    search: "",
+    id_type_produit: 1,
+  });
+
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateRange, setDateRange] = useState<Date | undefined>();
+
+  // Mise à jour des filtres avec le terme de recherche
+  const activeFilters = {
+    ...filters,
+    search: debouncedSearchTerm,
+  };
 
   const {
     productInstances,
@@ -56,7 +96,7 @@ export function ProductInstanceTable({
     hasNextPage,
     isFetchingNextPage,
     loading,
-  } = useProductInstances({ search: debouncedSearchTerm, id_type_produit: 1 });
+  } = useProductInstances(activeFilters);
 
   // Pagination calculée à partir des pages
   const total = pages?.[0]?.total ? pages?.[0]?.total : 0;
@@ -93,9 +133,41 @@ export function ProductInstanceTable({
     }
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+  const handleFilterChange = (
+    key: keyof Filters,
+    value: string | number | undefined
+  ) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    setCurrentPage(1); // Reset to first page when filters change
   };
+
+  const handleDateRangeChange = (range: Date | undefined) => {
+    setDateRange(range);
+    setFilters((prev) => ({
+      ...prev,
+      date_entree: range,
+    }));
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      id_type_produit: 1,
+    });
+    setDateRange(undefined);
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters =
+    Object.values(filters).some(
+      (value) =>
+        value !== undefined && value !== "" && value !== 1 && value !== ""
+    ) || dateRange;
 
   const EtatColor = (etat: string) => {
     switch (etat) {
@@ -116,19 +188,163 @@ export function ProductInstanceTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="relative w-full max-sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Rechercher..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="pl-8"
-          />
+      {/* Barre de recherche et filtres */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
+          <div className="flex items-center gap-2 w-full">
+            <div className="relative w-full max-w-md">
+              <ProductCombobox
+                value={filters.id_produit?.toString() || ""}
+                onChange={(value) =>
+                  handleFilterChange(
+                    "id_produit",
+                    value ? String(value) : undefined
+                  )
+                }
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showFilters ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="w-4 h-4" />
+                Filtres
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="ml-1">
+                    {Object.keys(filters).filter(
+                      (key) =>
+                        filters[key as keyof Filters] !== undefined &&
+                        filters[key as keyof Filters] !== "" &&
+                        filters[key as keyof Filters] !== 1 &&
+                        filters[key as keyof Filters] !== ""
+                    ).length + (dateRange ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
+
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Effacer
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <Button onClick={onAdd} variant={"blue"} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-" /> Ajouter un produit
+          </Button>
         </div>
-        <Button onClick={onAdd} variant={"blue"} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-" /> Ajouter un produit
-        </Button>
+
+        {/* Panneau de filtres */}
+        {showFilters && (
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Filtre par état de vente */}
+              <div className="space-y-2">
+                <Label htmlFor="etat-exemplaire">État de vente</Label>
+                <Select
+                  value={filters.etat_exemplaire || undefined}
+                  onValueChange={(value) =>
+                    handleFilterChange("etat_exemplaire", value || undefined)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les états" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Disponible">Disponible</SelectItem>
+                    <SelectItem value="Reserve">Réservé</SelectItem>
+                    <SelectItem value="Vendu">Vendu</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtre par date d'entrée */}
+              <div className="space-y-2">
+                <Label>Date d'entrée</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateRange && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange ? (
+                        dateRange ? (
+                          <>
+                            {format(dateRange, "dd/MM/yyyy", {
+                              locale: fr,
+                            })}{" "}
+                            - {format(dateRange, "dd/MM/yyyy", { locale: fr })}
+                          </>
+                        ) : (
+                          format(dateRange, "dd/MM/yyyy", { locale: fr })
+                        )
+                      ) : (
+                        "Sélectionner une période"
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="single"
+                      defaultMonth={dateRange}
+                      selected={dateRange}
+                      onSelect={(range) => handleDateRangeChange(range)}
+                      numberOfMonths={1}
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Filtres de prix de vente */}
+              <div className="space-y-2">
+                <Label>Prix de vente</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Min"
+                    type="number"
+                    value={filters.prix_de_vente_min || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "prix_de_vente_min",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                  <Input
+                    placeholder="Max"
+                    type="number"
+                    value={filters.prix_de_vente_max || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "prix_de_vente_max",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-md border">

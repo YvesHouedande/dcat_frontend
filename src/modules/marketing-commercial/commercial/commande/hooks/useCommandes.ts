@@ -68,7 +68,7 @@ export const useCreateCommande = () => {
     mutationFn: commandesServiceInstance.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commandes"] });
-      navigate("/stocks/commandes");
+      navigate("/commercial/vente-equipements");
     },
   });
 };
@@ -90,7 +90,7 @@ export const useCreateCommandeWithMarketing = () => {
     mutationFn: commandesServiceInstance.createWithMarketing,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commandes"] });
-      navigate("/stocks/commandes");
+      navigate("/commercial/vente-equipements");
     },
   });
 };
@@ -137,7 +137,7 @@ export const useDeleteCommande = () => {
       commandesServiceInstance.delete(id, type),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commandes"] });
-      navigate("/stocks/commandes");
+      navigate("/commercial/vente-equipements");
     },
   });
 };

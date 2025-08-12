@@ -1,8 +1,7 @@
 // src/components/dashboard/ProductInstanceDashboard.tsx
-import { useState, useEffect, useRef } from "react";
+import { useState,useRef } from "react";
 import { ProductInstanceTable } from "../tables/ProductInstanceTable";
 import { ProductInstanceForm } from "../forms/ProductInstanceForm";
-import { useProductInstances } from "../../hooks/useProductInstances";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
-import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import { UseFormReturn } from "react-hook-form";
 
 import { ExemplaireProduitFormValues } from "@/modules/stocks/exemplaire";
@@ -23,43 +21,15 @@ export function ProductInstanceDashboard() {
   );
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentInstance, setCurrentInstance] =
-    useState<ExemplaireProduitFormValues| null>(null);
+    useState<ExemplaireProduitFormValues | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
-
-  const {
-    productInstances = [],
-    pages = [],
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    loading,
-    error,
-  } = useProductInstances();
-
-  // Pagination calculée à partir des pages
-  const total = pages.length > 0 ? pages[0].total : 0;
-  const totalPages = pages.length > 0 ? pages[0].totalPages : 1;
-  const pageInstances = productInstances.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  const handlePageChange = (page: number) => {
-    if (page > currentPage && hasNextPage) {
-      fetchNextPage();
-    }
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
 
 
 
-  const openEditForm = (
-    instance: ProductInstanceFormValues
-  ) => {
+
+
+
+  const openEditForm = (instance: ProductInstanceFormValues) => {
     setCurrentInstance(instance);
     setIsEditMode(true);
     setIsFormOpen(true);
@@ -69,10 +39,6 @@ export function ProductInstanceDashboard() {
     setIsFormOpen(false);
     setCurrentInstance(null);
   };
-
-
-
-
 
   const handleFormSuccess = () => {
     const numSerie = formRef.current?.getValues("num_serie");
@@ -95,11 +61,7 @@ export function ProductInstanceDashboard() {
     // fetchProductInstances(paginationParams); // This line is no longer needed as pagination is handled by useInfiniteQuery
   };
 
-
-
-  useEffect(() => {
-    // Initial fetch is handled by useInfiniteQuery
-  }, [currentPage]); // Re-run when currentPage changes to fetch next page if needed
+// Re-run when currentPage changes to fetch next page if needed
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -109,27 +71,11 @@ export function ProductInstanceDashboard() {
         </h1>
       </div>
 
-      {error && (
-        <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-800">
-          Erreur: {error.message}
-        </div>
-      )}
 
-      {loading ? (
-        <TableSkeleton />
-      ) : (
         <ProductInstanceTable
-          productInstances={pageInstances}
-          onPageChange={handlePageChange}
-          onSearch={() => {}}
           onEdit={openEditForm}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          total={total}
-          loading={loading || isFetchingNextPage}
         />
-      )}
+      
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -147,8 +93,6 @@ export function ProductInstanceDashboard() {
           />
         </DialogContent>
       </Dialog>
-
-   
     </div>
   );
 }
