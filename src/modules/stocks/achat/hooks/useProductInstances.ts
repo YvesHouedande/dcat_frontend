@@ -12,12 +12,15 @@ import { ProductInstanceFormValues } from "../schemas/productInstanceSchema";
 const PRODUCT_INSTANCES_KEY = "productInstances";
 const wait = <T>(result: T): Promise<T> =>
   new Promise((resolve) => setTimeout(() => resolve(result), 200));
-export const useProductInstances = () => {
+export const useProductInstances = (filters = {}) => {
   const queryClient = useQueryClient();
   const productInstanceService = ProductInstanceService();
   // Récupérer la liste des instances de produit avec pagination
   const fetchProductInstances = (params: PaginationParams) =>
-    productInstanceService.getAll(params);
+    productInstanceService.getAll({
+      ...params,
+      ...filters,
+    });
 
   // Utilisation de useInfiniteQuery pour la pagination
   const {
@@ -28,7 +31,7 @@ export const useProductInstances = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<PaginatedResponse<ProductInstanceFormValues>, Error>({
-    queryKey: [PRODUCT_INSTANCES_KEY],
+    queryKey: [PRODUCT_INSTANCES_KEY, filters],
     queryFn: ({ pageParam = 1 }) =>
       fetchProductInstances({ page: pageParam, pageSize: 10 }),
     getNextPageParam: (lastPage) => {

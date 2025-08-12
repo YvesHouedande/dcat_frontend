@@ -4,7 +4,7 @@ const CommandesManager: React.FC = () => {
   const navigate = useNavigate();
 
   const handleEdit = (id_commande: string | number) => {
-    navigate(`/stocks/commandes/${id_commande}/modifier`);
+    navigate(`/commercial/vente-equipements/${id_commande}/modifier`);
   };
 
   return (

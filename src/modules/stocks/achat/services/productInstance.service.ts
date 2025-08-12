@@ -28,6 +28,5 @@ export const ProductInstanceService = () => {
     delete: async (id: string | number): Promise<void> => {
       return await api.delete(`/stocks/exemplaires/${id}`);
     },
-
   };
 };

@@ -68,7 +68,8 @@ export function useExemplaireProduitForm({
       const coef_divers = Number(data.coef_divers) || 0;
       const marge_basse = Number(data.marge_basse) || 0;
       const marge_haute = Number(data.marge_haute) || 0;
-      const prix_de_revient = prix_achat + coef_divers;
+      const frais_divers = Number(data.frais_divers) || 0;
+      const prix_de_revient = prix_achat + (frais_divers * coef_divers) ;
       const marge = marge_basse + marge_haute / 2;
       const prix_de_vente = prix_de_revient + marge;
       const dataWithCalcul = {

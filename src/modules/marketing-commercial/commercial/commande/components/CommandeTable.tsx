@@ -22,7 +22,7 @@ import {
   Trash2,
   Eye,
   Package,
-  Calendar,
+  CalendarIcon,
   XCircle,
   RotateCcw,
   CheckCircle,
@@ -37,6 +37,7 @@ import {
   BarChart3,
   TrendingUp,
   ShoppingCart,
+  X,
 } from "lucide-react";
 import { useCommandes, useDeleteCommande } from "../hooks/useCommandes";
 import { Commande, CommandeData, etat_commande } from "../types/commande";
@@ -58,6 +59,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { PopoverContent } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 
 interface CommandesTableProps {
   onEdit: (id: string | number) => void;
@@ -320,25 +329,86 @@ const StatsCards = ({ commandesData }: { commandesData: CommandeData[] }) => {
   );
 };
 
+interface Filters {
+  date_de_commande?: Date;
+  date_livraison_gt?: Date;
+  date_livraison_lt?: Date;
+  lieu_de_livraison?: string;
+  mode_de_paiement?: string;
+  montant_total_max?: number;
+  montant_total_min?: number;
+}
+
+const modesPaiement = [
+  { value: "espèce", label: "Espèces" },
+  { value: "carte bancaire", label: "Carte bancaire" },
+  { value: "transfer", label: "Virement" },
+  { value: "mobile", label: "Mobile Money" },
+];
+
 export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [openDelete, setOpenDelete] = useState(false);
   const [selectedCommande, setSelectedCommande] = useState<Commande | null>(
     null
   );
-  const [showStats, setShowStats] = useState(true);
+  const [showStats, setShowStats] = useState(false);
+  const [filters, setFilters] = useState<Filters>();
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
 
   const {
     data: commandes,
     isLoading,
+    isFetching,
     error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     refetch,
   } = useCommandes({
-    search: "",
+    ...filters,
+    etat: statusFilter,
   });
+
+  const handleFilterChange = (
+    key: keyof Filters,
+    value: string | number | undefined
+  ) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    // Reset to first page when filters change
+  };
+
+  const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
+    setDateRange({ from: range.from, to: range.to });
+    setFilters((prev) => ({
+      ...prev,
+      date_livraison_gt: range.from,
+      date_livraison_lt: range.to,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({});
+    setDateRange({ from: undefined, to: undefined });
+  };
+
+  const hasActiveFilters =
+    Object.values(filters || {}).some(
+      (value) =>
+        value !== undefined && value !== "" && value !== 1 && value !== ""
+    ) ||
+    dateRange.from ||
+    dateRange.to;
 
   const deleteCommande = useDeleteCommande();
   const navigate = useNavigate();
@@ -384,7 +454,7 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !isFetching) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -461,39 +531,249 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
         <StatsCards commandesData={commandesData} />
       )}
 
-      {/* Filtres modernes */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Filtrer par statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="en_cours">En cours</SelectItem>
-              <SelectItem value="en_attente">En attente</SelectItem>
-              <SelectItem value="Livrée">Livrée</SelectItem>
-              <SelectItem value="annulée">Annulée</SelectItem>
-              <SelectItem value="Retournée">Retournée</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showFilters ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filtres
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-1">
+                  {Object.keys(filters || {}).filter(
+                    (key) =>
+                      filters?.[key as keyof Filters] !== undefined &&
+                      filters?.[key as keyof Filters] !== "" &&
+                      filters?.[key as keyof Filters] !== 1 &&
+                      filters?.[key as keyof Filters] !== ""
+                  ).length + (dateRange.from || dateRange.to ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
 
-          <Button
-            variant="outline"
-            onClick={() => refetch()}
-            className="border-gray-200 hover:bg-gray-50"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
-          </Button>
-
-          <div className="flex items-center justify-center">
-            <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-              Pagination infinie
-            </Badge>
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Effacer
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Panneau de filtres */}
+        {showFilters && (
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Filtre par état de vente */}
+              <div className="space-y-2">
+                <Label htmlFor="etat-exemplaire">État de vente</Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    setStatusFilter(value === "all" ? "" : value);
+                  }}
+                >
+                  <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                    <Filter className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Filtrer par statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="en_cours">En cours</SelectItem>
+                    <SelectItem value="en_attente">En attente</SelectItem>
+                    <SelectItem value="Livrée">Livrée</SelectItem>
+                    <SelectItem value="annulée">Annulée</SelectItem>
+                    <SelectItem value="Retournée">Retournée</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtre par date d'entrée */}
+              <div className="space-y-2">
+                <Label>Date de livraison</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateRange.from && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "dd/MM/yyyy", {
+                              locale: fr,
+                            })}{" "}
+                            -{" "}
+                            {format(dateRange.to, "dd/MM/yyyy", { locale: fr })}
+                          </>
+                        ) : (
+                          format(dateRange.from, "dd/MM/yyyy", { locale: fr })
+                        )
+                      ) : (
+                        "Sélectionner une période"
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange.from}
+                      selected={dateRange}
+                      onSelect={(range) =>
+                        handleDateRangeChange({
+                          from: range?.from,
+                          to: range?.to,
+                        })
+                      }
+                      numberOfMonths={2}
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Filtres de montant total */}
+              <div className="space-y-2">
+                <Label>Montant de la commande</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Min"
+                    type="number"
+                    value={filters?.montant_total_min || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "montant_total_min",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                  <Input
+                    placeholder="Max"
+                    type="number"
+                    value={filters?.montant_total_max || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "montant_total_max",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Filtres de lieu de livraison */}
+              <div className="space-y-2">
+                <Label>Lieu de livraison</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex: Rue de la Paix, etc."
+                    type="text"
+                    value={filters?.lieu_de_livraison || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "lieu_de_livraison",
+                        e.target.value ? e.target.value : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Filtres de mode de paiement */}
+              <div className="space-y-2">
+                <Label>Mode de paiement</Label>
+                <div className="flex gap-2">
+                  <Select
+                    value={filters?.mode_de_paiement || ""}
+                    onValueChange={(value) =>
+                      handleFilterChange(
+                        "mode_de_paiement",
+                        value === "all" ? "" : value
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choisir un mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les modes</SelectItem>
+                      {modesPaiement.map((mode) => (
+                        <SelectItem key={mode.value} value={mode.value}>
+                          {mode.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Filtres de frais divers */}
+              <div className="space-y-2">
+                <Label>Date de la commande</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateRange.from && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "dd/MM/yyyy", {
+                              locale: fr,
+                            })}{" "}
+                            -{" "}
+                            {format(dateRange.to, "dd/MM/yyyy", { locale: fr })}
+                          </>
+                        ) : (
+                          format(dateRange.from, "dd/MM/yyyy", { locale: fr })
+                        )
+                      ) : (
+                        "Sélectionner une date"
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="single"
+                      defaultMonth={dateRange.from}
+                      selected={dateRange.from}
+                      onSelect={(range) =>
+                        setFilters({
+                          date_de_commande: range,
+                        })
+                      }
+                      numberOfMonths={1}
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Contenu - Tableau pour desktop, Cartes pour mobile */}
@@ -581,7 +861,7 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
                           {formatDate(commande.commande.date_de_commande)}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center mt-1">
-                          <Calendar className="w-3 h-3 mr-1" />
+                          <CalendarIcon className="w-3 h-3 mr-1" />
                           Commandé
                         </div>
                       </TableCell>

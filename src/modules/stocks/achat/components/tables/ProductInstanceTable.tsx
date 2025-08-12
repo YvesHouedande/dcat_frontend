@@ -1,5 +1,5 @@
 // src/components/tables/ProductInstanceTable.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -18,10 +18,37 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, Search, Edit, Package } from "lucide-react";
-// import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
+import {
+  MoreHorizontal,
+  Edit,
+  Package,
+  Filter,
+  X,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { ProductInstanceFormValues } from "../../schemas/productInstanceSchema";
 import { formatCurrency } from "@/modules/stocks/utils/helpers";
+import { useProductInstances } from "../../hooks/useProductInstances";
+import { useDebounce } from "@/modules/stocks/entree/utils/helpers";
+import { ProductCombobox } from "@/components/combobox/ProductCombobox";
 
 // Composant pour gérer l'affichage de l'image ou de l'icône en cas d'erreur
 function ImageOrIcon({ src }: { src?: string }) {
@@ -41,57 +68,437 @@ function ImageOrIcon({ src }: { src?: string }) {
 }
 
 interface ProductInstanceTableProps {
-  productInstances: ProductInstanceFormValues[];
-  onPageChange: (page: number) => void;
-  onSearch: (term: string) => void;
   onEdit: (instance: ProductInstanceFormValues) => void;
-  currentPage: number;
-  totalPages: number;
-  pageSize: number;
-  total: number;
-  loading: boolean;
 }
 
-// interface Props {
-//   Id: string | number;
-// }
-export function ProductInstanceTable({
-  productInstances,
-  onPageChange,
-  onSearch,
-  onEdit,
-  currentPage,
-  totalPages,
-  total,
-  loading,
-  pageSize
-}: ProductInstanceTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+// Interface pour les filtres
+interface Filters {
+  search: string;
+  id_type_produit?: number;
+  prix_de_vente_min?: number;
+  prix_de_vente_max?: number;
+  prix_de_revient_min?: number;
+  prix_de_revient_max?: number;
+  prix_achat_min?: number;
+  prix_achat_max?: number;
+  date_achat_min?: Date;
+  date_achat_max?: Date;
+  etat_exemplaire?: string;
+  frais_divers_min?: number;
+  frais_divers_max?: number;
+  coef_divers_min?: number;
+  coef_divers_max?: number;
+  id_produit?: number;
+}
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+export function ProductInstanceTable({ onEdit }: ProductInstanceTableProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<Filters>({
+    search: "",
+    id_type_produit: 1,
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
+
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Mise à jour des filtres avec le terme de recherche
+  const activeFilters = {
+    ...filters,
+    search: debouncedSearchTerm,
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(searchTerm);
+  const {
+    productInstances,
+    pages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    loading,
+  } = useProductInstances(activeFilters);
+
+  // Pagination calculée à partir des pages
+  const total = pages?.[0]?.total ? pages?.[0]?.total : 0;
+  const totalPages = pages?.[0]?.totalPages ? pages?.[0]?.totalPages : 0;
+  const pageInstances = productInstances.slice(
+    (currentPage - 1) * pages?.[0]?.pageSize
+      ? (currentPage - 1) * pages?.[0]?.pageSize
+      : 0,
+    currentPage * pages?.[0]?.pageSize ? currentPage * pages?.[0]?.pageSize : 0
+  );
+
+
+
+  const handlePageChange = (page: number) => {
+    if (page > currentPage && hasNextPage) {
+      fetchNextPage();
+    }
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleFilterChange = (
+    key: keyof Filters,
+    value: string | number | undefined
+  ) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
+    setDateRange({ from: range.from, to: range.to });
+    setFilters((prev) => ({
+      ...prev,
+      date_achat_min: range.from,
+      date_achat_max: range.to,
+    }));
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      id_type_produit: 1,
+    });
+    setDateRange({ from: undefined, to: undefined });
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters =
+    Object.values(filters).some(
+      (value) =>
+        value !== undefined && value !== "" && value !== 1 && value !== ""
+    ) ||
+    dateRange.from ||
+    dateRange.to;
+
+  const getEtatExemplaireColor = (etat: string) => {
+    switch (etat) {
+      case "vendu":
+        return "bg-green-100 text-green-800";
+      case "invendu":
+        return "bg-blue-100 text-blue-800";
+      case "bon":
+        return "bg-yellow-100 text-yellow-800";
+      case "endommage":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getEtatExemplaireLabel = (etat: string) => {
+    switch (etat) {
+      case "vendu":
+        return "Vendu";
+      case "invendu":
+        return "Invendu";
+      case "bon":
+        return "Bon état";
+      case "endommage":
+        return "Endommagé";
+      default:
+        return etat;
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <form
-          onSubmit={handleSearchSubmit}
-          className="relative w-full max-sm:w-64"
-        >
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Rechercher..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="pl-8 lg:w-1/2 rounded-lg border-gray-300 focus:border-blue-400 shadow-sm"
-          />
-        </form>
+    <div className="space-y-4 w-full">
+      {/* Barre de recherche et filtres */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
+          <div className="relative w-full max-w-md">
+            <ProductCombobox
+              value={filters.id_produit?.toString() || ""}
+              onChange={(value) =>
+                handleFilterChange(
+                  "id_produit",
+                  value ? String(value) : undefined
+                )
+              }
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showFilters ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filtres
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-1">
+                  {Object.keys(filters).filter(
+                    (key) =>
+                      filters[key as keyof Filters] !== undefined &&
+                      filters[key as keyof Filters] !== "" &&
+                      filters[key as keyof Filters] !== 1 &&
+                      filters[key as keyof Filters] !== ""
+                  ).length + (dateRange.from || dateRange.to ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
+
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Effacer
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Panneau de filtres */}
+        {showFilters && (
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Filtre par état de vente */}
+              <div className="space-y-2">
+                <Label htmlFor="etat-exemplaire">État de vente</Label>
+                <Select
+                  value={filters.etat_exemplaire || undefined}
+                  onValueChange={(value) =>
+                    handleFilterChange("etat_exemplaire", value || undefined)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les états" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Disponible">Disponible</SelectItem>
+                    <SelectItem value="Reserve">Réservé</SelectItem>
+                    <SelectItem value="Vendu">Vendu</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtre par date d'entrée */}
+              <div className="space-y-2">
+                <Label>Date d'entrée</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateRange.from && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "dd/MM/yyyy", {
+                              locale: fr,
+                            })}{" "}
+                            -{" "}
+                            {format(dateRange.to, "dd/MM/yyyy", { locale: fr })}
+                          </>
+                        ) : (
+                          format(dateRange.from, "dd/MM/yyyy", { locale: fr })
+                        )
+                      ) : (
+                        "Sélectionner une période"
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange.from}
+                      selected={dateRange}
+                      onSelect={(range) =>
+                        handleDateRangeChange({
+                          from: range?.from,
+                          to: range?.to,
+                        })
+                      }
+                      numberOfMonths={2}
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Filtres de prix d'achat */}
+              <div className="space-y-2">
+                <Label>Prix d'achat</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Min"
+                    type="number"
+                    value={filters.prix_achat_min || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "prix_achat_min",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                  <Input
+                    placeholder="Max"
+                    type="number"
+                    value={filters.prix_achat_max || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "prix_achat_max",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Filtres de prix de vente */}
+              <div className="space-y-2">
+                <Label>Prix de vente</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Min"
+                    type="number"
+                    value={filters.prix_de_vente_min || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "prix_de_vente_min",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                  <Input
+                    placeholder="Max"
+                    type="number"
+                    value={filters.prix_de_vente_max || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "prix_de_vente_max",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Filtres de prix de revient */}
+              <div className="space-y-2">
+                <Label>Prix de revient</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Min"
+                    type="number"
+                    value={filters.prix_de_revient_min || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "prix_de_revient_min",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                  <Input
+                    placeholder="Max"
+                    type="number"
+                    value={filters.prix_de_revient_max || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "prix_de_revient_max",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Filtres de frais divers */}
+              <div className="space-y-2">
+                <Label>Frais divers</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Min"
+                    type="number"
+                    value={filters.frais_divers_min || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "frais_divers_min",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                  <Input
+                    placeholder="Max"
+                    type="number"
+                    value={filters.frais_divers_max || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "frais_divers_max",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Filtres de coefficient divers */}
+              <div className="space-y-2">
+                <Label>Coefficient divers</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Min"
+                    type="number"
+                    step="0.01"
+                    value={filters.coef_divers_min || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "coef_divers_min",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                  <Input
+                    placeholder="Max"
+                    type="number"
+                    step="0.01"
+                    value={filters.coef_divers_max || ""}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        "coef_divers_max",
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border overflow-x-auto bg-white shadow-sm">
@@ -111,16 +518,19 @@ export function ProductInstanceTable({
                 Prix d'achat
               </TableHead>
               <TableHead className="font-bold text-gray-700 text-base border-r">
-                Frais divers
-              </TableHead>
-              <TableHead className="font-bold text-gray-700 text-base border-r">
-                Coef.
-              </TableHead>
-              <TableHead className="font-bold text-gray-700 text-base border-r">
                 Prix de revient
               </TableHead>
               <TableHead className="font-bold text-gray-700 text-base border-r">
                 Prix de vente
+              </TableHead>
+              <TableHead className="font-bold text-gray-700 text-base border-r">
+                Marge basse
+              </TableHead>
+              <TableHead className="font-bold text-gray-700 text-base border-r">
+                Marge haute
+              </TableHead>
+              <TableHead className="font-bold text-gray-700 text-base border-r">
+                État
               </TableHead>
               <TableHead className="font-bold text-gray-700 text-base border-r">
                 Date d'entrée
@@ -133,18 +543,18 @@ export function ProductInstanceTable({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-4">
+                <TableCell colSpan={11} className="text-center py-4">
                   Chargement...
                 </TableCell>
               </TableRow>
-            ) : productInstances.length === 0 ? (
+            ) : pageInstances.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-4">
+                <TableCell colSpan={11} className="text-center py-4">
                   Aucun exemplaire trouvé
                 </TableCell>
               </TableRow>
             ) : (
-              productInstances.map((instance) => (
+              pageInstances.map((instance) => (
                 <TableRow
                   key={instance.id_exemplaire}
                   className="transition-colors hover:bg-blue-50/60"
@@ -164,24 +574,25 @@ export function ProductInstanceTable({
                     {formatCurrency(Number(instance.prix_achat))}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
-                    {formatCurrency(Number(instance.frais_divers))}
+                    {formatCurrency(Number(instance.prix_de_revient))}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
-                    {instance.coef_divers ? instance.coef_divers : 0}
+                  {formatCurrency(Number(instance.prix_de_vente))}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
-                    {formatCurrency(
-                      instance.prix_de_revient
-                        ? Number(instance.prix_de_revient)
-                        : 0
-                    )}
+                    {formatCurrency(Number(instance.marge_basse))}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
-                    {formatCurrency(
-                      instance.prix_de_vente
-                        ? Number(instance.prix_de_vente)
-                        : 0
-                    )}
+                    {formatCurrency(Number(instance.marge_haute))}
+                  </TableCell>
+                  <TableCell className="border-r">
+                    <Badge
+                      className={getEtatExemplaireColor(
+                        instance.etat_exemplaire
+                      )}
+                    >
+                      {getEtatExemplaireLabel(instance.etat_exemplaire)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
                     {instance.date_entree}
@@ -217,31 +628,33 @@ export function ProductInstanceTable({
         </Table>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-2">
+      <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
-          Affichage de {total === 0 ? 0 : (currentPage - 1) * pageSize + 1} à{" "}
-          {Math.min(currentPage * pageSize, total)} sur {total} exemplaire
+          Affichage de{" "}
+          {total === 0 ? 0 : (currentPage - 1) * pages?.[0]?.pageSize + 1} à{" "}
+          {Math.min(currentPage * pages?.[0]?.pageSize, total)} sur {total}{" "}
+          exemplaire
           {total > 1 ? "s" : ""}
         </p>
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage <= 1 || loading}
-            className="transition-colors hover:bg-blue-100"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage <= 1 || loading || isFetchingNextPage}
           >
             Précédent
           </Button>
-          <div className="text-sm font-semibold text-gray-700">
+          <div className="text-sm">
             Page {currentPage} sur {totalPages}
           </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages || loading}
-            className="transition-colors hover:bg-blue-100"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={
+              currentPage >= totalPages || loading || isFetchingNextPage
+            }
           >
             Suivant
           </Button>
