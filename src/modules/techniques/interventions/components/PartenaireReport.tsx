@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+
 
 import {
   Table,
@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Intervention, Partenaire } from "../interface/interface";
 import { getInterventionsByPartenaire } from "../api/intervention";
 import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
-import { FileDown, Eye, ChevronDown, Building2 } from "lucide-react";
+import { FileDown, ChevronDown, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 const logoSrc = "/Logodcat.jpg";
@@ -75,11 +75,11 @@ interface PartenaireReportProps {
   onViewIntervention?: (intervention: Intervention) => void;
 }
 
-export const PartenaireReport: React.FC<PartenaireReportProps> = ({
-  onViewIntervention = () => {},
-}) => {
-  const navigate = useNavigate();
+export const PartenaireReport: React.FC<PartenaireReportProps> = () => {
   const [selectedPartenaireId, setSelectedPartenaireId] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState(
+    format(new Date(), "yyyy-MM")
+  );
   // La liste des interventions doit maintenant correspondre à la structure de données réelle
   const [interventionsData, setInterventionsData] = useState<
     InterventionData[]
@@ -132,11 +132,26 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
       const response = await getInterventionsByPartenaire(
         parseInt(selectedPartenaireId)
       );
+      
+      // Filtrer les interventions par mois si une période est sélectionnée
+      let filteredData = response.data || [];
+      if (selectedMonth && response.data) {
+        const [year, month] = selectedMonth.split("-").map(Number);
+        const startDate = startOfMonth(new Date(year, month - 1));
+        const endDate = endOfMonth(new Date(year, month - 1));
+        
+        filteredData = response.data.filter((item: unknown) => {
+          const intervention = (item as { date_intervention?: string; intervention?: { date_intervention?: string } });
+          const interventionDate = new Date(intervention.date_intervention || intervention.intervention?.date_intervention || '');
+          return interventionDate >= startDate && interventionDate <= endDate;
+        });
+      }
+      
       // On s'assure que response.data est bien un tableau de InterventionData
       // Si ce n'est pas le cas, on transforme les données reçues
-      if (Array.isArray(response.data)) {
+      if (Array.isArray(filteredData)) {
         // Utilise le type guard pour garantir la sécurité de typage
-        const interventionsData = (response.data as unknown[]).map((item) => {
+        const interventionsData = (filteredData as unknown[]).map((item) => {
           if (isInterventionData(item)) {
             return item;
           }
@@ -152,11 +167,29 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPartenaireId]);
+  }, [selectedPartenaireId, selectedMonth]);
 
   useEffect(() => {
     loadInterventions();
   }, [loadInterventions]);
+
+  // Fonction pour générer les options de mois
+  const generateMonthOptions = () => {
+    const options = [];
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
+    // Générer les options pour les 24 derniers mois
+    for (let i = 0; i < 24; i++) {
+      const date = new Date(currentYear, currentMonth - i, 1);
+      const value = format(date, "yyyy-MM");
+      const label = format(date, "MMMM yyyy", { locale: fr });
+      options.push({ value, label });
+    }
+
+    return options;
+  };
 
   const calculateTotalDuration = () => {
     let totalMinutes = 0;
@@ -183,16 +216,11 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     );
   };
 
-  const handleViewIntervention = (intervention: Intervention) => {
-    if (onViewIntervention) {
-      onViewIntervention(intervention);
-    } else {
-      navigate(`/gestion-des-interventions/interventions/${intervention.id_intervention}`);
-    }
-  };
+
 
   const generateExcelContent = () => {
     const selectedPartenaire = getSelectedPartenaire();
+    const monthName = format(new Date(selectedMonth + "-01"), "MMMM yyyy", { locale: fr });
     const headers = ["Date", "Problème signalé", "Cause", "Mode d'intervention", "Action menée", "Recommandation", "Durée"];
     const rows = interventionsData.map((item) => [
       // Itérez sur interventionsData
@@ -222,7 +250,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     const csvContent = [
       `Rapport d'interventions - ${
         selectedPartenaire?.nom_partenaire || "Partenaire"
-      }`,
+      } - ${monthName}`,
       `Généré le: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: fr })}`,
       "",
       headers.join(","),
@@ -239,6 +267,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     const selectedPartenaire = getSelectedPartenaire();
     const partenaireName =
       selectedPartenaire?.nom_partenaire || "Partenaire inconnu";
+    const monthName = format(new Date(selectedMonth + "-01"), "MMMM yyyy", { locale: fr });
 
     const rows = interventionsData.map((item) => [
       // Itérez sur interventionsData
@@ -337,8 +366,8 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
           `}
         </div>
                  <div class="header">
-           <h1>Rapport d'Interventions par Partenaire</h1>
-           <p style="text-align: center;">Partenaire : ${partenaireName}</p>
+           <h1>TABLEAU RÉCAPITULATIF DES INTERVENTIONS</h1>
+           <p style="text-align: center;">Partenaire : ${partenaireName} | Période : ${monthName}</p>
          </div>
          
          
@@ -407,7 +436,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     if (interventionsData.length === 0) {
       // Vérifiez interventionsData
       toast.info(
-        "Aucune intervention à exporter pour le partenaire sélectionné."
+        "Aucune intervention à exporter pour le partenaire et la période sélectionnés."
       );
       return;
     }
@@ -417,19 +446,21 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
       const selectedPartenaire = getSelectedPartenaire();
       let content, fileName, type;
 
+      const monthName = format(new Date(selectedMonth + "-01"), "yyyy-MM", { locale: fr });
+      
       if (formatType === "excel") {
         content = generateExcelContent();
         fileName = `rapport-interventions-${
           selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") ||
           "partenaire"
-        }.csv`;
+        }-${monthName}.csv`;
         type = "text/csv;charset=utf-8;";
       } else {
         content = generatePDFContent();
         fileName = `rapport-interventions-${
           selectedPartenaire?.nom_partenaire?.replace(/\s+/g, "-") ||
           "partenaire"
-        }.pdf`;
+        }-${monthName}.pdf`;
         type = "text/html";
       }
 
@@ -482,9 +513,9 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Rapport d'Interventions par Partenaire</CardTitle>
+              <CardTitle>Rapport d'Interventions par Partenaire et Période</CardTitle>
               <CardDescription>
-                Récapitulatif des interventions pour le partenaire sélectionné
+                Récapitulatif des interventions pour le partenaire et la période sélectionnés
               </CardDescription>
             </div>
             <div className="flex gap-4">
@@ -513,6 +544,22 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                       </SelectItem>
                     ))
                   )}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedMonth}
+                onValueChange={(value) => setSelectedMonth(value)}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Sélectionner une période" />
+                </SelectTrigger>
+                <SelectContent>
+                  {generateMonthOptions().map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -548,7 +595,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
           {!selectedPartenaireId && partenaires.length > 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Sélectionnez un partenaire pour voir ses interventions.</p>
+              <p>Sélectionnez un partenaire et une période pour voir les interventions.</p>
             </div>
           ) : partenaires.length === 0 && !isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -568,6 +615,10 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                   <div className="text-sm">
                     <span className="font-medium">Nom :</span>{" "}
                     {getSelectedPartenaire()?.nom_partenaire}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Période :</span>{" "}
+                    {format(new Date(selectedMonth + "-01"), "MMMM yyyy", { locale: fr })}
                   </div>
                 </div>
               )}
@@ -592,14 +643,13 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                       <TableHead>Action menée</TableHead>
                       <TableHead>Recommandation</TableHead>
                       <TableHead>Durée</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {interventionsData.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center">
-                          Aucune intervention pour ce partenaire
+                          Aucune intervention pour ce partenaire sur cette période
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -630,19 +680,6 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                               {item.intervention.recommandation}
                             </TableCell>
                             <TableCell>{item.intervention.duree}</TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleViewIntervention(item.intervention)
-                                } // Passer l'objet intervention réel
-                                className="hover:bg-gray-100"
-                              >
-                                <Eye className="h-4 w-4" />
-                                <span className="ml-2">Détails</span>
-                              </Button>
-                            </TableCell>
                           </TableRow>
                         )
                       )

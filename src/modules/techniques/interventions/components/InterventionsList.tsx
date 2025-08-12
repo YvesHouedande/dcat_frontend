@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { Intervention } from '../interface/interface';
 import { getInterventions } from '../api/intervention';
 import { Search, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 interface InterventionsListProps {
   onDelete: (intervention: Intervention) => void;
@@ -41,31 +42,22 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
   onDelete,
 }) => {
   const navigate = useNavigate();
-  const [allInterventions, setAllInterventions] = useState<Intervention[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterDefaillance, setFilterDefaillance] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterDefaillance, setFilterDefaillance] = useState<string>('all');
   const itemsPerPage = 10;
 
-  const loadInterventions = async () => {
-    setIsLoading(true);
-    try {
-      // Charger toutes les interventions pour permettre le filtrage local
-      const response = await getInterventions(1, 1000); // Charger beaucoup d'interventions
-      setAllInterventions(response.data || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des interventions:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Utiliser TanStack Query pour charger les interventions
+  const { data: interventionsResponse, isLoading, error } = useQuery({
+    queryKey: ['interventions', 'list'],
+    queryFn: () => getInterventions(1, 1000), // Charger beaucoup d'interventions pour le filtrage local
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => {
-    loadInterventions();
-  }, []);
+  const allInterventions = interventionsResponse?.data || [];
 
   // Filtrage des interventions
   const filteredInterventions = useMemo(() => {
@@ -117,7 +109,7 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
   );
 
   // Réinitialiser la page courante quand les filtres changent
-  useEffect(() => {
+  useMemo(() => {
     setCurrentPage(1);
   }, [searchTerm, filterType, filterStatus, filterDefaillance]);
 
@@ -147,9 +139,9 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
 
   const clearFilters = () => {
     setSearchTerm('');
-    setFilterType('');
-    setFilterStatus('');
-    setFilterDefaillance('');
+    setFilterType('all');
+    setFilterStatus('all');
+    setFilterDefaillance('all');
   };
 
   const hasActiveFilters = searchTerm || (filterType && filterType !== 'all') || (filterStatus && filterStatus !== 'all') || (filterDefaillance && filterDefaillance !== 'all');
@@ -223,8 +215,11 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="Corrective">Corrective</SelectItem>
-                <SelectItem value="Préventive">Préventive</SelectItem>
+                {[...new Set(allInterventions.map(i => i.type_intervention).filter(Boolean))].map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -233,10 +228,12 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
                 <SelectValue placeholder="Statut" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="à faire">À faire</SelectItem>
-                <SelectItem value="en cours">En cours</SelectItem>
-                <SelectItem value="terminé">Terminé</SelectItem>
-                <SelectItem value="planifié">Planifié</SelectItem>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                {[...new Set(allInterventions.map(i => i.statut_intervention).filter(Boolean))].map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -246,9 +243,11 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes les défaillances</SelectItem>
-                <SelectItem value="Électrique">Électrique</SelectItem>
-                <SelectItem value="Matérielle">Matérielle</SelectItem>
-                <SelectItem value="Logiciel">Logiciel</SelectItem>
+                {[...new Set(allInterventions.map(i => i.type_defaillance).filter(Boolean))].map((defaillance) => (
+                  <SelectItem key={defaillance} value={defaillance}>
+                    {defaillance}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -275,6 +274,22 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
           {allInterventions.length !== filteredInterventions.length && (
             <span> sur {allInterventions.length} au total</span>
           )}
+          
+          {/* Afficher les filtres actifs */}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {filterType && filterType !== 'all' && (
+              <Badge variant="secondary">Type: {filterType}</Badge>
+            )}
+            {filterStatus && filterStatus !== 'all' && (
+              <Badge variant="secondary">Statut: {filterStatus}</Badge>
+            )}
+            {filterDefaillance && filterDefaillance !== 'all' && (
+              <Badge variant="secondary">Défaillance: {filterDefaillance}</Badge>
+            )}
+            {searchTerm && (
+              <Badge variant="secondary">Recherche: "{searchTerm}"</Badge>
+            )}
+          </div>
         </div>
       )}
 
@@ -298,6 +313,17 @@ export const InterventionsList: React.FC<InterventionsListProps> = ({
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
                     Chargement...
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  <div className="text-center">
+                    <p className="text-red-500 mb-2">Erreur lors du chargement des interventions</p>
+                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                      Réessayer
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

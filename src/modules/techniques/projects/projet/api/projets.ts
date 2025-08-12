@@ -7,10 +7,6 @@ import {
   Livrable,
   Partenaire,
 } from "../../types/types"; // Assurez-vous que le chemin est correct et que Document et CreateDocumentTextPayload sont importés
-import {
-  deleteLivrable,
-  getLivrablesByProjetId,
-} from "../../livrables/api/livrables"; // Chemin relatif vers src/api/livrables.ts
 import { omit } from "@/lib/utils";
 
 const API_URL = import.meta.env.VITE_APP_API_URL;
@@ -379,233 +375,18 @@ export const deleteProjet = async (
   projectId: number
 ): Promise<{ success: boolean; message: string; deletedId: number }> => {
   try {
-    console.log(`[API] Début de la suppression du projet ${projectId}...`); // Étape 1: Récupérer et supprimer les livrables du projet
-
-    console.log(
-      `[API] Récupération des livrables associés au projet ${projectId}...`
-    );
-    let associatedLivrables: Livrable[] = [];
-    try {
-      const livrablesResponse = await getLivrablesByProjetId(projectId); // Vérifier si la réponse a une propriété 'data' qui est un tableau, ou si la réponse est directement un tableau
-      if (livrablesResponse.data && Array.isArray(livrablesResponse.data)) {
-        associatedLivrables = livrablesResponse.data;
-        console.log(
-          `[API] Livrables associés trouvés:`,
-          associatedLivrables.length
-        );
-      } else if (Array.isArray(livrablesResponse)) {
-        // Fallback si la réponse API est un tableau direct
-        associatedLivrables = livrablesResponse as Livrable[];
-        console.log(
-          `[API] Livrables associés trouvés (directement en tableau):`,
-          associatedLivrables.length
-        );
-      } else {
-        console.warn(
-          `[API] Structure de réponse inattendue pour les livrables du projet ${projectId}:`,
-          livrablesResponse
-        );
-      }
-    } catch (error) {
-      console.warn(
-        `[API] Impossible de récupérer les livrables associés pour le projet ${projectId}:`,
-        error
-      ); // On continue même en cas d'erreur de récupération des livrables
-    }
-    if (associatedLivrables.length > 0) {
-      console.log(
-        `[API] Suppression de ${associatedLivrables.length} livrable(s)...`
-      );
-      const livrableDeletionPromises = associatedLivrables.map(
-        async (livrable) => {
-          try {
-            console.log(
-              `[API] Suppression du livrable ${livrable.id_livrable} (libellé: ${livrable.libelle_livrable})...`
-            );
-            await deleteLivrable(livrable.id_livrable); // Utilise la fonction de suppression sécurisée des livrables (qui gère ses propres documents)
-            console.log(
-              `[API] ✓ Livrable ${livrable.id_livrable} supprimé avec succès`
-            );
-            return { success: true, id: livrable.id_livrable };
-          } catch (error) {
-            console.error(
-              `[API] ✗ Échec de suppression du livrable ${livrable.id_livrable}:`,
-              error
-            );
-            return { success: false, id: livrable.id_livrable, error };
-          }
-        }
-      );
-      const livrableDeletionResults = await Promise.allSettled(
-        livrableDeletionPromises
-      );
-      const failedLivrableDeletions = livrableDeletionResults.filter(
-        (result) => result.status === "rejected"
-      );
-      if (failedLivrableDeletions.length > 0) {
-        console.error(
-          `[API] ${failedLivrableDeletions.length} suppression(s) de livrable(s) ont échoué.`
-        ); // Décision: Continuer avec la suppression du projet même si des livrables n'ont pas pu être supprimés.
-      } else {
-        console.log(
-          `[API] ✓ Tous les livrables associés ont été supprimés avec succès`
-        );
-      }
-    } else {
-      console.log(`[API] Aucun livrable associé au projet ${projectId}`);
-    } // Étape 3: Récupérer et supprimer les documents directement liés au projet // Cette étape est cruciale car ces documents ne sont pas supprimés via les livrables.
-
-    console.log(
-      `[API] Récupération des documents directement liés au projet ${projectId}...`
-    );
-    let associatedDocuments: Document[] = [];
-    try {
-      const docsResponse = await getDocumentsByProjetId(projectId);
-      if (docsResponse.documents && Array.isArray(docsResponse.documents)) {
-        associatedDocuments = docsResponse.documents;
-        console.log(
-          `[API] Documents du projet trouvés:`,
-          associatedDocuments.length
-        );
-      } else if (docsResponse.data && Array.isArray(docsResponse.data)) {
-        associatedDocuments = docsResponse.data;
-        console.log(
-          `[API] Documents du projet trouvés (via data):`,
-          associatedDocuments.length
-        );
-      } else if (Array.isArray(docsResponse)) {
-        // Fallback si la réponse API est un tableau direct
-        associatedDocuments = docsResponse as Document[];
-        console.log(
-          `[API] Documents du projet trouvés (directement en tableau):`,
-          associatedDocuments.length
-        );
-      }
-    } catch (error) {
-      console.warn(
-        `[API] Impossible de récupérer les documents directement liés pour le projet ${projectId}:`,
-        error
-      ); // On continue même en cas d'erreur de récupération des documents
-    }
-
-    if (associatedDocuments.length > 0) {
-      console.log(
-        `[API] Suppression de ${associatedDocuments.length} document(s) directement lié(s) au projet...`
-      );
-      const documentDeletionPromises = associatedDocuments.map(async (doc) => {
-        try {
-          console.log(
-            `[API] Suppression du document ${doc.id_documents} (libellé: ${doc.libelle_document}) directement lié au projet ${projectId}...`
-          );
-          await deleteDocumentFromProjet(projectId, doc.id_documents); // Utilise la fonction de suppression de document du projet
-          console.log(
-            `[API] ✓ Document ${doc.id_documents} supprimé du projet ${projectId} avec succès`
-          );
-          return { success: true, id: doc.id_documents };
-        } catch (error) {
-          console.error(
-            `[API] ✗ Échec de suppression du document ${doc.id_documents} du projet ${projectId}:`,
-            error
-          );
-          return { success: false, id: doc.id_documents, error };
-        }
-      });
-      const documentDeletionResults = await Promise.allSettled(
-        documentDeletionPromises
-      );
-      const failedDocumentDeletions = documentDeletionResults.filter(
-        (result) => result.status === "rejected"
-      );
-      if (failedDocumentDeletions.length > 0) {
-        console.error(
-          `[API] ${failedDocumentDeletions.length} suppression(s) de document(s) direct(s) ont échoué.`
-        );
-      } else {
-        console.log(
-          `[API] ✓ Tous les documents directement liés au projet ont été supprimés avec succès`
-        );
-      }
-    } else {
-      console.log(
-        `[API] Aucun document directement lié au projet ${projectId}`
-      );
-    } // Étape 4: Récupérer et désassocier les partenaires du projet
-
-    console.log(
-      `[API] Récupération des partenaires associés au projet ${projectId}...`
-    );
-    let associatedPartenaires: number[] = [];
-    try {
-      associatedPartenaires = await getProjetAssociatedPartenaires(projectId);
-      console.log(
-        `[API] Partenaires associés trouvés:`,
-        associatedPartenaires.length
-      );
-    } catch (error) {
-      console.warn(
-        `[API] Impossible de récupérer les partenaires associés pour le projet ${projectId} (peut-être déjà supprimés/dissociés):`,
-        error
-      );
-    }
-    if (associatedPartenaires.length > 0) {
-      console.log(
-        `[API] Dissociation de ${associatedPartenaires.length} partenaire(s)...`
-      );
-      const dissociationPromises = associatedPartenaires.map(
-        async (partnerId) => {
-          try {
-            console.log(
-              `[API] Dissociation du partenaire ${partnerId} du projet ${projectId}...`
-            );
-            await removePartenaireFromProjet(projectId, partnerId);
-            console.log(`[API] ✓ Partenaire ${partnerId} dissocié avec succès`);
-            return { success: true, partnerId };
-          } catch (error) {
-            console.error(
-              `[API] ✗ Échec de dissociation du partenaire ${partnerId}:`,
-              error
-            );
-            return { success: false, partnerId, error };
-          }
-        }
-      );
-      const dissociationResults = await Promise.allSettled(
-        dissociationPromises
-      );
-      const failedDissociations = dissociationResults
-        .filter((result) => result.status === "rejected")
-        .map((result) => (result as PromiseRejectedResult).reason);
-      if (failedDissociations.length > 0) {
-        console.error(
-          `[API] ${failedDissociations.length} dissociation(s) ont échoué:`,
-          failedDissociations
-        ); // Décision: Continuer avec la suppression du projet même si des dissociations ont échoué.
-      } else {
-        console.log(
-          `[API] ✓ Tous les partenaires ont été dissociés avec succès`
-        );
-      }
-    } else {
-      console.log(`[API] Aucun partenaire associé au projet ${projectId}`);
-    } // Étape 5: Supprimer le projet lui-même
-
-    console.log(`[API] Suppression finale du projet ${projectId}...`);
+    console.log(`[API] Suppression du projet ${projectId}...`);
     const response = await apiClient.delete(
       `${API_URL}/technique/projets/${projectId}`
-    ); // Utilisez apiClient ici
+    );
     const apiResponse = response.data;
-    console.log(
-      `[API] Réponse de suppression du projet ${projectId}:`,
-      apiResponse
-    ); // Vérifier le succès de la suppression
+    
     if (!apiResponse.success) {
       throw new Error(
         apiResponse.message || "Erreur lors de la suppression du projet"
       );
-    } // Vérifier que l'ID du projet supprimé est retourné
-    if (!apiResponse.data || !apiResponse.data.id) {
-      console.warn(`[API] ID du projet supprimé non retourné dans la réponse`);
     }
+    
     const result = {
       success: true,
       message: apiResponse.message || "Projet supprimé avec succès",
@@ -613,7 +394,16 @@ export const deleteProjet = async (
     };
     console.log(`[API] ✓ Projet ${projectId} supprimé avec succès:`, result);
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
+    // Si l'erreur est liée à des contraintes de clés étrangères (opérations liées)
+    if (axios.isAxiosError(error) && (error.response?.status === 409 || error.response?.data?.message?.includes('foreign key'))) {
+      return {
+        success: false,
+        message: "Ce projet ne peut pas être supprimé pour le moment. Veuillez d'abord supprimer toutes les opérations liées à ce projet.",
+        deletedId: projectId
+      };
+    }
+    
     if (axios.isAxiosError(error)) {
       console.error("=== ERREUR AXIOS DÉTAILLÉE (suppression projet) ===");
       console.error("Status:", error.response?.status);
@@ -621,14 +411,11 @@ export const deleteProjet = async (
       console.error("Headers:", error.response?.headers);
       console.error("Données de réponse:", error.response?.data);
       console.error("URL:", error.config?.url);
-      console.error("Méthode:", error.config?.method); // Gestion spécifique des erreurs communes
+      console.error("Méthode:", error.config?.method);
+      
       if (error.response?.status === 404) {
         throw new Error(
           `Le projet ${projectId} n'existe pas ou a déjà été supprimé`
-        );
-      } else if (error.response?.status === 409) {
-        throw new Error(
-          `Impossible de supprimer le projet ${projectId} : il est encore lié à des ressources`
         );
       } else if (error.response?.status === 403) {
         throw new Error(
@@ -648,25 +435,11 @@ export const deleteProjet = async (
       throw error;
     }
   }
-}; // Fonction utilitaire pour supprimer un projet avec confirmation
-export const deleteProjetWithConfirmation = async (
-  projectId: number,
-  projectName: string
+}; // Fonction simple pour supprimer un projet (sans confirmation)
+export const deleteProjetSimple = async (
+  projectId: number
 ): Promise<{ success: boolean; message: string; deletedId: number }> => {
-  try {
-    // Optionnel: ajouter une confirmation côté client
-    const confirmMessage = `Êtes-vous sûr de vouloir supprimer le projet "${projectName}" ? Cette action est irréversible.`;
-    if (typeof window !== "undefined" && !window.confirm(confirmMessage)) {
-      throw new Error("Suppression annulée par l'utilisateur");
-    }
-    return await deleteProjet(projectId);
-  } catch (error) {
-    console.error(
-      `Erreur lors de la suppression du projet ${projectName} (ID: ${projectId}):`,
-      error
-    );
-    throw error;
-  }
+  return await deleteProjet(projectId);
 };
 
 //pour la récupération des projets et autres

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
 
 import {
   Table,
@@ -34,7 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Intervention } from "../interface/interface";
 import { getInterventions } from "../api/intervention";
-import { FileDown, Eye, ChevronDown } from "lucide-react";
+import { FileDown, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 const logoSrc = "/Logodcat.jpg";
@@ -68,10 +67,7 @@ interface MonthlyReportProps {
   onViewIntervention?: (intervention: Intervention) => void;
 }
 
-export const MonthlyReport: React.FC<MonthlyReportProps> = ({
-  onViewIntervention = () => {},
-}) => {
-  const navigate = useNavigate();
+export const MonthlyReport: React.FC<MonthlyReportProps> = () => {
   const [selectedMonth, setSelectedMonth] = useState(
     format(new Date(), "yyyy-MM")
   );
@@ -151,13 +147,6 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
     return options;
   };
 
-  const handleViewIntervention = (intervention: Intervention) => {
-    if (onViewIntervention) {
-      onViewIntervention(intervention);
-    } else {
-      navigate(`/gestion-des-interventions/interventions/${intervention.id_intervention}`);
-    }
-  };
 
   const generateExcelContent = () => {
     // Créer le contenu CSV avec la nouvelle structure
@@ -222,7 +211,7 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Rapport Mensuel des Interventions - ${monthName}</title>
+        <title>TABLEAU RÉCAPITULATIF DES INTERVENTIONS MENSUELLES - ${monthName}</title>
         <style>
           @page { size: A4 landscape; margin: 2cm; }
           body { 
@@ -475,7 +464,6 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
                       <TableHead>Action menée</TableHead>
                       <TableHead>Recommandation</TableHead>
                       <TableHead>Durée</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -510,19 +498,6 @@ export const MonthlyReport: React.FC<MonthlyReportProps> = ({
                             {intervention.recommandation}
                           </TableCell>
                           <TableCell>{intervention.duree}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleViewIntervention(intervention)
-                              }
-                              className="hover:bg-gray-100"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span className="ml-2">Détails</span>
-                            </Button>
-                          </TableCell>
                         </TableRow>
                       ))
                     )}

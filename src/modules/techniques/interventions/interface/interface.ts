@@ -64,13 +64,15 @@ export interface Intervention {
     type: string; // Ce champ 'type' est un doublon avec type_intervention dans la BDD, mais présent dans l'API
     id_partenaire: number; // Clé étrangère vers Partenaire
     id_contrat: number | null; // Clé étrangère vers Contrat, peut être null
-    superviseur: number; // ID du superviseur (employé)
+    id_superviseur: number | null; // ID du superviseur (employé) - peut être null
     documents?: InterventionDocument[]; // Optionnel: documents directement associés à l'intervention
     employes?: Employe[]; // Optionnel: employés assignés à l'intervention
 }
   
 // Payload pour la création d'une intervention
-export type CreateInterventionPayload = Omit<Intervention, 'id_intervention' | 'documents' | 'employes'>;
+export type CreateInterventionPayload = Omit<Intervention, 'id_intervention' | 'documents' | 'employes' | 'id_superviseur'> & {
+  id_superviseur?: number | null; // Rendre le superviseur optionnel car il sera traité séparément
+};
   
 // Payload pour la mise à jour d'une intervention (tous les champs peuvent être optionnels pour un PATCH,
 // mais pour un PUT, on enverrait l'objet complet sans id_intervention)

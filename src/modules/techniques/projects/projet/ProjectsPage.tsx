@@ -10,23 +10,21 @@ import {
   BarChart3,
   Clock,
   CheckCircle,
-  RefreshCcw,
   Coins,
   FileText,
   Plus,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner"; // Import de toast pour les messages
+import { DeleteConfirmationDialog } from "./components/DeleteConfirmationDialog";
 // import Layout from "@/components/Layout";
 
 // Importation des fonctions API depuis leurs fichiers respectifs
 // Chemins ajustés basés sur la structure `src/api/`
 import {
   fetchAllProjets,
-  deleteProjetWithConfirmation,
+  deleteProjetSimple,
   getProjetAssociatedPartenaires,
 } from "../projet/api/projets"; // Chemin corrigé vers src/api/projets.ts
 import { getFamilles } from "../projet/api/famille"; // Chemin corrigé vers src/api/famille.ts
@@ -40,8 +38,18 @@ const ProjetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const projetsPerPage = 10;
-  const [error, setError] = useState<string | null>(null);
-  const { getPartenaires } = usePartenairesApi(); 
+  const { getPartenaires } = usePartenairesApi();
+  
+  // État pour le dialogue de confirmation de suppression
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    projectId: number | null;
+    projectName: string;
+  }>({
+    isOpen: false,
+    projectId: null,
+    projectName: "",
+  }); 
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEtat, setFilterEtat] = useState("en_cours");
@@ -64,7 +72,6 @@ const ProjetsPage = () => {
   // et les boucles infinies de `useEffect` si elle est passée comme dépendance.
   const loadAllData = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const [fetchedProjets, fetchedFamilles, fetchedPartenaires] =
         await Promise.all([
@@ -120,9 +127,9 @@ const ProjetsPage = () => {
       setProjectPartnersMap(tempProjectPartnersMap);
     } catch (err: unknown) {
       console.error("Erreur lors du chargement des données :", err);
-      setError(
+      toast.info(
         (err as Error).message ||
-          "Impossible de charger les données. Veuillez réessayer."
+          "Les données ne sont pas disponibles pour le moment. Veuillez actualiser la page."
       );
       // Réinitialiser les états en cas d'erreur grave pour un affichage cohérent
       setProjets([]);
@@ -171,55 +178,53 @@ const ProjetsPage = () => {
     currentProjets.map((p) => `${p.id_projet}: ${p.nom_projet}`)
   );
 
-  // Gestionnaire de suppression de projet
-  const handleDelete = useCallback(
-    async (id: number) => {
-      const projetToDelete = projets.find((p) => p.id_projet === id);
-      if (!projetToDelete) {
-        console.warn("Projet non trouvé pour suppression:", id);
-        toast.error("Projet introuvable pour la suppression."); // Utilisation de toast
-        return;
-      }
-      setLoading(true);
-      try {
-        // Appel de la fonction de suppression avec confirmation
-        const result = await deleteProjetWithConfirmation(
-          id,
-          projetToDelete.nom_projet
+    // Gestionnaire pour ouvrir le dialogue de confirmation
+  const handleDeleteClick = useCallback((id: number) => {
+    const projetToDelete = projets.find((p) => p.id_projet === id);
+    if (!projetToDelete) {
+      toast.info("Projet introuvable pour la suppression.");
+      return;
+    }
+    setDeleteDialog({
+      isOpen: true,
+      projectId: id,
+      projectName: projetToDelete.nom_projet,
+    });
+  }, [projets]);
+
+  // Gestionnaire de suppression de projet confirmée
+  const handleDeleteConfirmed = useCallback(async () => {
+    if (!deleteDialog.projectId) return;
+    
+    setLoading(true);
+    try {
+      const result = await deleteProjetSimple(deleteDialog.projectId);
+      if (result.success) {
+        toast.success(
+          `Projet "${deleteDialog.projectName}" supprimé avec succès !`
         );
-        if (result.success) {
-          toast.success(
-            `Projet "${projetToDelete.nom_projet}" supprimé avec succès !`
-          ); // Utilisation de toast
-          await loadAllData(); // Recharger toutes les données après suppression
-          // Ajuster la page actuelle si nécessaire (par exemple, si la dernière page devient vide)
-          if (
-            currentPage > Math.ceil((projets.length - 1) / projetsPerPage) &&
-            currentPage > 1
-          ) {
-            setCurrentPage(currentPage - 1);
-          }
-        } else {
-          setError(result.message);
-          toast.error(`Échec de la suppression: ${result.message}`); // Utilisation de toast
+        await loadAllData();
+        if (
+          currentPage > Math.ceil((projets.length - 1) / projetsPerPage) &&
+          currentPage > 1
+        ) {
+          setCurrentPage(currentPage - 1);
         }
-      } catch (err: unknown) {
-        console.error("Erreur lors de la suppression du projet:", err);
-        setError(
-          (err as Error).message ||
-            "Erreur inconnue lors de la suppression du projet."
-        );
-        toast.error(
-          `Erreur lors de la suppression: ${
-            (err as Error).message || "Erreur inconnue."
-          }`
-        ); // Utilisation de toast
-      } finally {
-        setLoading(false);
+      } else {
+        toast.info(`Suppression non effectuée: ${result.message}`);
       }
-    },
-    [projets, loadAllData, currentPage, projetsPerPage]
-  ); // Dépendances pour `useCallback`
+    } catch (err: unknown) {
+      console.error("Erreur lors de la suppression du projet:", err);
+      toast.info(
+        `Suppression non effectuée: ${
+          (err as Error).message || "Veuillez réessayer plus tard."
+        }`
+      );
+    } finally {
+      setLoading(false);
+      setDeleteDialog({ isOpen: false, projectId: null, projectName: "" });
+    }
+  }, [deleteDialog, loadAllData, currentPage, projetsPerPage, projets.length]);
 
   // Fonction pour formater un montant en Franc CFA
   const formatCFA = (amount: number): string => {
@@ -245,11 +250,7 @@ const ProjetsPage = () => {
         : 0,
   };
 
-  // Fonction pour recharger manuellement les données
-  const handleRefresh = () => {
-    setCurrentPage(1); // Réinitialiser à la première page
-    loadAllData();
-  };
+
 
   // Fonction pour changer de page
   const handlePageChange = (page: number) => {
@@ -351,23 +352,7 @@ const ProjetsPage = () => {
         />
       </div>
 
-      {/* Affichage des erreurs */}
-      {error && (
-        <Alert variant="destructive">
-          <TriangleAlert className="h-4 w-4" />
-          <AlertTitle>Erreur</AlertTitle>
-          <AlertDescription>
-            {error}
-            <Button
-              variant="ghost"
-              onClick={handleRefresh}
-              className="ml-2 px-2 py-1 h-auto text-sm"
-            >
-              <RefreshCcw className="h-3 w-3 mr-1" /> Réessayer
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+
 
       {/* Section des projets récents */}
       <div className="space-y-4">
@@ -418,15 +403,15 @@ const ProjetsPage = () => {
         ) : (
           <>
             {/* Tableau des projets */}
-            <ProjetTable
-              projets={currentProjets}
-              onDelete={handleDelete}
-              onView={(id) => navigate(`/gestion-des-projets/projets/${id}/details`)}
-              onEdit={(id) => navigate(`/gestion-des-projets/projets/${id}/editer`)}
-              partenaires={partenaires}
-              familles={familles}
-              projectPartnersMap={projectPartnersMap}
-            />
+                         <ProjetTable
+               projets={currentProjets}
+               onDelete={handleDeleteClick}
+               onView={(id) => navigate(`/gestion-des-projets/projets/${id}/details`)}
+               onEdit={(id) => navigate(`/gestion-des-projets/projets/${id}/editer`)}
+               partenaires={partenaires}
+               familles={familles}
+               projectPartnersMap={projectPartnersMap}
+             />
             {/* Pagination des projets */}
             <ProjetPagination
               currentPage={currentPage}
@@ -436,10 +421,21 @@ const ProjetsPage = () => {
               onPageChange={handlePageChange}
             />
           </>
-        )}
-      </div>
-    </div>
-  );
-};
+                 )}
+       </div>
+
+       {/* Dialogue de confirmation de suppression */}
+       <DeleteConfirmationDialog
+         isOpen={deleteDialog.isOpen}
+         onClose={() => setDeleteDialog({ isOpen: false, projectId: null, projectName: "" })}
+         onConfirm={handleDeleteConfirmed}
+         title="Confirmer la suppression"
+         description={`Êtes-vous sûr de vouloir supprimer le projet "${deleteDialog.projectName}" ? Cette action est irréversible.`}
+         confirmText="Supprimer"
+         cancelText="Annuler"
+       />
+     </div>
+   );
+ };
 
 export default ProjetsPage;

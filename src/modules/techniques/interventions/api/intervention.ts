@@ -38,30 +38,99 @@ export const getInterventionById = async (id: number): Promise<ApiResponse<Inter
 
 export const createIntervention = async (payload: CreateInterventionPayload): Promise<ApiResponse<Intervention>> => {
   try {
+    console.log("[API] Tentative de création d'intervention avec payload:", payload);
     const response = await axios.post(BASE_PATH, payload);
+    console.log("[API] Intervention créée avec succès:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Erreur lors de la création de l'intervention:", error);
+    console.error("[API] Erreur lors de la création de l'intervention:", error);
     throw error;
   }
 };
 
 export const updateIntervention = async (id: number, payload: UpdateInterventionPayload): Promise<ApiResponse<Intervention>> => {
   try {
-    const response = await axios.put(`${BASE_PATH}/${id}`, payload);
+    console.log(`[API] Tentative de mise à jour de l'intervention ${id}`);
+    console.log(`[API] Payload envoyé:`, payload);
+    console.log(`[API] URL: ${BASE_PATH}/${id}`);
+    
+    // Configuration avec timeout plus long pour les textes longs
+    const config = {
+      timeout: 30000, // 30 secondes au lieu du timeout par défaut
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    };
+    
+    const response = await axios.put(`${BASE_PATH}/${id}`, payload, config);
+    
+    console.log(`[API] Réponse de mise à jour:`, response.data);
     return response.data;
   } catch (error) {
-    console.error(`Erreur lors de la mise à jour de l'intervention ${id}:`, error);
+    console.error(`[API] Erreur lors de la mise à jour de l'intervention ${id}:`, error);
+    
+    // Type guard pour vérifier si c'est une erreur Axios
+    if (axios.isAxiosError(error)) {
+      console.error(`[API] Détails de l'erreur:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+    } else {
+      console.error(`[API] Erreur non-Axios:`, error);
+    }
+    
     throw error;
   }
 };
 
 export const deleteIntervention = async (id: number): Promise<ApiResponse<void>> => {
   try {
+    console.log(`[API] Tentative de suppression de l'intervention ${id} avec dissociation des employés et documents`);
+    
+    // Récupérer les employés assignés à cette intervention
+    try {
+      const employeesResponse = await getInterventionEmployees(id);
+      const employees = employeesResponse.data || [];
+      
+      // Dissocier tous les employés
+      for (const employee of employees) {
+        try {
+          await removeEmployeeFromIntervention(id, employee.id_employes);
+          console.log(`[API] Employé ${employee.id_employes} dissocié de l'intervention ${id}`);
+        } catch (employeeError) {
+          console.error(`[API] Erreur lors de la dissociation de l'employé ${employee.id_employes}:`, employeeError);
+        }
+      }
+    } catch (employeesError) {
+      console.error(`[API] Erreur lors de la récupération des employés de l'intervention ${id}:`, employeesError);
+    }
+    
+    // Récupérer les documents de cette intervention
+    try {
+      const documentsResponse = await getInterventionDocuments(id);
+      const documents = documentsResponse.data || [];
+      
+      // Supprimer tous les documents
+      for (const document of documents) {
+        try {
+          await removeDocumentFromIntervention(id, document.id_documents);
+          console.log(`[API] Document ${document.id_documents} supprimé de l'intervention ${id}`);
+        } catch (documentError) {
+          console.error(`[API] Erreur lors de la suppression du document ${document.id_documents}:`, documentError);
+        }
+      }
+    } catch (documentsError) {
+      console.error(`[API] Erreur lors de la récupération des documents de l'intervention ${id}:`, documentsError);
+    }
+    
+    // Supprimer l'intervention elle-même
     const response = await axios.delete(`${BASE_PATH}/${id}`);
+    console.log(`[API] Intervention ${id} supprimée avec succès`);
     return response.data;
   } catch (error) {
-    console.error(`Erreur lors de la suppression de l'intervention ${id}:`, error);
+    console.error(`[API] Erreur lors de la suppression de l'intervention ${id}:`, error);
     throw error;
   }
 };
@@ -69,10 +138,41 @@ export const deleteIntervention = async (id: number): Promise<ApiResponse<void>>
 // Employee Management for Interventions
 export const assignEmployeeToIntervention = async (interventionId: number, employeeId: number): Promise<ApiResponse<void>> => {
   try {
+    console.log(`[API] Tentative d'assignation: intervention ${interventionId}, employé ${employeeId}`);
     const response = await axios.post(`${BASE_PATH}/${interventionId}/employes`, { id_employes: employeeId });
+    console.log(`[API] Assignation réussie:`, response.data);
     return response.data;
   } catch (error) {
-    console.error(`Erreur lors de l'assignation de l'employé à l'intervention:`, error);
+    console.error(`[API] Erreur lors de l'assignation de l'employé ${employeeId} à l'intervention ${interventionId}:`, error);
+    throw error;
+  }
+};
+
+// Fonction spécifique pour assigner un superviseur
+export const assignSuperviseurToIntervention = async (interventionId: number, superviseurId: number): Promise<ApiResponse<Intervention>> => {
+  try {
+    console.log(`[API] Tentative d'assignation du superviseur: intervention ${interventionId}, superviseur ${superviseurId}`);
+    
+    // Essayer d'abord la mise à jour directe du champ id_superviseur
+    try {
+      const response = await updateIntervention(interventionId, { id_superviseur: superviseurId });
+      console.log(`[API] Assignation du superviseur réussie via updateIntervention:`, response);
+      return response;
+    } catch (updateError) {
+      console.log(`[API] Échec de la mise à jour directe, tentative via assignEmployeeToIntervention:`, updateError);
+      
+      // Fallback : utiliser assignEmployeeToIntervention
+      await assignEmployeeToIntervention(interventionId, superviseurId);
+      
+      // Retourner une réponse simulée
+      return {
+        success: true,
+        message: 'Superviseur assigné via relation employé-intervention',
+        intervention: await getInterventionById(interventionId).then(res => res.data)
+      } as ApiResponse<Intervention>;
+    }
+  } catch (error) {
+    console.error(`[API] Erreur lors de l'assignation du superviseur ${superviseurId} à l'intervention ${interventionId}:`, error);
     throw error;
   }
 };
@@ -96,6 +196,8 @@ export const removeEmployeeFromIntervention = async (interventionId: number, emp
     throw error;
   }
 };
+
+
 
 // Document Management for Interventions
 export const getInterventionDocuments = async (interventionId: number): Promise<ApiResponse<InterventionDocument[]>> => {

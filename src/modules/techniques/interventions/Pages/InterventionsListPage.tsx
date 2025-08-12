@@ -21,12 +21,13 @@ import { toast } from "sonner";
 import { Intervention } from "../interface/interface";
 import { InterventionForm } from "../components/InterventionForm";
 import { InterventionsList } from "../components/InterventionsList";
-import { createIntervention, deleteIntervention } from "../api/intervention";
+import { assignSuperviseurToIntervention } from "../api/intervention";
 import Layout from "@/components/Layout";
 import { Plus, Home, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getAxiosErrorMessage } from "@/api/api";
 import { AxiosError } from "axios";
+import { useCreateIntervention, useDeleteIntervention, useAssignEmployeesToIntervention, extractInterventionId } from "../hooks";
 
 export const InterventionsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,33 +35,37 @@ export const InterventionsListPage: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedIntervention, setSelectedIntervention] =
     useState<Intervention | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // Hooks TanStack Query
+  const createInterventionMutation = useCreateIntervention();
+  const deleteInterventionMutation = useDeleteIntervention();
+  const assignEmployeesMutation = useAssignEmployeesToIntervention();
 
   // Type pour les données du formulaire
   type FormData = {
     date_intervention: string;
     id_partenaire: number;
-    probleme_signale: string;
-    type_intervention: "Corrective" | "Préventive";
-    type_defaillance: "Électrique" | "Matérielle" | "Logiciel";
-    cause_defaillance:
+    probleme_signale?: string;
+    type_intervention?: "Corrective" | "Préventive";
+    type_defaillance?: "Électrique" | "Matérielle" | "Logiciel";
+    cause_defaillance?:
       | "Usure normale"
       | "Défaut utilisateur"
       | "Défaut produit"
       | "Autre";
     detail_cause?: string;
-    rapport_intervention: string;
-    recommandation: string;
-    duree: string;
-    lieu: string;
-    mode_intervention: string;
-    statut_intervention: "à faire" | "en cours" | "en attente" | "terminé";
-    employes: number[];
-    superviseur: number;
+    rapport_intervention?: string;
+    recommandation?: string;
+    duree?: string;
+    lieu?: string;
+    mode_intervention?: string;
+    statut_intervention?: "à faire" | "en cours" | "en attente" | "terminé";
+    employes?: number[];
+    superviseur?: number;
+    id_contrat?: number | null;
   };
 
   const handleCreateSubmit = async (data: FormData) => {
-    setIsLoading(true);
     try {
       // Validation des champs requis
       if (!data.id_partenaire || data.id_partenaire === 0) {
@@ -83,34 +88,28 @@ export const InterventionsListPage: React.FC = () => {
       const formattedData = {
         date_intervention: data.date_intervention,
         id_partenaire: id_partenaire,
-        probleme_signale: truncateText(data.probleme_signale, 50),
-        type_intervention: truncateText(data.type_intervention, 50),
-        type_defaillance: truncateText(data.type_defaillance, 50),
-        cause_defaillance: truncateText(data.cause_defaillance, 50),
+        probleme_signale: truncateText(data.probleme_signale || "", 50),
+        type_intervention: truncateText(data.type_intervention || "", 50),
+        type_defaillance: truncateText(data.type_defaillance || "", 50),
+        cause_defaillance: truncateText(data.cause_defaillance || "", 50),
         detail_cause: data.detail_cause || "",
-        rapport_intervention: truncateText(data.rapport_intervention, 50),
-        recommandation: truncateText(data.recommandation, 50),
-        duree: truncateText(data.duree, 50),
-        lieu: truncateText(data.lieu, 50),
+        rapport_intervention: truncateText(data.rapport_intervention || "", 50),
+        recommandation: truncateText(data.recommandation || "", 50),
+        duree: truncateText(data.duree || "", 50),
+        lieu: truncateText(data.lieu || "", 50),
         mode_intervention: truncateText(
           data.mode_intervention || "Standard",
           50
         ),
-        type: truncateText(data.type_intervention, 50),
-        id_contrat: null,
-        superviseur: data.superviseur,
-        employes: data.employes,
-        statut_intervention: data.statut_intervention,
+        type: truncateText(data.type_intervention || "", 50),
+        id_contrat: data.id_contrat ?? null,
+        statut_intervention: data.statut_intervention || "à faire",
+        // Ne pas inclure superviseur ici, il sera traité séparément
       };
 
-      // Vérification que tous les champs requis sont présents et non vides
+      // Vérification que seuls les champs vraiment essentiels sont présents
       const requiredFields = [
         "date_intervention",
-        "type_intervention",
-        "type_defaillance",
-        "cause_defaillance",
-        "lieu",
-        "duree",
       ] as const;
 
       const missingFields = requiredFields.filter(
@@ -126,51 +125,60 @@ export const InterventionsListPage: React.FC = () => {
       console.log("Données brutes du formulaire:", data);
       console.log("Données formatées envoyées à l'API:", formattedData);
 
-      try {
-        const response = await createIntervention(formattedData);
-        console.log("Réponse de l'API:", response);
+      // Créer l'intervention avec TanStack Query
+      const response = await createInterventionMutation.mutateAsync(formattedData);
+      
+      console.log("Réponse complète de l'API:", response);
+      console.log("Structure de la réponse:", {
+        success: response.success,
+        data: response.data,
+        intervention: response.intervention,
+        message: response.message
+      });
 
-        if (response.success === false) {
-          throw new Error(
-            response.message || "Erreur lors de la création de l'intervention"
-          );
-        }
-
-        toast.success("Intervention créée avec succès");
-        setIsCreateDialogOpen(false);
-        // Recharger la liste des interventions sans rafraîchir la page
-        // Note: Cette page utilise InterventionsList qui se recharge automatiquement
-      } catch (apiError: unknown) {
-        console.error("Erreur API:", apiError);
-        throw new Error(getAxiosErrorMessage(apiError));
+      if (response.success === false) {
+        throw new Error(
+          response.message || "Erreur lors de la création de l'intervention"
+        );
       }
+
+      // Récupérer l'ID de l'intervention créée selon la structure de réponse
+      const interventionId = extractInterventionId(response);
+      
+      console.log("ID de l'intervention créée:", interventionId);
+      
+      // Assigner les employés et le superviseur en utilisant les hooks appropriés
+      if (data.employes && data.employes.length > 0) {
+        await assignEmployeesMutation.mutateAsync({
+          interventionId,
+          employes: data.employes,
+          superviseur: 0 // Pas de superviseur ici
+        });
+      }
+      
+      // Assigner le superviseur séparément
+      if (data.superviseur && data.superviseur > 0) {
+        await assignSuperviseurToIntervention(interventionId, data.superviseur);
+      }
+
+      setIsCreateDialogOpen(false);
+      
     } catch (error: unknown) {
       console.error("Erreur lors de la création:", error);
       toast.error(
         getAxiosErrorMessage(error as AxiosError) ||
           "Une erreur inattendue est survenue"
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedIntervention) return;
-    setIsLoading(true);
     try {
-      await deleteIntervention(selectedIntervention.id_intervention);
+      await deleteInterventionMutation.mutateAsync(selectedIntervention.id_intervention);
       setIsDeleteDialogOpen(false);
-      toast.success("L'intervention a été supprimée avec succès.");
-      // Recharger la liste des interventions sans rafraîchir la page
-      // Note: Cette page utilise InterventionsList qui se recharge automatiquement
     } catch (error) {
       console.error("Erreur lors de la suppression de l'intervention:", error);
-      toast.error(
-        "Une erreur est survenue lors de la suppression de l'intervention."
-      );
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -227,7 +235,7 @@ export const InterventionsListPage: React.FC = () => {
             </DialogHeader>
             <InterventionForm
               onSubmit={handleCreateSubmit}
-              isLoading={isLoading}
+              isLoading={createInterventionMutation.isLoading}
             />
           </DialogContent>
         </Dialog>
@@ -247,8 +255,8 @@ export const InterventionsListPage: React.FC = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} disabled={isLoading}>
-                {isLoading ? "Suppression..." : "Supprimer"}
+              <AlertDialogAction onClick={handleDelete} disabled={deleteInterventionMutation.isLoading}>
+                {deleteInterventionMutation.isLoading ? "Suppression..." : "Supprimer"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

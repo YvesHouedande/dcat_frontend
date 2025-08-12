@@ -8,6 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +36,10 @@ import {
   getInterventionDocuments,
   getInterventionEmployees,
   removeDocumentFromIntervention,
+  assignEmployeeToIntervention,
+  removeEmployeeFromIntervention,
+  assignSuperviseurToIntervention,
+  updateIntervention,
 } from "../api/intervention";
 import { usePartenairesApi } from "../../projects/projet/api/partenaires";
 import { AddDocumentSheet } from "./AddDocumentSheet";
@@ -46,6 +57,7 @@ import {
   Wrench,
   Home,
   BarChart3,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -75,18 +87,22 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
   const [partenaire, setPartenaire] = useState<Partenaire | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  const [isAddSuperviseurOpen, setIsAddSuperviseurOpen] = useState(false);
   const [contrat, setContrat] = useState<Contrat | null>(null);
   const [superviseur, setSuperviseur] = useState<Employe | null>(null);
+  const [allEmployes, setAllEmployes] = useState<Employe[]>([]);
   const { fetchContratById } = useContratsApi();
   const { getPartenaires } = usePartenairesApi();
   const { getEmployes } = useEmployesApi();
   const loadData = useCallback(async () => {
     try {
-      const [documentsResponse, employesResponse, partenairesResponse] =
+      const [documentsResponse, employesResponse, partenairesResponse, allEmployesResponse] =
         await Promise.all([
           getInterventionDocuments(intervention.id_intervention),
           getInterventionEmployees(intervention.id_intervention),
           getPartenaires({ limit: 100, page: 1 }),
+          getEmployes({ limit: 100, page: 1 }),
         ]);
 
       let docsToSet: InterventionDocument[] = [];
@@ -105,6 +121,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
       setDocuments(docsToSet);
 
       setEmployes(employesResponse.data || []);
+      setAllEmployes(allEmployesResponse || []);
       const partenaireFound = partenairesResponse.find(
         (p) => p.id_partenaire === intervention.id_partenaire
       );
@@ -133,13 +150,14 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
       }
     };
     
+    // Charger le superviseur via l'API dédiée
     // Charger le superviseur si superviseur existe
     const loadSuperviseur = async () => {
-      if (intervention.superviseur) {
+      if (intervention.id_superviseur) {
         try {
           const employesResponse = await getEmployes({ limit: 100, page: 1 });
           const superviseurFound = employesResponse.find(
-            (e) => e.id_employes === intervention.superviseur
+            (e) => e.id_employes === intervention.id_superviseur
           );
           setSuperviseur(superviseurFound || null);
         } catch {
@@ -152,7 +170,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
     
     loadContrat();
     loadSuperviseur();
-  }, [loadData, intervention.id_contrat, intervention.superviseur, fetchContratById, getEmployes]);
+  }, [loadData, intervention.id_contrat, intervention.id_superviseur, fetchContratById, getEmployes]);
 
   const handleDeleteDocument = async (documentId: number) => {
     try {
@@ -181,6 +199,70 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
       toast.error("Erreur lors du téléchargement du document");
     }
   };
+
+  const handleAssignEmployee = async (employeeId: number) => {
+    try {
+      await assignEmployeeToIntervention(intervention.id_intervention, employeeId);
+      toast.success('Employé assigné avec succès');
+      // Recharger les employés
+      const employesResponse = await getInterventionEmployees(intervention.id_intervention);
+      setEmployes(employesResponse.data || []);
+      setIsAddEmployeeOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de l\'assignation:', error);
+      toast.error('Erreur lors de l\'assignation de l\'employé');
+    }
+  };
+
+  const handleRemoveEmployee = async (employeeId: number) => {
+    try {
+      await removeEmployeeFromIntervention(intervention.id_intervention, employeeId);
+      toast.success('Employé retiré avec succès');
+      // Recharger les employés
+      const employesResponse = await getInterventionEmployees(intervention.id_intervention);
+      setEmployes(employesResponse.data || []);
+    } catch (error) {
+      console.error('Erreur lors du retrait:', error);
+      toast.error('Erreur lors du retrait de l\'employé');
+    }
+  };
+
+  const handleAssignSuperviseur = async (superviseurId: number) => {
+    try {
+      await assignSuperviseurToIntervention(intervention.id_intervention, superviseurId);
+      toast.success('Superviseur assigné avec succès');
+      // Recharger le superviseur
+      const employesResponse = await getEmployes({ limit: 100, page: 1 });
+      const superviseurFound = employesResponse.find(
+        (e) => e.id_employes === superviseurId
+      );
+      setSuperviseur(superviseurFound || null);
+      setIsAddSuperviseurOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de l\'assignation du superviseur:', error);
+      toast.error('Erreur lors de l\'assignation du superviseur');
+    }
+  };
+
+  const handleRemoveSuperviseur = async () => {
+    if (!superviseur) return;
+    try {
+      // Mettre à jour l'intervention pour retirer le superviseur
+      await updateIntervention(intervention.id_intervention, { id_superviseur: null });
+      toast.success('Superviseur retiré avec succès');
+      setSuperviseur(null);
+    } catch (error) {
+      console.error('Erreur lors du retrait du superviseur:', error);
+      toast.error('Erreur lors du retrait du superviseur');
+    }
+  };
+
+
+
+  // Filtrer les employés disponibles (non assignés)
+  const availableEmployes = allEmployes.filter(
+    emp => !employes.some(assignedEmp => assignedEmp.id_employes === emp.id_employes)
+  );
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -312,7 +394,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
                   {contrat ? (
                     <span
                       className="text-indigo-600 underline cursor-pointer"
-                      onClick={() => navigate(`/resources-humaines/contrats/${contrat.id_contrat}/details`)}
+                      onClick={() => navigate(`/gestion-administrative/contrats/${contrat.id_contrat}`)}
                     >
                       {contrat.nom_contrat}
                     </span>
@@ -410,20 +492,40 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
           <CardContent>
             {superviseur ? (
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-5 w-5 text-primary" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{superviseur.prenom_employes} {superviseur.nom_employes}</p>
+                      <p className="text-sm text-muted-foreground">{superviseur.email_employes}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{superviseur.prenom_employes} {superviseur.nom_employes}</p>
-                    <p className="text-sm text-muted-foreground">{superviseur.email_employes}</p>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveSuperviseur()}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Aucun superviseur assigné
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Aucun superviseur assigné
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAddSuperviseurOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter un superviseur
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -537,6 +639,20 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-sm text-muted-foreground">
+                {employes.length} employé{employes.length > 1 ? 's' : ''} assigné{employes.length > 1 ? 's' : ''}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddEmployeeOpen(true)}
+                disabled={availableEmployes.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter un employé
+              </Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {employes.map((employe) => (
                 <div key={employe.id_employes} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
@@ -551,6 +667,14 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
                       {employe.email_employes}
                     </p>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveEmployee(employe.id_employes)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -577,8 +701,17 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
                 Aucun employé assigné à cette intervention
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Les employés peuvent être assignés lors de la modification de l'intervention
+                Les employés peuvent être assignés directement depuis cette page
               </p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => setIsAddEmployeeOpen(true)}
+                disabled={availableEmployes.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter un employé
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -672,6 +805,114 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
           onDocumentAdded();
         }}
       />
+
+      {/* Dialog pour ajouter des employés */}
+      <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assigner un employé</DialogTitle>
+            <DialogDescription>
+              Sélectionnez un employé à assigner à cette intervention
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {availableEmployes.length > 0 ? (
+              <div className="grid gap-2">
+                {availableEmployes.map((employe) => (
+                  <div
+                    key={employe.id_employes}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {employe.prenom_employes} {employe.nom_employes}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {employe.email_employes}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAssignEmployee(employe.id_employes)}
+                    >
+                      Assigner
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Tous les employés sont déjà assignés à cette intervention
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog pour ajouter un superviseur */}
+      <Dialog open={isAddSuperviseurOpen} onOpenChange={setIsAddSuperviseurOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assigner un superviseur</DialogTitle>
+            <DialogDescription>
+              Sélectionnez un employé à assigner comme superviseur de cette intervention
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {allEmployes.length > 0 ? (
+              <div className="grid gap-2">
+                {allEmployes.map((employe) => (
+                  <div
+                    key={employe.id_employes}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {employe.prenom_employes} {employe.nom_employes}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {employe.email_employes}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        handleAssignSuperviseur(employe.id_employes);
+                        setIsAddSuperviseurOpen(false);
+                      }}
+                    >
+                      Assigner
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Aucun employé disponible
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };

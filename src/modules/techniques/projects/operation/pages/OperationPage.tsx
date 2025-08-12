@@ -7,12 +7,13 @@ import { OperationFilters } from "../components/OperationFilters";
 import { OperationTable } from "../components/OperationTable";
 import OperationPagination from "../components/OperationPagination";
 import OperationForm from "../components/OperationForm";
-import { getAllOperations, createOperation, deleteOperation } from "../api/operation";
+import { getAllOperations, createOperation, deleteOperationSimple } from "../api/operation";
 import { fetchAllProjets } from "../../projet/api/projets";
 import { Operation, Projet } from "../../types/types";
 import { CheckCircle, Clock, AlertTriangle, CircleDashed } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteOperationConfirmationDialog } from "../components/DeleteOperationConfirmationDialog";
 
 const OperationPage: React.FC = () => {
   const navigate = useNavigate(); // Initialisez useNavigate ici
@@ -30,6 +31,17 @@ const OperationPage: React.FC = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
 
+  // État pour le dialogue de confirmation de suppression
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    operationId: number | null;
+    operationName: string;
+  }>({
+    isOpen: false,
+    operationId: null,
+    operationName: "",
+  });
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -43,8 +55,7 @@ const OperationPage: React.FC = () => {
         setOperations(Array.isArray(operationsRes.data) ? operationsRes.data : []);
         setProjets(Array.isArray(projetsRes.data) ? projetsRes.data : []);
       } catch {
-        setError("Impossible de charger les opérations ou les projets.");
-        toast.error("Erreur de chargement des opérations ou projets.");
+        toast.info("Les données ne sont pas disponibles pour le moment. Veuillez actualiser la page.");
       } finally {
         setLoading(false);
       }
@@ -133,25 +144,42 @@ const OperationPage: React.FC = () => {
   };
   // --- FIN DES CORRECTIONS ---
 
-  const handleDelete = async (id: number) => {
-    toast.promise(
-      async () => {
-        const result = await deleteOperation(id); // Récupérer le résultat de la suppression
-        if (result.success) { // Vérifier la propriété `success` du résultat
-          setOperations((prev) => prev.filter((op) => op.id_operation !== id));
-          return "Opération supprimée avec succès !";
-        } else {
-          throw new Error(result.message || "Échec de la suppression de l'opération.");
-        }
-      },
-      {
-        loading: "Suppression de l'opération...",
-        success: (message) => message,
-        error: (err) => {
-          return err instanceof Error ? err.message : "Échec de la suppression de l'opération.";
-        },
+  // Gestionnaire pour ouvrir le dialogue de confirmation
+  const handleDeleteClick = (id: number) => {
+    const operationToDelete = operations.find((op) => op.id_operation === id);
+    if (!operationToDelete) {
+      toast.info("Opération introuvable pour la suppression.");
+      return;
+    }
+    setDeleteDialog({
+      isOpen: true,
+      operationId: id,
+      operationName: operationToDelete.nom_operation,
+    });
+  };
+
+  // Gestionnaire de suppression d'opération confirmée
+  const handleDeleteConfirmed = async () => {
+    if (!deleteDialog.operationId) return;
+    
+    try {
+      const result = await deleteOperationSimple(deleteDialog.operationId);
+      if (result.success) {
+        setOperations((prev) => prev.filter((op) => op.id_operation !== deleteDialog.operationId));
+        toast.success(`Opération "${deleteDialog.operationName}" supprimée avec succès !`);
+      } else {
+        toast.info(`Suppression non effectuée: ${result.message}`);
       }
-    );
+    } catch (err) {
+      console.error("Erreur lors de la suppression de l'opération:", err);
+      toast.info(
+        `Suppression non effectuée: ${
+          err instanceof Error ? err.message : "Veuillez réessayer plus tard."
+        }`
+      );
+    } finally {
+      setDeleteDialog({ isOpen: false, operationId: null, operationName: "" });
+    }
   };
 
   return (
@@ -206,7 +234,7 @@ const OperationPage: React.FC = () => {
               operations={currentOperations}
               onView={handleView}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={handleDeleteClick}
             />
             <OperationPagination
               currentPage={currentPage}
@@ -218,6 +246,17 @@ const OperationPage: React.FC = () => {
             />
           </>
         )}
+
+        {/* Dialogue de confirmation de suppression */}
+        <DeleteOperationConfirmationDialog
+          isOpen={deleteDialog.isOpen}
+          onClose={() => setDeleteDialog({ isOpen: false, operationId: null, operationName: "" })}
+          onConfirm={handleDeleteConfirmed}
+          title="Confirmer la suppression"
+          description={`Êtes-vous sûr de vouloir supprimer l'opération "${deleteDialog.operationName}" ? Cette action est irréversible.`}
+          confirmText="Supprimer"
+          cancelText="Annuler"
+        />
       </div>
       <Sheet open={modalOpen} onOpenChange={setModalOpen}>
         <SheetContent side="right" className="w-full max-w-md">

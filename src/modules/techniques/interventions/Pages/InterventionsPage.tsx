@@ -24,9 +24,11 @@ import {
   createIntervention,
   deleteIntervention,
   getInterventions,
+  assignSuperviseurToIntervention,
 } from "../api/intervention";
 import Layout from "@/components/Layout";
 import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Tooltip,
   Legend,
@@ -34,45 +36,48 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format, subDays } from "date-fns";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Trash2, Plus, FileText, BarChart3 } from "lucide-react";
+import { format, subDays} from "date-fns";
+import { fr } from "date-fns/locale";
+import { Plus, FileText, BarChart3, TrendingUp, Clock, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAssignEmployeesToIntervention, extractInterventionId } from "../hooks/useInterventions";
+import { 
+  isRecursiveObject,
+  findInterventionIdRecursively 
+} from "../types/utils";
 
 export const InterventionsPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedIntervention, setSelectedIntervention] =
+  const [selectedIntervention] =
     useState<Intervention | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // Hook pour l'assignation des employés
+  const assignEmployeesMutation = useAssignEmployeesToIntervention();
 
   const refreshData = async () => {
     try {
-      const interventionsResponse = await getInterventions();
-      
-      // Limiter à 2 interventions les plus récentes
-      const recentInterventions = (interventionsResponse.data || [])
-        .sort(
-          (a, b) =>
-            new Date(b.date_intervention).getTime() -
-            new Date(a.date_intervention).getTime()
-        )
-        .slice(0, 2);
-      setInterventions(recentInterventions);
+      setIsLoadingData(true);
+      // Récupérer toutes les interventions (sans limite)
+      const interventionsResponse = await getInterventions(1, 1000);
+      setInterventions(interventionsResponse.data || []);
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
       toast.error("Erreur lors du chargement des données");
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
@@ -92,74 +97,111 @@ export const InterventionsPage: React.FC = () => {
       (int) => new Date(int.date_intervention) >= last30Days
     );
 
-    // 2. Temps moyen d'intervention
-    const avgDuration =
-      recentInterventions.reduce((acc, curr) => {
-        const matches = curr.duree.match(/(\d+)h(?:(\d+))?/);
-        if (matches) {
-          const hours = parseInt(matches[1]) || 0;
-          const minutes = parseInt(matches[2]) || 0;
-          return acc + (hours * 60 + minutes);
-        }
-        return acc;
-      }, 0) / recentInterventions.length;
 
-    // 3. Types de défaillances les plus courants
-    const defaillanceCount = recentInterventions.reduce((acc, curr) => {
+
+    // 3. Temps moyen d'intervention (toutes les interventions)
+    const avgDuration = interventions.reduce((acc, curr) => {
+      const matches = curr.duree.match(/(\d+)h(?:(\d+))?/);
+      if (matches) {
+        const hours = parseInt(matches[1]) || 0;
+        const minutes = parseInt(matches[2]) || 0;
+        return acc + (hours * 60 + minutes);
+      }
+      return acc;
+    }, 0) / interventions.length;
+
+    // 4. Types de défaillances les plus courants (toutes les interventions)
+    const defaillanceCount = interventions.reduce((acc, curr) => {
       acc[curr.type_defaillance] = (acc[curr.type_defaillance] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // 4. Tendance des interventions par jour
-    const dailyInterventions = recentInterventions.reduce((acc, curr) => {
-      const date = format(new Date(curr.date_intervention), "dd/MM");
-      acc[date] = (acc[date] || 0) + 1;
+    // 5. Types d'intervention (toutes les interventions)
+    const interventionTypeCount = interventions.reduce((acc, curr) => {
+      acc[curr.type_intervention] = (acc[curr.type_intervention] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
+    // 6. Statuts des interventions (toutes les interventions)
+    const statutCount = interventions.reduce((acc, curr) => {
+      acc[curr.statut_intervention] = (acc[curr.statut_intervention] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
+    // 7. Interventions par jour de la semaine (toutes les interventions)
+    const weeklyInterventions = interventions.reduce((acc, curr) => {
+      const dayOfWeek = format(new Date(curr.date_intervention), "EEEE", { locale: fr });
+      acc[dayOfWeek] = (acc[dayOfWeek] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // 9. Interventions en cours et en attente
+    const interventionsEnCours = interventions.filter(
+      (int) => int.statut_intervention === "en cours"
+    ).length;
+    const interventionsEnAttente = interventions.filter(
+      (int) => int.statut_intervention === "en attente"
+    ).length;
 
     return {
-      totalInterventions: recentInterventions.length,
+      totalInterventions: interventions.length,
+      recentInterventions: recentInterventions.length,
       avgDurationFormatted: `${Math.floor(avgDuration / 60)}h${Math.round(
         avgDuration % 60
       )}`,
-      interventionsParJour: Object.entries(dailyInterventions).map(
-        ([date, count]) => ({
-          date,
-          interventions: count,
+      interventionsEnCours,
+      interventionsEnAttente,
+      weeklyInterventions: Object.entries(weeklyInterventions)
+        .sort((a, b) => {
+          const daysOrder = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+          return daysOrder.indexOf(a[0]) - daysOrder.indexOf(b[0]);
         })
-      ),
-      defaillances: Object.entries(defaillanceCount).map(([name, value]) => ({
-        name,
-        value,
-      })),
+        .map(([day, count]) => ({
+          jour: day.charAt(0).toUpperCase() + day.slice(1),
+          interventions: count,
+        })),
+      defaillances: Object.entries(defaillanceCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, value]) => ({
+          name,
+          value,
+        })),
+      typesIntervention: Object.entries(interventionTypeCount)
+        .map(([name, value]) => ({
+          name,
+          value,
+        })),
+      statuts: Object.entries(statutCount)
+        .map(([name, value]) => ({
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+          value,
+        })),
     };
   }, [interventions]);
 
-  const COLORS = ["#2563eb", "#16a34a", "#ea580c", "#8b5cf6", "#db2777"];
+  const COLORS = ["#2563eb", "#16a34a", "#ea580c", "#8b5cf6", "#db2777", "#f59e0b", "#10b981"];
 
   // Type pour les données du formulaire
   type FormData = {
     date_intervention: string;
     id_partenaire: number;
-    probleme_signale: string;
-    type_intervention: "Corrective" | "Préventive";
-    type_defaillance: "Électrique" | "Matérielle" | "Logiciel";
-    cause_defaillance:
+    probleme_signale?: string;
+    type_intervention?: "Corrective" | "Préventive";
+    type_defaillance?: "Électrique" | "Matérielle" | "Logiciel";
+    cause_defaillance?:
       | "Usure normale"
       | "Défaut utilisateur"
       | "Défaut produit"
       | "Autre";
     detail_cause?: string;
-    rapport_intervention: string;
-    recommandation: string;
-    duree: string;
-    lieu: string;
-    mode_intervention: string;
-    statut_intervention: "à faire" | "en cours" | "en attente" | "terminé";
-    employes: number[];
-    superviseur: number;
+    rapport_intervention?: string;
+    recommandation?: string;
+    duree?: string;
+    lieu?: string;
+    mode_intervention?: string;
+    statut_intervention?: "à faire" | "en cours" | "en attente" | "terminé";
+    employes?: number[];
+    superviseur?: number;
     id_contrat?: number | null;
   };
 
@@ -181,37 +223,32 @@ export const InterventionsPage: React.FC = () => {
       };
 
       // Format the data to match the API expectations with length limitations
+      // Note: employes and superviseur will be handled separately via assignEmployeeToIntervention and assignSuperviseurToIntervention
       const formattedData = {
         date_intervention: data.date_intervention,
         id_partenaire: id_partenaire,
-        probleme_signale: truncateText(data.probleme_signale, 50),
-        type_intervention: truncateText(data.type_intervention, 50),
-        type_defaillance: truncateText(data.type_defaillance, 50),
-        cause_defaillance: truncateText(data.cause_defaillance, 50),
+        probleme_signale: data.probleme_signale || "",
+        type_intervention: truncateText(data.type_intervention || "", 50),
+        type_defaillance: truncateText(data.type_defaillance || "", 50),
+        cause_defaillance: truncateText(data.cause_defaillance || "", 50),
         detail_cause: data.detail_cause || "",
-        rapport_intervention: truncateText(data.rapport_intervention, 50),
-        recommandation: truncateText(data.recommandation, 50),
-        duree: truncateText(data.duree, 50),
-        lieu: truncateText(data.lieu, 50),
+        rapport_intervention: data.rapport_intervention || "",
+        recommandation: data.recommandation || "",
+        duree: truncateText(data.duree || "", 50),
+        lieu: truncateText(data.lieu || "", 50),
         mode_intervention: truncateText(
           data.mode_intervention || "Standard",
           50
         ),
-        type: truncateText(data.type_intervention, 50),
-        id_contrat: data.id_contrat ?? null, // Correction : on prend la valeur du formulaire
-        employes: data.employes, // Correction : on envoie les employés sélectionnés
-        superviseur: data.superviseur, // Correction : on envoie le superviseur sélectionné
-        statut_intervention: data.statut_intervention,
+        type: truncateText(data.type_intervention || "", 50),
+        id_contrat: data.id_contrat ?? null,
+        statut_intervention: data.statut_intervention || "à faire",
+        // Ne pas inclure superviseur ici, il sera traité séparément
       };
 
-      // Vérification que tous les champs requis sont présents et non vides
+      // Vérification que seuls les champs vraiment essentiels sont présents
       const requiredFields = [
         "date_intervention",
-        "type_intervention",
-        "type_defaillance",
-        "cause_defaillance",
-        "lieu",
-        "duree",
       ] as const;
 
       const missingFields = requiredFields.filter(
@@ -229,7 +266,13 @@ export const InterventionsPage: React.FC = () => {
 
       try {
         const response = await createIntervention(formattedData);
-        console.log("Réponse de l'API:", response);
+        console.log("Réponse complète de l'API:", response);
+        console.log("Structure de la réponse:", {
+          success: response.success,
+          data: response.data,
+          intervention: response.intervention,
+          message: response.message
+        });
 
         if (response.success === false) {
           throw new Error(
@@ -237,10 +280,61 @@ export const InterventionsPage: React.FC = () => {
           );
         }
 
+        // Log détaillé avant extraction de l'ID
+        console.log("🔍 [InterventionsPage] Avant extractInterventionId:");
+        console.log("- Type de response:", typeof response);
+        console.log("- Clés de response:", Object.keys(response || {}));
+        console.log("- response.data:", response.data);
+        console.log("- response.intervention:", response.intervention);
+        console.log("- response.success:", response.success);
+
+        // Récupérer l'ID de l'intervention créée selon la structure de réponse
+        let interventionId: number;
+        try {
+          interventionId = extractInterventionId(response);
+        } catch (extractError) {
+          console.error("❌ [InterventionsPage] Erreur lors de l'extraction de l'ID:", extractError);
+          
+          // Solution de secours : chercher l'ID manuellement
+          console.log("🔄 [InterventionsPage] Tentative de récupération manuelle de l'ID...");
+          
+          // Essayer différentes structures possibles
+          if (isRecursiveObject(response)) {
+            const foundId = findInterventionIdRecursively(response);
+            if (foundId !== null) {
+              console.log("✅ [InterventionsPage] ID trouvé manuellement:", foundId);
+              interventionId = foundId;
+            } else {
+              throw new Error("Impossible de récupérer l'ID de l'intervention - aucune méthode n'a fonctionné");
+            }
+          } else {
+            throw new Error("Réponse invalide - impossible de récupérer l'ID");
+          }
+        }
+        
+        console.log("ID de l'intervention créée:", interventionId);
+        
+        // Assigner les employés et le superviseur en utilisant les hooks appropriés
+        if (data.employes && data.employes.length > 0) {
+          await assignEmployeesMutation.mutateAsync({
+            interventionId,
+            employes: data.employes,
+            superviseur: 0 // Pas de superviseur ici
+          });
+        }
+        
+        // Assigner le superviseur séparément
+        if (data.superviseur && data.superviseur > 0) {
+          await assignSuperviseurToIntervention(interventionId, data.superviseur);
+        }
+
         toast.success("L'intervention a été créée avec succès.");
 
         setIsCreateDialogOpen(false);
 
+        // Invalider le cache pour forcer le rechargement des données
+        queryClient.invalidateQueries({ queryKey: ['interventions'] });
+        
         // Recharger la liste des interventions sans rafraîchir la page
         refreshData();
       } catch (apiError) {
@@ -283,6 +377,9 @@ export const InterventionsPage: React.FC = () => {
       setIsDeleteDialogOpen(false);
       toast.success("L'intervention a été supprimée avec succès.");
       
+      // Invalider le cache pour forcer le rechargement des données
+      queryClient.invalidateQueries({ queryKey: ['interventions'] });
+      
       // Recharger la liste des interventions sans rafraîchir la page
       refreshData();
     } catch (error) {
@@ -295,19 +392,30 @@ export const InterventionsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteClick = (intervention: Intervention) => {
-    setSelectedIntervention(intervention);
-    setIsDeleteDialogOpen(true);
-  };
+
+  if (isLoadingData) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Chargement des données...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Interventions</h1>
+            <h1 className="text-3xl font-bold">Tableau de Bord des Interventions</h1>
             <p className="text-muted-foreground mt-2">
-              Tableau de bord des interventions techniques
+              Vue d'ensemble de toutes les interventions techniques
             </p>
           </div>
           <div className="flex gap-2">
@@ -339,137 +447,120 @@ export const InterventionsPage: React.FC = () => {
         {/* Dashboard Section */}
         {dashboardData && (
           <div className="space-y-6">
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Interventions (30j)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {dashboardData.totalInterventions}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Durée Moyenne
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {dashboardData.avgDurationFormatted}
-                  </div>
-                </CardContent>
-              </Card>
+                         {/* KPI Cards */}
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               <Card>
+                 <CardHeader className="pb-2">
+                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                     <TrendingUp className="mr-2 h-4 w-4" />
+                     Total Interventions
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-2xl font-bold text-blue-600">
+                     {dashboardData.totalInterventions}
+                   </div>
+                   <p className="text-xs text-muted-foreground">
+                     {dashboardData.recentInterventions} dans les 30 derniers jours
+                   </p>
+                 </CardContent>
+               </Card>
+               
+               <Card>
+                 <CardHeader className="pb-2">
+                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                     <Clock className="mr-2 h-4 w-4" />
+                     Durée Moyenne
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-2xl font-bold text-green-600">
+                     {dashboardData.avgDurationFormatted}
+                   </div>
+                   <p className="text-xs text-muted-foreground">
+                     Par intervention
+                   </p>
+                 </CardContent>
+               </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Interventions Aujourd'hui
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {
-                      interventions.filter(
-                        (int) =>
-                          format(
-                            new Date(int.date_intervention),
-                            "yyyy-MM-dd"
-                          ) === format(new Date(), "yyyy-MM-dd")
-                      ).length
-                    }
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+               <Card>
+                 <CardHeader className="pb-2">
+                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center">
+                     <AlertTriangle className="mr-2 h-4 w-4" />
+                     En Cours
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-2xl font-bold text-orange-600">
+                     {dashboardData.interventionsEnCours}
+                   </div>
+                   <p className="text-xs text-muted-foreground">
+                     {dashboardData.interventionsEnAttente} en attente
+                   </p>
+                 </CardContent>
+               </Card>
+             </div>
 
-            {/* Charts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Distribution par type de défaillance */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Types de Défaillances</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={dashboardData.defaillances}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) =>
-                            `${name} (${(percent * 100).toFixed(0)}%)`
-                          }
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {dashboardData.defaillances.map((_entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                         {/* Charts Grid */}
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+               {/* Distribution par type de défaillance */}
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Types de Défaillances</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="h-[400px]">
+                     <ResponsiveContainer width="100%" height="100%">
+                       <PieChart>
+                         <Pie
+                           data={dashboardData.defaillances}
+                           cx="50%"
+                           cy="50%"
+                           labelLine={false}
+                           label={({ name, percent }) =>
+                             `${name} (${(percent * 100).toFixed(0)}%)`
+                           }
+                           outerRadius={120}
+                           fill="#8884d8"
+                           dataKey="value"
+                         >
+                           {dashboardData.defaillances.map((_entry, index) => (
+                             <Cell
+                               key={`cell-${index}`}
+                               fill={COLORS[index % COLORS.length]}
+                             />
+                           ))}
+                         </Pie>
+                         <Tooltip />
+                         <Legend />
+                       </PieChart>
+                     </ResponsiveContainer>
+                   </div>
+                 </CardContent>
+               </Card>
+
+               {/* Interventions par statut */}
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Interventions par Statut</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="h-[400px]">
+                     <ResponsiveContainer width="100%" height="100%">
+                       <BarChart data={dashboardData.statuts}>
+                         <CartesianGrid strokeDasharray="3 3" />
+                         <XAxis dataKey="name" />
+                         <YAxis />
+                         <Tooltip />
+                         <Bar dataKey="value" fill="#8b5cf6" />
+                       </BarChart>
+                     </ResponsiveContainer>
+                   </div>
+                 </CardContent>
+               </Card>
+             </div>
           </div>
         )}
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Type de Défaillance</TableHead>
-              <TableHead>Cause</TableHead>
-              <TableHead>Détail</TableHead>
-              <TableHead>Rapport</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {interventions.map((intervention) => (
-              <TableRow key={intervention.id_intervention}>
-                <TableCell>
-                  {format(
-                    new Date(intervention.date_intervention),
-                    "dd/MM/yyyy"
-                  )}
-                </TableCell>
-                <TableCell>{intervention.type_intervention}</TableCell>
-                <TableCell>{intervention.type_defaillance}</TableCell>
-                <TableCell>{intervention.cause_defaillance}</TableCell>
-                <TableCell>{intervention.detail_cause}</TableCell>
-                <TableCell>{intervention.rapport_intervention}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => handleDeleteClick(intervention)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
 
         {/* Dialog de création */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Operation, Tache, CreateTachePayload, UpdateTachePayload } from "../../types/types";
-import { getOperationsByProjet, getTachesByOperation, createOperation, deleteOperation } from "../api/operation";
+import { getOperationsByProjet, getTachesByOperation, createOperation, deleteOperationSimple } from "../api/operation";
 import { createTache } from "../../tasks/api/taches";
 import { updateTache, deleteTacheSafely } from "../../tasks/api/taches";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import OperationForm from "./OperationForm";
 import OperationPagination from "./OperationPagination";
 import { useNavigate } from "react-router-dom";
+import { DeleteOperationConfirmationDialog } from "./DeleteOperationConfirmationDialog";
+import { toast } from "sonner";
 
 interface OperationListProps {
   idProjet: number;
@@ -55,7 +57,7 @@ const OperationList: React.FC<OperationListProps> = ({ idProjet }) => {
   const [opSubmitting, setOpSubmitting] = useState(false);
   const [opError, setOpError] = useState<string | null>(null);
   const [opEditSubmitting, setOpEditSubmitting] = useState<Record<number, boolean>>({});
-  const [opEditError, setOpEditError] = useState<Record<number, string | null>>({});
+  const [opEditError] = useState<Record<number, string | null>>({});
 
   const [currentPage, setCurrentPage] = useState(1);
   const [serverPagination, setServerPagination] = useState<{
@@ -68,6 +70,17 @@ const OperationList: React.FC<OperationListProps> = ({ idProjet }) => {
   const itemsPerPage = 10;
   const navigate = useNavigate();
 
+  // État pour le dialogue de confirmation de suppression
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    operationId: number | null;
+    operationName: string;
+  }>({
+    isOpen: false,
+    operationId: null,
+    operationName: "",
+  });
+
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -77,7 +90,7 @@ const OperationList: React.FC<OperationListProps> = ({ idProjet }) => {
         if (res.pagination) setServerPagination(res.pagination);
       })
       .catch(() => {
-        setError("Erreur lors du chargement des opérations");
+        toast.info("Les données ne sont pas disponibles pour le moment. Veuillez actualiser la page.");
         setOperations([]);
       })
       .finally(() => setLoading(false));
@@ -125,17 +138,39 @@ const OperationList: React.FC<OperationListProps> = ({ idProjet }) => {
     navigate(`/gestion-des-projets/projets/operations/${op.id_operation}/editer`);
   };
 
-  const handleDeleteOperation = async (op: Operation) => {
-    if (!window.confirm("Supprimer cette opération ?")) return;
-    setOpEditSubmitting((prev) => ({ ...prev, [op.id_operation]: true }));
+  // Gestionnaire pour ouvrir le dialogue de confirmation
+  const handleDeleteOperationClick = (op: Operation) => {
+    setDeleteDialog({
+      isOpen: true,
+      operationId: op.id_operation,
+      operationName: op.nom_operation,
+    });
+  };
+
+  // Gestionnaire de suppression d'opération confirmée
+  const handleDeleteOperationConfirmed = async () => {
+    if (!deleteDialog.operationId) return;
+    
+    setOpEditSubmitting((prev) => ({ ...prev, [deleteDialog.operationId!]: true }));
     try {
-      await deleteOperation(op.id_operation);
-      const res = await getOperationsByProjet(idProjet);
-      setOperations(res.data || []);
-    } catch {
-      setOpEditError((prev) => ({ ...prev, [op.id_operation]: "Erreur lors de la suppression de l'opération." }));
+      const result = await deleteOperationSimple(deleteDialog.operationId);
+      if (result.success) {
+        const res = await getOperationsByProjet(idProjet);
+        setOperations(res.data || []);
+        toast.success(`Opération "${deleteDialog.operationName}" supprimée avec succès !`);
+      } else {
+        toast.info(`Suppression non effectuée: ${result.message}`);
+      }
+    } catch (err) {
+      console.error("Erreur lors de la suppression de l'opération:", err);
+      toast.info(
+        `Suppression non effectuée: ${
+          err instanceof Error ? err.message : "Veuillez réessayer plus tard."
+        }`
+      );
     } finally {
-      setOpEditSubmitting((prev) => ({ ...prev, [op.id_operation]: false }));
+      setOpEditSubmitting((prev) => ({ ...prev, [deleteDialog.operationId!]: false }));
+      setDeleteDialog({ isOpen: false, operationId: null, operationName: "" });
     }
   };
 
@@ -271,7 +306,7 @@ const OperationList: React.FC<OperationListProps> = ({ idProjet }) => {
                 <Button size="sm" variant="outline" onClick={() => handleOpEditClick(op)}>
                   Éditer
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleDeleteOperation(op)} disabled={opEditSubmitting[op.id_operation]}>
+                <Button size="sm" variant="destructive" onClick={() => handleDeleteOperationClick(op)} disabled={opEditSubmitting[op.id_operation]}>
                   Supprimer
                 </Button>
                 {opEditError[op.id_operation] && <span className="text-xs text-red-500 ml-2">{opEditError[op.id_operation]}</span>}
@@ -425,6 +460,17 @@ const OperationList: React.FC<OperationListProps> = ({ idProjet }) => {
           onPageChange={setCurrentPage}
         />
       )}
+        {/* Dialogue de confirmation de suppression */}
+        <DeleteOperationConfirmationDialog
+          isOpen={deleteDialog.isOpen}
+          onClose={() => setDeleteDialog({ isOpen: false, operationId: null, operationName: "" })}
+          onConfirm={handleDeleteOperationConfirmed}
+          title="Confirmer la suppression"
+          description={`Êtes-vous sûr de vouloir supprimer l'opération "${deleteDialog.operationName}" ? Cette action est irréversible.`}
+          confirmText="Supprimer"
+          cancelText="Annuler"
+        />
+      
     </div>
   );
 };

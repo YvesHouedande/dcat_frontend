@@ -37,22 +37,22 @@ import { Contrat } from '@/modules/administration-Finnance/administration/types/
 
 // Schéma de validation du formulaire
 const formSchema = z.object({
-  date_intervention: z.string(),
-  id_partenaire: z.number(),
+  date_intervention: z.string().min(1, 'La date d\'intervention est requise'),
+  id_partenaire: z.number().min(1, 'Le client est requis'),
   id_contrat: z.number().optional(),
-  probleme_signale: z.string().min(1, 'Le problème signalé est requis'),
-  type_intervention: z.enum(['Corrective', 'Préventive']),
-  type_defaillance: z.enum(['Électrique', 'Matérielle', 'Logiciel']),
-  cause_defaillance: z.enum(['Usure normale', 'Défaut utilisateur', 'Défaut produit', 'Autre']),
+  probleme_signale: z.string().optional(),
+  type_intervention: z.enum(['Corrective', 'Préventive']).optional(),
+  type_defaillance: z.enum(['Électrique', 'Matérielle', 'Logiciel']).optional(),
+  cause_defaillance: z.enum(['Usure normale', 'Défaut utilisateur', 'Défaut produit', 'Autre']).optional(),
   detail_cause: z.string().optional(),
-  rapport_intervention: z.string().min(1, 'Le rapport d\'intervention est requis'),
-  recommandation: z.string(),
-  duree: z.string().min(1, 'La durée est requise'),
-  lieu: z.string().min(1, 'Le lieu est requis'),
-  mode_intervention: z.string().min(1, 'Le mode d\'intervention est requis'),
-  statut_intervention: z.enum(['à faire', 'en cours', 'en attente', 'terminé']),
-  employes: z.array(z.number()),
-  superviseur: z.number(),
+  rapport_intervention: z.string().optional(),
+  recommandation: z.string().optional(),
+  duree: z.string().optional(),
+  lieu: z.string().optional(),
+  mode_intervention: z.string().optional(),
+  statut_intervention: z.enum(['à faire', 'en cours', 'en attente', 'terminé']).optional(),
+  employes: z.array(z.number()).optional(),
+  superviseur: z.number().optional(),
 });
 
 export type FormData = z.infer<typeof formSchema>;
@@ -82,34 +82,40 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
       id_partenaire: intervention?.id_partenaire || 0,
       id_contrat: intervention?.id_contrat || undefined,
       probleme_signale: intervention?.probleme_signale || '',
-      type_intervention: (intervention?.type_intervention as 'Corrective' | 'Préventive') || 'Corrective',
-      type_defaillance: (intervention?.type_defaillance as 'Électrique' | 'Matérielle' | 'Logiciel') || 'Électrique',
-      cause_defaillance: (intervention?.cause_defaillance as 'Usure normale' | 'Défaut utilisateur' | 'Défaut produit' | 'Autre') || 'Usure normale',
+      type_intervention: (intervention?.type_intervention as 'Corrective' | 'Préventive') || undefined,
+      type_defaillance: (intervention?.type_defaillance as 'Électrique' | 'Matérielle' | 'Logiciel') || undefined,
+      cause_defaillance: (intervention?.cause_defaillance as 'Usure normale' | 'Défaut utilisateur' | 'Défaut produit' | 'Autre') || undefined,
       detail_cause: intervention?.detail_cause || '',
       rapport_intervention: intervention?.rapport_intervention || '',
       recommandation: intervention?.recommandation || '',
       duree: intervention?.duree || '',
       lieu: intervention?.lieu || '',
       mode_intervention: intervention?.mode_intervention || '',
-      statut_intervention: (intervention?.statut_intervention as 'à faire' | 'en cours' | 'en attente' | 'terminé') || 'à faire',
+      statut_intervention: (intervention?.statut_intervention as 'à faire' | 'en cours' | 'en attente' | 'terminé') || undefined,
       employes: intervention?.employes?.map(e => e.id_employes) || [],
-      superviseur: 0,
+      superviseur: intervention?.id_superviseur || undefined,
     },
   });
 
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('[Form] Chargement des données...');
         const [partenairesList, employesList, contratsList] = await Promise.all([
           getPartenaires({limit: 100, page: 1}),
           getEmployes({limit: 100, page: 1}),
           fetchContrats({limit: 100, page: 1}),
         ]);
+        console.log('[Form] Données chargées:', {
+          partenaires: partenairesList?.length || 0,
+          employes: employesList?.length || 0,
+          contrats: contratsList?.length || 0
+        });
         setPartenaires(partenairesList);
         setEmployes(employesList);
         setContrats(contratsList);
       } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
+        console.error('[Form] Erreur lors du chargement des données:', error);
       }
     };
     loadData();
@@ -117,6 +123,9 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
 
   // Handler pour la soumission du formulaire principal
   const handleFormSubmit = (data: FormData) => {
+    console.log('[Form] Données du formulaire soumises:', data);
+    console.log('[Form] Employés sélectionnés:', data.employes);
+    console.log('[Form] Superviseur sélectionné:', data.superviseur);
     onSubmit(data);
   };
 
@@ -160,7 +169,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                   <FormLabel>Client</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value.toString()}
+                    value={field.value ? field.value.toString() : ''}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -256,7 +265,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              field.onChange(field.value.filter((id) => id !== employeId));
+                              field.onChange((field.value || []).filter((id) => id !== employeId));
                             }}
                           >
                             ×
@@ -301,7 +310,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value || ''}
                       className="flex space-x-4"
                     >
                       <div className="flex items-center space-x-2">
@@ -328,7 +337,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value || ''}
                       className="flex space-x-4"
                     >
                       <div className="flex items-center space-x-2">
@@ -359,7 +368,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value || ''}
                       className="flex flex-col space-y-2"
                     >
                       <div className="flex items-center space-x-2">
@@ -496,7 +505,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value || ''}
                       className="flex space-x-4"
                     >
                       <div className="flex items-center space-x-2">
@@ -530,7 +539,7 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                   <FormLabel>Superviseur</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value.toString()}
+                    value={field.value ? field.value.toString() : ''}
                   >
                     <FormControl>
                       <SelectTrigger>
