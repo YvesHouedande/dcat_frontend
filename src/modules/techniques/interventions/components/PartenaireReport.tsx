@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+
 
 import {
   Table,
@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Intervention, Partenaire } from "../interface/interface";
 import { getInterventionsByPartenaire } from "../api/intervention";
 import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
-import { FileDown, Eye, ChevronDown, Building2 } from "lucide-react";
+import { FileDown, ChevronDown, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 const logoSrc = "/Logodcat.jpg";
@@ -75,10 +75,7 @@ interface PartenaireReportProps {
   onViewIntervention?: (intervention: Intervention) => void;
 }
 
-export const PartenaireReport: React.FC<PartenaireReportProps> = ({
-  onViewIntervention = () => {},
-}) => {
-  const navigate = useNavigate();
+export const PartenaireReport: React.FC<PartenaireReportProps> = () => {
   const [selectedPartenaireId, setSelectedPartenaireId] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState(
     format(new Date(), "yyyy-MM")
@@ -219,13 +216,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
     );
   };
 
-  const handleViewIntervention = (intervention: Intervention) => {
-    if (onViewIntervention) {
-      onViewIntervention(intervention);
-    } else {
-      navigate(`/gestion-des-interventions/interventions/${intervention.id_intervention}`);
-    }
-  };
+
 
   const generateExcelContent = () => {
     const selectedPartenaire = getSelectedPartenaire();
@@ -652,7 +643,6 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                       <TableHead>Action menée</TableHead>
                       <TableHead>Recommandation</TableHead>
                       <TableHead>Durée</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -690,19 +680,6 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = ({
                               {item.intervention.recommandation}
                             </TableCell>
                             <TableCell>{item.intervention.duree}</TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleViewIntervention(item.intervention)
-                                } // Passer l'objet intervention réel
-                                className="hover:bg-gray-100"
-                              >
-                                <Eye className="h-4 w-4" />
-                                <span className="ml-2">Détails</span>
-                              </Button>
-                            </TableCell>
                           </TableRow>
                         )
                       )
