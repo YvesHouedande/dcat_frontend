@@ -117,8 +117,25 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
       ) {
         docsToSet = documentsResponse.data;
       }
-      console.log("Documents chargés:", docsToSet);
-      setDocuments(docsToSet);
+      
+      // Traiter les documents pour ajouter une date par défaut si date_document n'est pas disponible
+      const processedDocs = docsToSet.map(doc => {
+        console.log("Document brut:", doc);
+        
+        // Si le document n'a pas de date_document, utiliser la date actuelle comme fallback
+        if (!doc.date_document) {
+          console.log("Aucune date trouvée pour le document, utilisation de la date actuelle");
+          return {
+            ...doc,
+            date_document: new Date().toISOString()
+          };
+        }
+        
+        return doc;
+      });
+      
+      console.log("Documents traités:", processedDocs);
+      setDocuments(processedDocs);
 
       setEmployes(employesResponse.data || []);
       setAllEmployes(allEmployesResponse || []);
@@ -755,9 +772,9 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
                         {doc.classification_document || "Document"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {doc.date_document ? formatDate(doc.date_document) : "-"}
-                    </TableCell>
+                                         <TableCell className="text-muted-foreground">
+                       {doc.date_document ? formatDate(doc.date_document) : "-"}
+                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center gap-1 justify-end">
                         <Button

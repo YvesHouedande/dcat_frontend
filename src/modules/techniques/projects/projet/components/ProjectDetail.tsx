@@ -1226,9 +1226,9 @@ const ProjetDetailsPage: React.FC = () => {
     try {
       const result = await deleteOperationSimple(operationId);
       if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
-        queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
-        toast.success("Opération supprimée avec succès !");
+      queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
+      toast.success("Opération supprimée avec succès !");
       } else {
         toast.info(`Suppression non effectuée: ${result.message}`);
       }

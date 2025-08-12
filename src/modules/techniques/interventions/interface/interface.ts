@@ -12,7 +12,7 @@ export interface InterventionDocument {
     classification_document: string;
     lien_document: string; // Chemin ou URL du document
     etat_document?: string; // Optionnel
-    date_document: string; // ISO date string
+    date_document?: string; // ISO date string - peut être null si non fourni
     id_intervention?: number | null; // Lien vers Intervention 
     id_nature_document: number; // Clé étrangère vers NatureDocument (maintenue car les documents ont une nature)
 }
@@ -82,7 +82,7 @@ export type UpdateInterventionPayload = Partial<Omit<Intervention, 'id_intervent
 export interface CreateInterventionDocumentTextPayload {
   libelle_document: string;
   classification_document?: string; 
-  date_document?: string; 
+  date_document?: string; // Optionnel - le backend utilisera la date de création si non fournie
   id_nature_document: number; 
   etat_document?: string;
 }

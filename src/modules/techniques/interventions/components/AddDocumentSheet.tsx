@@ -3,11 +3,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { addDocumentToIntervention } from '../api/intervention';
 
@@ -26,7 +21,6 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [libelle, setLibelle] = useState('');
-  const [dateDocument, setDateDocument] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,7 +36,6 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
   const resetForm = () => {
     setFile(null);
     setLibelle('');
-    setDateDocument(new Date());
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -79,16 +72,24 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
 
     setIsSubmitting(true);
     try {
-      await addDocumentToIntervention(
+      const response = await addDocumentToIntervention(
         interventionId,
         file!,
         {
           libelle_document: libelle.trim(),
           classification_document: '',
-          date_document: dateDocument ? dateDocument.toISOString() : new Date().toISOString(),
+          // Ne pas envoyer date_document, laisser le backend utiliser la date de création
           id_nature_document: 1, // Valeur par défaut
         }
       );
+
+      // Utiliser la date de création retournée par l'API pour mettre à jour le document
+      if (response.data && typeof response.data === 'object' && 'details' in response.data) {
+        const details = (response.data as { details?: { dateCreation?: string } }).details;
+        if (details?.dateCreation) {
+          console.log('Date de création utilisée:', details.dateCreation);
+        }
+      }
 
       toast.success('Document ajouté avec succès');
       onDocumentAdded();
@@ -147,31 +148,10 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="date_document">Date du document</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                  disabled={isSubmitting}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateDocument ? (
-                    format(dateDocument, "dd MMMM yyyy", { locale: fr })
-                  ) : (
-                    <span>Sélectionner une date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateDocument}
-                  onSelect={setDateDocument}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label>Date du document</Label>
+            <div className="text-sm text-gray-500 p-2 bg-gray-50 rounded border">
+              La date sera automatiquement définie à la date de création du document
+            </div>
           </div>
           
           <div className="flex justify-end space-x-2 mt-6">
