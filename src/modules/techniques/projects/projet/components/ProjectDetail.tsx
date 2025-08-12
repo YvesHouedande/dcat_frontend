@@ -86,7 +86,7 @@ import {
 } from "../../tasks/api/taches";
 import {
   getOperationsByProjet,
-  deleteOperation,
+  deleteOperationSimple,
   updateOperation,
   createOperation,
 } from "../../operation/api/operation";
@@ -1222,15 +1222,23 @@ const ProjetDetailsPage: React.FC = () => {
     navigate(`/gestion-des-projets/projets/${id}/operations/${operationId}`);
   };
   const handleDeleteOperation = async (operationId: number) => {
-    if (!window.confirm("Supprimer cette opération ?")) return;
     if (!projet || !projet.id_projet) return;
     try {
-      await deleteOperation(operationId);
-      queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
-      toast.success("Opération supprimée avec succès !");
-    } catch {
-      toast.error("Erreur lors de la suppression de l'opération.");
+      const result = await deleteOperationSimple(operationId);
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ['operations', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['taches', projectId] });
+        toast.success("Opération supprimée avec succès !");
+      } else {
+        toast.info(`Suppression non effectuée: ${result.message}`);
+      }
+    } catch (err) {
+      console.error("Erreur lors de la suppression de l'opération:", err);
+      toast.info(
+        `Suppression non effectuée: ${
+          err instanceof Error ? err.message : "Veuillez réessayer plus tard."
+        }`
+      );
     }
   };
   
