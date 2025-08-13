@@ -9,8 +9,7 @@ import {
   Landmark,
   NotepadText,
   Truck,
-  Camera,
-  Printer,
+
   Megaphone,
   BadgeDollarSign,
 } from "lucide-react";
@@ -32,7 +31,7 @@ interface Department {
 }
 
 const dashboardConfig: Record<
-  "daf" | "dmc" | "dsei" | "gs" | "mg",
+  "daf" | "dmc" | "dsei" | "gs" ,
   Department
 > = {
   daf: {
@@ -98,25 +97,25 @@ const dashboardConfig: Record<
       },
     ],
   },
-  mg: {
-    name: "MOYENS GENERAUX",
-    route: "/gestion-des-outils-travail",
-    color: "bg-stone-800",
-    sections: [
-      {
-        title: "Gestion des outils de travail",
-        route: "/gestion-des-outils-travail",
-        icon: Camera,
-        color: "from-slate-600 to-slate-700",
-      },
-      {
-        title: "Gestion des équipements et moyens de travail",
-        route: "/gestion-equipements-et-moyens-travail",
-        icon: Printer,
-        color: "from-gray-600 to-gray-700",
-      },
-    ],
-  },
+  // mg: {
+  //   name: "MOYENS GENERAUX",
+  //   route: "/gestion-des-outils-travail",
+  //   color: "bg-stone-800",
+  //   sections: [
+  //     {
+  //       title: "Gestion des outils de travail",
+  //       route: "/gestion-des-outils-travail",
+  //       icon: Camera,
+  //       color: "from-slate-600 to-slate-700",
+  //     },
+  //     {
+  //       title: "Gestion des équipements et moyens de travail",
+  //       route: "/gestion-equipements-et-moyens-travail",
+  //       icon: Printer,
+  //       color: "from-gray-600 to-gray-700",
+  //     },
+  //   ],
+  // },
   dmc: {
     name: "MARKETING et COMMERCIAL",
     route: "/commercial",
@@ -222,10 +221,10 @@ const AnotherDashboardPage = (): JSX.Element => {
                 department={dashboardConfig.dsei}
                 onNavigate={handleNavigation}
               />
-              <DepartmentCard
+              {/* <DepartmentCard
                 department={dashboardConfig.mg}
                 onNavigate={handleNavigation}
-              />
+              /> */}
               <DepartmentCard
                 department={dashboardConfig.dmc}
                 onNavigate={handleNavigation}

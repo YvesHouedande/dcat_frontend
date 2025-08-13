@@ -9,33 +9,52 @@ import {
 } from "../types/referenceTypes";
 
 // transformation des données pour l'API
-const transformData = (values: ReferenceProduit) => {
-  {
-    const formData = new FormData();
-    formData.append("code_produit", values.code_produit ?? "");
-    formData.append("desi_produit", values.desi_produit);
-    formData.append("desc_produit", values.desc_produit ?? "");
-    formData.append("emplacement_produit", values.emplacement_produit);
-    formData.append("id_categorie", values.id_categorie.toString());
-    formData.append("id_famille", values.id_famille.toString());
-    formData.append("id_marque", values.id_marque.toString());
-    formData.append("id_modele", values.id_modele.toString());
-    formData.append("id_type_produit", values.id_type_produit.toString());
-    formData.append("caracteristiques_produit", values.caracteristiques_produit ?? "");
-    if (values.imagesMeta !== undefined) {
-      formData.append("imagesMeta", values.imagesMeta);
-    } else {
-      formData.append("imagesMeta", "");
-    }
-    // Pour chaque image
-    values.images?.forEach((img) => {
-      if (img.file) {
-        formData.append("images", img.file); // ⚠️ clé "images" multiple pour plusieurs fichiers
+const transformData = (values: Partial<ReferenceProduit>): FormData => {
+  const formData = new FormData();
+
+  // Fonction utilitaire typée
+  const appendIfDefined = <K extends keyof ReferenceProduit>(
+    key: K,
+    value: ReferenceProduit[K] | undefined
+  ) => {
+    if (value !== undefined && value !== null) {
+      // On gère les nombres et objets pour éviter les erreurs
+      if (typeof value === "number") {
+        formData.append(key, value.toString());
+      } else if (typeof value === "object" && !(value instanceof File)) {
+        formData.append(key, JSON.stringify(value));
+      } else {
+        formData.append(key, value as string | Blob);
       }
-    });
-    return formData;
+    }
+  };
+
+  appendIfDefined("code_produit", values.code_produit);
+  appendIfDefined("desi_produit", values.desi_produit);
+  appendIfDefined("desc_produit", values.desc_produit);
+  appendIfDefined("emplacement_produit", values.emplacement_produit);
+  appendIfDefined("id_categorie", values.id_categorie);
+  appendIfDefined("id_famille", values.id_famille);
+  appendIfDefined("id_marque", values.id_marque);
+  appendIfDefined("id_modele", values.id_modele);
+  appendIfDefined("id_type_produit", values.id_type_produit);
+  appendIfDefined("caracteristiques_produit", values.caracteristiques_produit);
+  appendIfDefined("prix_produit", values.prix_produit);
+
+  if (values.imagesMeta !== undefined) {
+    appendIfDefined("imagesMeta", values.imagesMeta);
   }
+
+  // Gestion des images (fichiers)
+  values.images?.forEach((img) => {
+    if (img.file) {
+      formData.append("images", img.file);
+    }
+  });
+
+  return formData;
 };
+
 export const useProductService = () => {
   const apis = useApi();
   const getAll = async (
@@ -99,9 +118,9 @@ export const useProductService = () => {
 
   // Mettre à jour un produit
   const update = async (
-    produit: ReferenceProduit
+    produit: Partial<ReferenceProduit>
   ): Promise<ReferenceProduit> => {
-    const formData = transformData(produit);
+    const formData = transformData(produit as ReferenceProduit);
     // Note: Assurez-vous que l'ID du produit est bien défini dans l'objet produit
     const response = await apis.put(
       `stocks/produits/${produit.id_produit}`,
