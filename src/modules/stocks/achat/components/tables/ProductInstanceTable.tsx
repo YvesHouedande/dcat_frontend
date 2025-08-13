@@ -127,14 +127,20 @@ export function ProductInstanceTable({ onEdit }: ProductInstanceTableProps) {
   // Pagination calculée à partir des pages
   const total = pages?.[0]?.total ? pages?.[0]?.total : 0;
   const totalPages = pages?.[0]?.totalPages ? pages?.[0]?.totalPages : 0;
-  const pageInstances = productInstances.slice(
-    (currentPage - 1) * pages?.[0]?.pageSize
-      ? (currentPage - 1) * pages?.[0]?.pageSize
-      : 0,
-    currentPage * pages?.[0]?.pageSize ? currentPage * pages?.[0]?.pageSize : 0
-  );
-
-
+  const pageInstances = productInstances
+    .slice(
+      (currentPage - 1) * pages?.[0]?.pageSize
+        ? (currentPage - 1) * pages?.[0]?.pageSize
+        : 0,
+      currentPage * pages?.[0]?.pageSize
+        ? currentPage * pages?.[0]?.pageSize
+        : 0
+    )
+    .sort((a, b) => {
+      return (
+        new Date(b.date_entree).getTime() - new Date(a.date_entree).getTime()
+      );
+    });
 
   const handlePageChange = (page: number) => {
     if (page > currentPage && hasNextPage) {
@@ -186,31 +192,16 @@ export function ProductInstanceTable({ onEdit }: ProductInstanceTableProps) {
 
   const getEtatExemplaireColor = (etat: string) => {
     switch (etat) {
-      case "vendu":
+      case "Vendu":
         return "bg-green-100 text-green-800";
-      case "invendu":
+      case "Reserve":
         return "bg-blue-100 text-blue-800";
-      case "bon":
+      case "Disponible":
         return "bg-yellow-100 text-yellow-800";
       case "endommage":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getEtatExemplaireLabel = (etat: string) => {
-    switch (etat) {
-      case "vendu":
-        return "Vendu";
-      case "invendu":
-        return "Invendu";
-      case "bon":
-        return "Bon état";
-      case "endommage":
-        return "Endommagé";
-      default:
-        return etat;
     }
   };
 
@@ -577,7 +568,7 @@ export function ProductInstanceTable({ onEdit }: ProductInstanceTableProps) {
                     {formatCurrency(Number(instance.prix_de_revient))}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
-                  {formatCurrency(Number(instance.prix_de_vente))}
+                    {formatCurrency(Number(instance.prix_de_vente))}
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">
                     {formatCurrency(Number(instance.marge_basse))}
@@ -591,7 +582,8 @@ export function ProductInstanceTable({ onEdit }: ProductInstanceTableProps) {
                         instance.etat_exemplaire
                       )}
                     >
-                      {getEtatExemplaireLabel(instance.etat_exemplaire)}
+                      {instance.etat_exemplaire.charAt(0).toUpperCase() +
+                        instance.etat_exemplaire.slice(1)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-gray-700 border-r">

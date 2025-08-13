@@ -4,12 +4,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { toDatetimeLocal } from "@/modules/stocks/utils/helpers";
-import {  useExemplaireCréation, useExemplaireUpdate } from "..";
+import { useExemplaireCréation, useExemplaireUpdate } from "..";
 import {
   ExemplaireProduitEditSchema,
   ExemplaireProduitFormValues,
   ExemplaireProduitSchema,
 } from "../schemas/ExemplaireProduitSchema";
+import { getAxiosErrorMessage } from "@/api/api";
+
 
 interface UseExemplaireProduitFormProps {
   onSuccess?: () => void;
@@ -69,7 +71,7 @@ export function useExemplaireProduitForm({
       const marge_basse = Number(data.marge_basse) || 0;
       const marge_haute = Number(data.marge_haute) || 0;
       const frais_divers = Number(data.frais_divers) || 0;
-      const prix_de_revient = prix_achat + (frais_divers * coef_divers) ;
+      const prix_de_revient = prix_achat + frais_divers * coef_divers;
       const marge = marge_basse + marge_haute / 2;
       const prix_de_vente = prix_de_revient + marge;
       const dataWithCalcul = {
@@ -94,8 +96,9 @@ export function useExemplaireProduitForm({
         onSuccess();
       }
     } catch (err) {
+      
       setError(
-        err instanceof Error ? err : new Error("Une erreur est survenue")
+        new Error(getAxiosErrorMessage(err))
       );
     } finally {
       setLoading(false);
@@ -121,6 +124,6 @@ export function useExemplaireProduitForm({
     error,
     reset,
     isEditMode,
-    margeError
+    margeError,
   };
 }

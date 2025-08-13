@@ -26,10 +26,11 @@ import {
   X,
   Calendar as CalendarIcon,
   Package,
-  Plus,
+  LogOut,
+  InfoIcon,
 } from "lucide-react";
 // import { useLivraisonData } from "@/modules/stocks/livraison/hooks/useLivraison";
-import { ProductInstanceFormValues } from "../../schemas/productInstanceSchema";
+import { ProductInstanceFormValues } from "../../schemas/SortieSchema";
 import { formatCurrency } from "@/modules/stocks/utils/helpers";
 import { useProductInstances } from "../../hooks/useProductInstances";
 import { useDebounce } from "../../utils/helpers";
@@ -52,10 +53,10 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-interface ProductInstanceTableProps {
+interface SortieInstanceTableProps {
   onEdit: (instance: ProductInstanceFormValues) => void;
-  onDelete: (id: string | number) => void;
-  onAdd: () => void;
+  onCancel: (id: string | number) => void;
+  onOut: (instance: ProductInstanceFormValues) => void;
 }
 
 interface Filters {
@@ -67,11 +68,11 @@ interface Filters {
   id_produit?: number;
 }
 
-export function ProductInstanceTable({
+export function SortieInstanceTable({
   onEdit,
-  onDelete,
-  onAdd,
-}: ProductInstanceTableProps) {
+  onCancel,
+  onOut,
+}: SortieInstanceTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -245,10 +246,6 @@ export function ProductInstanceTable({
               )}
             </div>
           </div>
-
-          <Button onClick={onAdd} variant={"blue"} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-" /> Ajouter un produit
-          </Button>
         </div>
 
         {/* Panneau de filtres */}
@@ -411,9 +408,6 @@ export function ProductInstanceTable({
                         instance.etat_exemplaire.slice(1)}
                     </Badge>
                   </TableCell>
-                  {/* <TableCell>
-                    <LivraisonReference Id={instance.id_livraison} />
-                  </TableCell> */}
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -425,17 +419,35 @@ export function ProductInstanceTable({
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onEdit(instance)}>
-                          <Edit className="mr-2 h-4 w-4" /> Modifier
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            if (instance.id_exemplaire !== undefined) {
-                              onDelete(instance.id_exemplaire);
-                            }
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+
+                        {instance.etat_exemplaire.toLowerCase() === "vendu" ? (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (instance.id_exemplaire !== undefined) {
+                                onCancel(instance.id_exemplaire);
+                              }
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Annuler la
+                            sortie
+                          </DropdownMenuItem>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={() => onEdit(instance)}>
+                              <Edit className="mr-2 h-4 w-4" /> Modifier l'etat
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                onOut(instance);
+                              }}
+                            >
+                              <LogOut className="mr-2 h-4 w-4" /> faire sortir
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => {}}>
+                          <InfoIcon className="mr-2 h-4 w-4" /> Info
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

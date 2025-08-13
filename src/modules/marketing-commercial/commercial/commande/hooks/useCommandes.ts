@@ -142,6 +142,20 @@ export const useDeleteCommande = () => {
   });
 };
 
+export const useDeleteCommandeBruteForce = () => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const commandesServiceInstance = CommandesService();
+  return useMutation({
+    mutationFn: ({ id, type }: { id: number; type: string }) =>
+      commandesServiceInstance.deleteBruteForce(id, type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commandes"] });
+      navigate("/commercial/vente-equipements");
+    },
+  });
+};
+
 /**
  * Met à jour le statut d'une commande.
  *
