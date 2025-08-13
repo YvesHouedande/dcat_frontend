@@ -41,8 +41,8 @@ const EntiteProfile: React.FC = () => {
   // Charger le partenaire associé si l'entité en a un
   const { data: partenaire, isLoading: loadingPartenaire } = useQuery({
     queryKey: ["partenaire", entite?.id_partenaire],
-    queryFn: () => fetchPartnerById(entite!.id_partenaire),
-    enabled: !!entite && entite.id_partenaire > 0,
+    queryFn: () => fetchPartnerById(entite!.id_partenaire!),
+    enabled: !!entite && !!entite.id_partenaire && entite.id_partenaire > 0,
   });
 
   const getInitials = (name: string): string => {
@@ -189,7 +189,7 @@ const EntiteProfile: React.FC = () => {
                 <CardTitle className="text-lg">Relations</CardTitle>
               </CardHeader>
               <CardContent>
-                {entite.id_partenaire > 0 ? (
+                {entite.id_partenaire && entite.id_partenaire > 0 ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                       <div className="flex items-center space-x-3">
@@ -321,7 +321,7 @@ const EntiteProfile: React.FC = () => {
                   </span>
                 </div>
 
-                {entite.id_partenaire > 0 && (
+                {entite.id_partenaire && entite.id_partenaire > 0 && (
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">ID Partenaire</span>
                     <span className="text-sm font-medium">
