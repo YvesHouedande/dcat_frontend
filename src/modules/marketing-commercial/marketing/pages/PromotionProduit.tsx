@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -19,227 +18,133 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
-  Search, 
-  Tag, 
-  TrendingUp, 
-  Edit, 
-  DollarSign
-} from "lucide-react";
+import { Tag, TrendingUp, DollarSign } from "lucide-react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
-import { SocialShareButton } from "../components/SocialShareButton";
 
+import { ProductCombobox } from "@/components/combobox/ProductCombobox";
+import { useFetchExemplaireProduitByEtat } from "@/modules/stocks/exemplaire/hooks/useExemplaireProduits";
+import {
+  useProduct,
+  useUpadteProduct,
+} from "@/modules/stocks/reference/hooks/useProducts";
+import { formatCurrency } from "@/modules/stocks/utils/helpers";
 // Types pour les données
-interface ExemplairePrix {
-  id_exemplaire: number;
-  num_serie: string;
-  prix_achat: number;
-  prix_de_revient: number;
-  prix_de_vente: number;
-  marge_haute: number;
-  marge_basse: number;
-  etat_exemplaire: string;
-}
-
-interface Produit {
-  id_produit: number;
-  nom_produit: string;
-  categorie: string;
-  description: string;
-  image_produit?: string;
-  exemplaires: ExemplairePrix[];
-  prix_promotionnel?: number;
-  pourcentage_reduction?: number;
-}
 
 function PromotionProduit() {
-  const [produits, setProduits] = useState<Produit[]>([]);
-  const [produitsFiltrés, setProduitsFiltrés] = useState<Produit[]>([]);
-  const [produitSélectionné, setProduitSélectionné] = useState<Produit | null>(null);
-  const [recherche, setRecherche] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [modePromotion, setModePromotion] = useState<'prix' | 'pourcentage'>('prix');
+  const [produitId, setProduitId] = useState<string | null>(null);
+
+  const [modePromotion, setModePromotion] = useState<"prix" | "pourcentage">(
+    "prix"
+  );
 
   // États pour la promotion
   const [prixPromotionnel, setPrixPromotionnel] = useState<number>(0);
   const [pourcentageReduction, setPourcentageReduction] = useState<number>(0);
-  const [exemplaireSélectionné, setExemplaireSélectionné] = useState<string>("");
+  const [exemplaireSélectionné, setExemplaireSélectionné] =
+    useState<string>("");
 
-  useEffect(() => {
-    chargerProduits();
-  }, []);
+  const {
+    ExemplaireProduitByEtat: exemplaires,
+    loading: isLoadingExemplaires,
+  } = useFetchExemplaireProduitByEtat(produitId ?? undefined, "Disponible");
 
-  useEffect(() => {
-    // Filtrer les produits selon la recherche
-    if (recherche.trim() === "") {
-      setProduitsFiltrés(produits);
-    } else {
-      const filtrés = produits.filter(produit =>
-        produit.nom_produit.toLowerCase().includes(recherche.toLowerCase()) ||
-        produit.categorie.toLowerCase().includes(recherche.toLowerCase())
-      );
-      setProduitsFiltrés(filtrés);
-    }
-  }, [recherche, produits]);
+  const { product } = useProduct(produitId ?? undefined);
+  const { update: updateProduct } = useUpadteProduct();
 
-  const chargerProduits = async () => {
-    try {
-      setLoading(true);
-      // TODO: Remplacer par l'API réelle
-      // const response = await fetch('/api/produits-avec-exemplaires');
-      // const data = await response.json();
-      
-      // Données simulées pour la démonstration
-      const donneesSimulées: Produit[] = [
-        {
-          id_produit: 1,
-          nom_produit: "Ordinateur Portable Dell XPS 13",
-          categorie: "Informatique",
-          description: "Ordinateur portable haut de gamme",
-          exemplaires: [
-            {
-              id_exemplaire: 1,
-              num_serie: "XPS001",
-              prix_achat: 800,
-              prix_de_revient: 850,
-              prix_de_vente: 1200,
-              marge_haute: 300,
-              marge_basse: 200,
-              etat_exemplaire: "Disponible"
-            },
-            {
-              id_exemplaire: 2,
-              num_serie: "XPS002",
-              prix_achat: 820,
-              prix_de_revient: 870,
-              prix_de_vente: 1250,
-              marge_haute: 320,
-              marge_basse: 210,
-              etat_exemplaire: "Disponible"
-            }
-          ]
-        },
-        {
-          id_produit: 2,
-          nom_produit: "iPhone 15 Pro",
-          categorie: "Téléphonie",
-          description: "Smartphone Apple dernière génération",
-          exemplaires: [
-            {
-              id_exemplaire: 3,
-              num_serie: "IP001",
-              prix_achat: 900,
-              prix_de_revient: 950,
-              prix_de_vente: 1400,
-              marge_haute: 400,
-              marge_basse: 250,
-              etat_exemplaire: "Disponible"
-            }
-          ]
-        }
-      ];
-      
-      setProduits(donneesSimulées);
-    } catch (error) {
-      console.error("Erreur lors du chargement des produits:", error);
-      toast.error("Erreur lors du chargement des produits");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sélectionnerProduit = (produit: Produit) => {
-    setProduitSélectionné(produit);
-    if (produit.exemplaires.length === 1) {
-      setExemplaireSélectionné(produit.exemplaires[0].id_exemplaire.toString());
-    }
-    // Réinitialiser les valeurs
-    setPrixPromotionnel(0);
-    setPourcentageReduction(0);
-  };
-
-  const calculerPrixAvecReduction = (prixOriginal: number, reduction: number) => {
-    return prixOriginal - (prixOriginal * reduction / 100);
+  const calculerPrixAvecReduction = (
+    prixOriginal: number,
+    reduction: number
+  ) => {
+    return prixOriginal - (prixOriginal * reduction) / 100;
   };
 
   const appliquerPromotion = async () => {
-    if (!produitSélectionné || !exemplaireSélectionné) {
-      toast.error("Veuillez sélectionner un produit et un exemplaire");
+    // Vérification de la sélection
+    if (!exemplaireSélectionné) {
+      toast.error("Veuillez sélectionner un exemplaire");
       return;
     }
-
-    const exemplaire = produitSélectionné.exemplaires.find(
-      e => e.id_exemplaire.toString() === exemplaireSélectionné
+  
+    const exemplaire = exemplaires.find(
+      (e) => e.id_exemplaire?.toString() === exemplaireSélectionné
     );
-
+  
     if (!exemplaire) {
-      toast.error("Exemplaire non trouvé");
+      toast.error("Impossible de récupérer l'exemplaire sélectionné.");
       return;
     }
-
+  
     let prixFinal = 0;
     let reductionPourcentage = 0;
-
-    if (modePromotion === 'prix') {
-      if (prixPromotionnel <= 0 || prixPromotionnel >= exemplaire.prix_de_vente) {
-        toast.error("Le prix promotionnel doit être supérieur à 0 et inférieur au prix de vente");
+  
+    if (modePromotion === "prix") {
+      // Prix promo à 0 => remettre le prix d'origine
+      if (prixPromotionnel === 0) {
+        prixFinal = Number(exemplaire.prix_de_vente);
+        reductionPourcentage = 0;
+      }
+      // Prix promo invalide
+      else if (
+        prixPromotionnel < 0 ||
+        prixPromotionnel >= Number(exemplaire.prix_de_vente)
+      ) {
+        toast.error(
+          "Le prix promotionnel doit être supérieur à 0 et inférieur au prix de vente"
+        );
         return;
       }
-      prixFinal = prixPromotionnel;
-      reductionPourcentage = ((exemplaire.prix_de_vente - prixPromotionnel) / exemplaire.prix_de_vente) * 100;
+      // Prix promo valide
+      else {
+        prixFinal = prixPromotionnel;
+        reductionPourcentage =
+          (((Number(exemplaire.prix_de_vente) || 0) - prixPromotionnel) /
+            (Number(exemplaire.prix_de_vente) || 1)) *
+          100;
+      }
     } else {
+      // Mode réduction en pourcentage
       if (pourcentageReduction <= 0 || pourcentageReduction >= 100) {
         toast.error("Le pourcentage de réduction doit être entre 1 et 99%");
         return;
       }
-      prixFinal = calculerPrixAvecReduction(exemplaire.prix_de_vente, pourcentageReduction);
+      prixFinal = calculerPrixAvecReduction(
+        Number(exemplaire.prix_de_vente || 0),
+        pourcentageReduction
+      );
       reductionPourcentage = pourcentageReduction;
     }
-
+  
     try {
-      // TODO: API call pour enregistrer la promotion
-      // await fetch('/api/promotions', {
-      //   method: 'POST',
-      //   body: JSON.stringify({
-      //     id_produit: produitSélectionné.id_produit,
-      //     id_exemplaire: exemplaire.id_exemplaire,
-      //     prix_promotionnel: prixFinal,
-      //     pourcentage_reduction: reductionPourcentage
-      //   })
-      // });
-
-      // Mettre à jour l'état local
-      const produitsMisÀJour = produits.map(p => 
-        p.id_produit === produitSélectionné.id_produit 
-          ? { ...p, prix_promotionnel: prixFinal, pourcentage_reduction: reductionPourcentage }
-          : p
+      updateProduct.mutate(
+        {
+          id_produit: product?.data?.id_produit,
+          prix_produit: prixFinal,
+        },
+        {
+          onSuccess: () => {
+            toast.success("Prix produit affecté avec succès");
+          },
+          onError: (error) => {
+            toast.error(
+              `Erreur lors de l'affectation du prix du produit: ${error}`
+            );
+          },
+        }
       );
-      setProduits(produitsMisÀJour);
-
-      toast.success(`Promotion appliquée ! Prix: ${prixFinal.toLocaleString()}€ (-${reductionPourcentage.toFixed(1)}%)`);
-      setProduitSélectionné(null);
+  
+      toast.success(
+        `Promotion appliquée ! Prix: ${formatCurrency(
+          prixFinal
+        )} (-${reductionPourcentage.toFixed(1)}%)`
+      );
+      setExemplaireSélectionné("");
     } catch (error) {
       console.error("Erreur lors de l'application de la promotion:", error);
       toast.error("Erreur lors de l'application de la promotion");
     }
   };
-
-  const retirerPromotion = async (produit: Produit) => {
-    try {
-      // TODO: API call pour retirer la promotion
-      const produitsMisÀJour = produits.map(p => 
-        p.id_produit === produit.id_produit 
-          ? { ...p, prix_promotionnel: undefined, pourcentage_reduction: undefined }
-          : p
-      );
-      setProduits(produitsMisÀJour);
-      toast.success("Promotion retirée avec succès");
-    } catch (error) {
-      console.error("Erreur lors de la suppression de la promotion:", error);
-      toast.error("Erreur lors de la suppression de la promotion");
-    }
-  };
+  
 
   return (
     <Layout>
@@ -252,7 +157,8 @@ function PromotionProduit() {
               Promotion des Produits
             </h1>
             <p className="text-gray-600 mt-2">
-              Gérez les prix promotionnels de vos produits en vous basant sur les prix de vos exemplaires
+              Gérez les prix promotionnels de vos produits en vous basant sur
+              les prix de vos exemplaires
             </p>
           </div>
 
@@ -260,12 +166,9 @@ function PromotionProduit() {
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Rechercher un produit..."
-                  value={recherche}
-                  onChange={(e) => setRecherche(e.target.value)}
-                  className="pl-10"
+                <ProductCombobox
+                  value={produitId || ""}
+                  onChange={(value) => setProduitId(value as string)}
                 />
               </div>
             </CardContent>
@@ -277,59 +180,66 @@ function PromotionProduit() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  Catalogue des Produits
+                  Produit
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="text-center py-8">Chargement des produits...</div>
+                {isLoadingExemplaires ? (
+                  <div className="text-center py-8">
+                    Chargement du produit...
+                  </div>
                 ) : (
                   <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {produitsFiltrés.map((produit) => (
-                      <div
-                        key={produit.id_produit}
-                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                          produitSélectionné?.id_produit === produit.id_produit
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => sélectionnerProduit(produit)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold">{produit.nom_produit}</h3>
-                            <p className="text-sm text-gray-600">{produit.categorie}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {produit.exemplaires.length} exemplaire(s) disponible(s)
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            {produit.prix_promotionnel ? (
-                              <div>
-                                <Badge variant="destructive" className="mb-1">
-                                  -{produit.pourcentage_reduction?.toFixed(1)}%
-                                </Badge>
-                                <div className="text-lg font-bold text-green-600">
-                                  {produit.prix_promotionnel.toLocaleString()}€
-                                </div>
-                                <div className="text-sm text-gray-500 line-through">
-                                  {Math.max(...produit.exemplaires.map(e => e.prix_de_vente)).toLocaleString()}€
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-lg font-semibold">
-                                {Math.min(...produit.exemplaires.map(e => e.prix_de_vente)).toLocaleString()}€
-                                {produit.exemplaires.length > 1 && (
-                                  <span className="text-sm text-gray-500">
-                                    {" "}à {Math.max(...produit.exemplaires.map(e => e.prix_de_vente)).toLocaleString()}€
-                                  </span>
+                    <div
+                      key={product?.data?.id_produit}
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors border-blue-500 bg-blue-50`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-semibold">
+                            {product?.data?.desi_produit}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {product?.data?.categorie}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {exemplaires.length} exemplaire(s) disponible(s)
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-semibold">
+                            {exemplaires.length > 0 && (
+                              <>
+                                {formatCurrency(
+                                  Math.min(
+                                    ...exemplaires.map((e) =>
+                                      e.prix_de_vente
+                                        ? Number(e.prix_de_vente)
+                                        : 0
+                                    )
+                                  )
                                 )}
-                              </div>
+                              </>
+                            )}
+                            {exemplaires.length > 1 && (
+                              <span className="text-sm text-gray-500">
+                                {" "}
+                                à{" "}
+                                {formatCurrency(
+                                  Math.max(
+                                    ...exemplaires.map((e) =>
+                                      e.prix_de_vente
+                                        ? Number(e.prix_de_vente)
+                                        : 0
+                                    )
+                                  )
+                                )}
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -340,31 +250,43 @@ function PromotionProduit() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5" />
-                  Configuration Promotion
+                  Configuration Prix
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {produitSélectionné ? (
+                {product?.data && exemplaires.length > 0 ? (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="font-semibold text-lg">{produitSélectionné.nom_produit}</h3>
-                      <p className="text-gray-600">{produitSélectionné.description}</p>
+                      <h3 className="font-semibold text-lg">
+                        {product?.data?.desi_produit}
+                      </h3>
+                      <p className="text-gray-600">
+                        {product?.data?.categorie}
+                      </p>
                     </div>
 
                     {/* Sélection de l'exemplaire */}
                     <div className="space-y-2">
                       <Label>Exemplaire de référence</Label>
-                      <Select value={exemplaireSélectionné} onValueChange={setExemplaireSélectionné}>
+                      <Select
+                        value={exemplaireSélectionné}
+                        onValueChange={setExemplaireSélectionné}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Choisir un exemplaire" />
                         </SelectTrigger>
                         <SelectContent>
-                          {produitSélectionné.exemplaires.map((exemplaire) => (
-                            <SelectItem 
-                              key={exemplaire.id_exemplaire} 
-                              value={exemplaire.id_exemplaire.toString()}
+                          {exemplaires.map((exemplaire) => (
+                            <SelectItem
+                              key={exemplaire.id_exemplaire}
+                              value={
+                                exemplaire.id_exemplaire
+                                  ? exemplaire.id_exemplaire.toString()
+                                  : ""
+                              }
                             >
-                              {exemplaire.num_serie} - {exemplaire.prix_de_vente.toLocaleString()}€
+                              {exemplaire.num_serie} -{" "}
+                              {formatCurrency(Number(exemplaire.prix_de_vente))}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -375,16 +297,35 @@ function PromotionProduit() {
                       <>
                         {/* Détails de l'exemplaire sélectionné */}
                         {(() => {
-                          const exemplaire = produitSélectionné.exemplaires.find(
-                            e => e.id_exemplaire.toString() === exemplaireSélectionné
+                          const exemplaire = exemplaires.find(
+                            (e) =>
+                              e.id_exemplaire?.toString() ===
+                              exemplaireSélectionné
                           );
                           return exemplaire ? (
                             <div className="bg-gray-50 p-4 rounded-lg">
-                              <h4 className="font-medium mb-2">Détails de l'exemplaire {exemplaire.num_serie}</h4>
+                              <h4 className="font-medium mb-2">
+                                Détails de l'exemplaire {exemplaire.num_serie}
+                              </h4>
                               <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>Prix d'achat: {exemplaire.prix_achat.toLocaleString()}€</div>
-                                <div>Prix de revient: {exemplaire.prix_de_revient.toLocaleString()}€</div>
-                                <div>Prix de vente: {exemplaire.prix_de_vente.toLocaleString()}€</div>
+                                <div>
+                                  Prix d'achat:{" "}
+                                  {formatCurrency(
+                                    Number(exemplaire.prix_achat)
+                                  )}
+                                </div>
+                                <div>
+                                  Prix de revient:{" "}
+                                  {formatCurrency(
+                                    Number(exemplaire.prix_de_revient)
+                                  )}
+                                </div>
+                                <div>
+                                  Prix de vente:{" "}
+                                  {formatCurrency(
+                                    Number(exemplaire.prix_de_vente)
+                                  )}
+                                </div>
                                 <div>État: {exemplaire.etat_exemplaire}</div>
                               </div>
                             </div>
@@ -394,25 +335,34 @@ function PromotionProduit() {
                         {/* Mode de promotion */}
                         <div className="space-y-2">
                           <Label>Mode de promotion</Label>
-                          <Select value={modePromotion} onValueChange={(value: 'prix' | 'pourcentage') => setModePromotion(value)}>
+                          <Select
+                            value={modePromotion}
+                            onValueChange={(value: "prix" | "pourcentage") =>
+                              setModePromotion(value)
+                            }
+                          >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="prix">Prix fixe</SelectItem>
-                              <SelectItem value="pourcentage">Pourcentage de réduction</SelectItem>
+                              <SelectItem value="pourcentage">
+                                Pourcentage de réduction
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         {/* Configuration du prix ou pourcentage */}
-                        {modePromotion === 'prix' ? (
+                        {modePromotion === "prix" ? (
                           <div className="space-y-2">
-                            <Label>Prix promotionnel (€)</Label>
+                            <Label>Prix promotionnel (CFA)</Label>
                             <Input
                               type="number"
                               value={prixPromotionnel}
-                              onChange={(e) => setPrixPromotionnel(Number(e.target.value))}
+                              onChange={(e) =>
+                                setPrixPromotionnel(Number(e.target.value))
+                              }
                               placeholder="Entrez le prix promotionnel"
                             />
                           </div>
@@ -422,49 +372,51 @@ function PromotionProduit() {
                             <Input
                               type="number"
                               value={pourcentageReduction}
-                              onChange={(e) => setPourcentageReduction(Number(e.target.value))}
+                              onChange={(e) =>
+                                setPourcentageReduction(Number(e.target.value))
+                              }
                               placeholder="Entrez le pourcentage"
                               min="1"
                               max="99"
                             />
-                            {pourcentageReduction > 0 && exemplaireSélectionné && (
-                              <p className="text-sm text-gray-600">
-                                Prix final: {calculerPrixAvecReduction(
-                                  produitSélectionné.exemplaires.find(e => e.id_exemplaire.toString() === exemplaireSélectionné)?.prix_de_vente || 0,
-                                  pourcentageReduction
-                                ).toLocaleString()}€
-                              </p>
-                            )}
+                            {pourcentageReduction > 0 &&
+                              exemplaireSélectionné && (
+                                <p className="text-sm text-gray-600">
+                                  Prix final :{" "}
+                                  {formatCurrency(
+                                    calculerPrixAvecReduction(
+                                      Number(
+                                        exemplaires.find(
+                                          (e) =>
+                                            e.id_exemplaire?.toString() ===
+                                            exemplaireSélectionné
+                                        )?.prix_de_vente ?? 0
+                                      ),
+                                      pourcentageReduction
+                                    )
+                                  )}
+                                </p>
+                              )}
                           </div>
                         )}
 
                         {/* Actions */}
                         <div className="flex gap-2">
-                          <Button onClick={appliquerPromotion} className="flex-1">
+                          <Button
+                            onClick={appliquerPromotion}
+                            className="flex-1"
+                          >
                             Appliquer la promotion
                           </Button>
-                          {produitSélectionné.prix_promotionnel && (
-                            <Button 
-                              variant="outline" 
-                              onClick={() => retirerPromotion(produitSélectionné)}
+                          {/* {product?.data?.prix_promotionnel && (
+                            <Button
+                              variant="outline"
+                              onClick={() => retirerPromotion(product?.data)}
                             >
                               Retirer
                             </Button>
-                          )}
+                          )} */}
                         </div>
-
-                        {/* Partage social */}
-                        {produitSélectionné.prix_promotionnel && (
-                          <div className="border-t pt-4">
-                            <Label className="block mb-2">Partager la promotion</Label>
-                            <SocialShareButton
-                              productName={produitSélectionné.nom_produit}
-                              originalPrice={Math.max(...produitSélectionné.exemplaires.map(e => e.prix_de_vente))}
-                              promotionalPrice={produitSélectionné.prix_promotionnel}
-                              discount={produitSélectionné.pourcentage_reduction || 0}
-                            />
-                          </div>
-                        )}
                       </>
                     )}
                   </div>
@@ -481,7 +433,7 @@ function PromotionProduit() {
           {/* Table des promotions actives */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Promotions Actives</CardTitle>
+              <CardTitle>Prix Actifs</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -489,55 +441,31 @@ function PromotionProduit() {
                   <TableRow>
                     <TableHead>Produit</TableHead>
                     <TableHead>Prix Original</TableHead>
-                    <TableHead>Prix Promotionnel</TableHead>
-                    <TableHead>Réduction</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Prix Affiché</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {produitsFiltrés.filter(p => p.prix_promotionnel).map((produit) => (
-                    <TableRow key={produit.id_produit}>
-                      <TableCell className="font-medium">{produit.nom_produit}</TableCell>
-                      <TableCell>
-                        <span className="line-through text-gray-500">
-                          {Math.max(...produit.exemplaires.map(e => e.prix_de_vente)).toLocaleString()}€
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-green-600 font-semibold">
-                        {produit.prix_promotionnel?.toLocaleString()}€
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="destructive">
-                          -{produit.pourcentage_reduction?.toFixed(1)}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => sélectionnerProduit(produit)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => retirerPromotion(produit)}
-                          >
-                            Retirer
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {product?.data &&
+                    exemplaires.length > 0 &&
+                    exemplaires
+                      .filter((p) => p.prix_de_vente)
+                      .map((produit) => (
+                        <TableRow key={produit.id_produit}>
+                          <TableCell className="font-medium">
+                            {product?.data?.desi_produit}
+                          </TableCell>
+                          <TableCell>
+                            <span className="line-through text-gray-500">
+                              {formatCurrency(Number(produit.prix_de_vente))}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-green-600 font-semibold">
+                            {formatCurrency(Number(product.data?.prix_produit))}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                 </TableBody>
               </Table>
-              {produitsFiltrés.filter(p => p.prix_promotionnel).length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  Aucune promotion active
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

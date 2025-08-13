@@ -32,6 +32,7 @@ import {
   useProduct,
   useCreateProduct,
   useUpadteProduct,
+  useDeleteProduct,
 } from "../hooks/useProducts";
 import {
   useProductCategories,
@@ -81,7 +82,7 @@ export default function ReferenceEditForm() {
   // Actions hooks
   const { deleteImage } = useDeleteImageProduct();
   const { updateImage } = useUpdateImageProdcut();
-
+  const { delete: deleteProduct } = useDeleteProduct();
   // Data hooks
   const { product } = useProduct(id);
   const { productCategories: categories } = useProductCategories();
@@ -329,6 +330,19 @@ export default function ReferenceEditForm() {
       return;
     navigate(-1);
   }, [isFormDirty, navigate]);
+  const handleDelete = () => {
+    if (isEditMode && product.data?.id_produit) {
+      deleteProduct.mutate(Number(product.data.id_produit), {
+        onSuccess: () => {
+          toast.success("Produit supprimé avec succès");
+          navigate(-1);
+        },
+        onError: () => {
+          toast.error("Erreur lors de la suppression du produit");
+        },
+      });
+    }
+  };
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -723,6 +737,16 @@ export default function ReferenceEditForm() {
 
               {/* Action Buttons */}
               <div className="flex justify-between pt-6 border-t border-gray-200">
+                <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={isLoading}
+                  className="min-w-32"
+                >
+                  Supprimer 
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -732,6 +756,8 @@ export default function ReferenceEditForm() {
                 >
                   Annuler
                 </Button>
+                </div>
+              
 
                 <div className="flex space-x-4">
                   <Button

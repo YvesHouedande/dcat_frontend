@@ -120,7 +120,7 @@ export const useUpadteProduct = () => {
   const productService = useProductService();
   const queryClient = useQueryClient();
   const update = useMutation({
-    mutationFn: (updatedProduct: ReferenceProduit) =>
+    mutationFn: (updatedProduct: Partial<ReferenceProduit>) =>
       productService.update(updatedProduct),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PRODUIT_KEY] });

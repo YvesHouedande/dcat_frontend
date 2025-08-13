@@ -485,26 +485,33 @@ const CommandeForm = () => {
                   {/* Sélection du destinataire */}
                   {typeDestinataire === "client" ? (
                     <div className="mb-6">
-                      <FormField
-                        control={form.control}
-                        name="id_client"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sélectionner un client</FormLabel>
-                            <FormControl>
-                              <ClientCombobox
-                                value={field.value}
-                                onChange={field.onChange}
-                                disabled={
-                                  createCommandeWithMarketing.isLoading ||
-                                  isUpdate
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {commande?.client?.id ? (
+                        <div className="mb-6">
+                          <Label>Client</Label>
+                          <p>{commande.client.nom}</p>
+                        </div>
+                      ) : (
+                        <FormField
+                          control={form.control}
+                          name="id_client"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sélectionner un client</FormLabel>
+                              <FormControl>
+                                <ClientCombobox
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  disabled={
+                                    createCommandeWithMarketing.isLoading ||
+                                    isUpdate
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                     </div>
                   ) : (
                     <div className="mb-6">
