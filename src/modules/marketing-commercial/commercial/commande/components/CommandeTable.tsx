@@ -67,6 +67,7 @@ import { fr } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { PopoverContent } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { useDeleteCommandeBruteForce } from "../hooks/useCommandes";
 
 interface CommandesTableProps {
   onEdit: (id: string | number) => void;
@@ -403,7 +404,7 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
   };
 
   const hasActiveFilters =
-    Object.values(filters || {}).some(
+    Object.values(filters ?? {}).some(
       (value) =>
         value !== undefined && value !== "" && value !== 1 && value !== ""
     ) ||
@@ -411,6 +412,8 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
     dateRange.to;
 
   const deleteCommande = useDeleteCommande();
+  const deleteCommandeBruteForce = useDeleteCommandeBruteForce();
+
   const navigate = useNavigate();
 
   const commandesData = useMemo(() => {
@@ -431,10 +434,12 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
     const type = selectedCommande.id_commande
       ? "vente en ligne"
       : "vente directe";
-    await deleteCommande.mutateAsync({
+
+    await deleteCommandeBruteForce.mutateAsync({
       id: selectedCommande.id_commande || 0,
       type: type,
     });
+
     setOpenDelete(false);
     setSelectedCommande(null);
   };
@@ -544,7 +549,7 @@ export const CommandesTable: React.FC<CommandesTableProps> = ({ onEdit }) => {
               Filtres
               {hasActiveFilters && (
                 <Badge variant="secondary" className="ml-1">
-                  {Object.keys(filters || {}).filter(
+                  {Object.keys(filters ?? {}).filter(
                     (key) =>
                       filters?.[key as keyof Filters] !== undefined &&
                       filters?.[key as keyof Filters] !== "" &&

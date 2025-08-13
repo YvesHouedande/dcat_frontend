@@ -13,8 +13,14 @@ const CommercialRoutes: React.FC = () => {
       <Route path="/" element={<MarketingLayout />}>
         <Route path="vente-equipements" element={<CommandePage />} />
         <Route path="commande-equipements" element={<CommandeForm />} />
-        <Route path="vente-equipements/:id" element={<CommandeDetails />} />
-        <Route path="vente-equipements/:id/modifier" element={<CommandeForm />} />
+        <Route
+          path="vente-equipements/:id"
+          element={<CommandeDetails isSortie={false} />}
+        />
+        <Route
+          path="vente-equipements/:id/modifier"
+          element={<CommandeForm />}
+        />
       </Route>
       <Route path="/*" element={<NotFound />} />
     </Routes>

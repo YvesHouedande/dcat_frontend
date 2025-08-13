@@ -12,10 +12,7 @@ export const formCommandeSchema = z
 
     id_client: z.string().optional(),
     partenaireId: z.string().optional(),
-    dateLivraison: z.union([
-      z.string().min(1, "La date de livraison est obligatoire"),
-      z.number().min(1, "La date de livraison est obligatoire"),
-    ]),
+    dateLivraison: z.union([z.string(), z.number()]).optional(),
     modePaiement: z.string().min(1, "Le mode de paiement est obligatoire"),
   })
   .refine((data) => !!data.id_client || !!data.partenaireId, {

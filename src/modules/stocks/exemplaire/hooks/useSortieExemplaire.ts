@@ -7,6 +7,7 @@ import {
 import useSortieExemplaireService from "../services/SortieExemplaire.service";
 import { SortieExemplaire } from "../types";
 
+const PRODUCT_INSTANCES_KEY = "productInstances";
 // Interface pour la réponse paginée
 interface PaginatedResponse {
   currentPage: number;
@@ -22,16 +23,18 @@ export const useSortieExemplaireCreate = () => {
       SortieExemplaireService.faireSortieExemplaire(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sortieExemplaire"] });
+      queryClient.invalidateQueries({ queryKey: [PRODUCT_INSTANCES_KEY] });
     },
   });
   return { mutate, isLoading, error };
 };
 
-export const useSortieExemplaireCommande = (id: string) => {
+export const useSortieExemplaireCommande = (id?: string) => {
   const SortieExemplaireService = useSortieExemplaireService();
   const { data, isLoading, error } = useQuery({
     queryKey: ["sortieExemplaireCommande"],
-    queryFn: () => SortieExemplaireService.ExemplaireSortieCommande(id),
+    queryFn: () => SortieExemplaireService.ExemplaireSortieCommande(id!),
+    enabled: !!id,
   });
   return { data, isLoading, error };
 };
@@ -88,6 +91,7 @@ export const useUpdateSortieExemplaire = () => {
     },
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["sortieExemplaire", id] });
+      queryClient.invalidateQueries({ queryKey: [PRODUCT_INSTANCES_KEY] });
     },
   });
   return { mutate, isLoading, error };
@@ -101,6 +105,7 @@ export const useDeleteSortieExemplaire = () => {
       SortieExemplaireService.deleteSortieExemplaire(id),
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["sortieExemplaire", id] });
+      queryClient.invalidateQueries({ queryKey: [PRODUCT_INSTANCES_KEY] });
     },
   });
   return { mutate, isLoading, error };

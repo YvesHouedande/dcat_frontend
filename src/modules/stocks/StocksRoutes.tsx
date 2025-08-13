@@ -8,6 +8,8 @@ import ReferenceEditForm from "./reference/pages/referenceEdit";
 import LivraisonPage from "./livraison/pages/LivraisonPage";
 import GestionStock from "../dashboard/pages/gestionDesStocks/gestionStock";
 import EntreeDashboard from "./entree/pages/Dashboard";
+import SortieDashboard from "./sortie/pages/Dashboard";
+import CommandeDetails from "../marketing-commercial/commercial/commande/components/CommandeDetails";
 
 const StocksRoutes: React.FC = () => {
   return (
@@ -24,6 +26,10 @@ const StocksRoutes: React.FC = () => {
       </Route>
       <Route path="/achats" element={<StockLayout />}>
         <Route index element={<LivraisonPage />} />
+      </Route>
+      <Route path="/sorties" element={<StockLayout />}>
+        <Route index element={<SortieDashboard />} />
+        <Route path=":id" element={<CommandeDetails isSortie={true} />} />
       </Route>
       <Route path="/*" element={<NotFound />} />
     </Routes>

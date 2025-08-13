@@ -51,7 +51,9 @@ export const CommandesService = () => {
      * @param {Omit<Commande, 'id_commande' | 'created_at' | 'updated_at'>} commande - L'objet Commande à créer, sans l'ID, la date de création et la date de mise à jour.
      * @returns {Promise<Commande>} Une promesse qui résout l'objet Commande créé.
      */
-    create: async (commande: CommandeFormValues): Promise<Commande> => {
+    create: async (
+      commande: Partial<CommandeFormValues>
+    ): Promise<Commande> => {
       const { data } = await api.post("stocks/commandes", commande);
       return data;
     },
@@ -81,6 +83,10 @@ export const CommandesService = () => {
 
     delete: async (id: number, type: string): Promise<void> => {
       await api.delete(`/stocks/commandes/${id}/${type}`);
+    },
+
+    deleteBruteForce: async (id: number, type: string): Promise<void> => {
+      await api.delete(`/stocks/commandes/force/${id}/${type}`);
     },
 
     updateStatus: async (

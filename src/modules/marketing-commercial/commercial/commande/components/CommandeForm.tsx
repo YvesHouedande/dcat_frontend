@@ -646,7 +646,12 @@ const CommandeForm = () => {
                       disabled={
                         cartItems.length === 0 ||
                         createCommande.isLoading ||
-                        createCommandeWithMarketing.isLoading
+                        createCommandeWithMarketing.isLoading ||
+                        updateCommande.isLoading ||
+                        form.watch("modePaiement") === "" ||
+                        form.watch("lieuLivraison") === "" ||
+                        (!form.watch("id_client") &&
+                          !form.watch("partenaireId"))
                       }
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 disabled:opacity-50 disabled:cursor-not-allowed"
                       size="lg"

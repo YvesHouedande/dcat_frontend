@@ -34,7 +34,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useDeleteSortieExemplaire } from "@/modules/stocks/exemplaire/hooks/useSortieExemplaire";
 import { etat_commande } from "../types/commande";
 
-const CommandeDetails = () => {
+const CommandeDetails = ({ isSortie }: { isSortie?: boolean }) => {
   const [openDelete, setOpenDelete] = useState(false);
   const [sortieLoading, setSortieLoading] = useState(false);
   const { id } = useParams();
@@ -51,11 +51,11 @@ const CommandeDetails = () => {
   const [showError, setShowError] = useState(false);
 
   const statusOptions: Commande["etat_commande"][] = [
-    etat_commande.annulee,
     etat_commande.en_cours,
     etat_commande.en_attente,
     etat_commande.livree,
     etat_commande.retournee,
+    etat_commande.annulee,
   ];
 
   // Effet pour afficher l'erreur après 1 seconde
@@ -129,7 +129,6 @@ const CommandeDetails = () => {
       livree: "bg-green-100 text-green-800 border-green-300",
       annulee: "bg-red-100 text-red-800 border-red-300",
       en_cours: "bg-blue-100 text-blue-800 border-blue-300",
-      
     };
     return colors[status] || colors["en_attente"];
   };
@@ -156,7 +155,9 @@ const CommandeDetails = () => {
   };
 
   const isEditable = (status: Commande["etat_commande"]): boolean => {
-    return status === "en_attente";
+    return (
+      status === etat_commande.en_attente || status === etat_commande.en_cours
+    );
   };
 
   const validereserve = () => {
@@ -423,7 +424,7 @@ const CommandeDetails = () => {
               <DropdownMenuTrigger asChild>
                 <Button
                   className={`${
-                    commande?.etat_commande.toLowerCase() === "annulée"
+                    commande?.etat_commande === etat_commande.annulee
                       ? "pointer-events-none"
                       : ""
                   }`}
@@ -431,27 +432,29 @@ const CommandeDetails = () => {
                   size="sm"
                 >
                   <StatusBadge
-                    status={commande?.etat_commande ?? "en_attente"}
+                    status={commande?.etat_commande ?? etat_commande.en_attente}
                   />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-full">
-                {statusOptions.map((status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    onClick={() => onStatusChange(Number(id)!, status)} // Convertir l'id en nombre et passer le status en paramètrecommande?.id_commande, status)}
-                    className={
-                      commande?.etat_commande === status ? "bg-gray-100" : ""
-                    }
-                  >
-                    <Badge
-                      variant="outline"
-                      className={`mr-2 ${getStatusColor(status)}`}
+                {statusOptions
+                  .filter((status) => status !== etat_commande.annulee)
+                  .map((status) => (
+                    <DropdownMenuItem
+                      key={status}
+                      onClick={() => onStatusChange(Number(id)!, status)} // Convertir l'id en nombre et passer le status en paramètrecommande?.id_commande, status)}
+                      className={
+                        commande?.etat_commande === status ? "bg-gray-100" : ""
+                      }
                     >
-                      {status}
-                    </Badge>
-                  </DropdownMenuItem>
-                ))}
+                      <Badge
+                        variant="outline"
+                        className={`mr-2 ${getStatusColor(status)}`}
+                      >
+                        {status}
+                      </Badge>
+                    </DropdownMenuItem>
+                  ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -466,7 +469,9 @@ const CommandeDetails = () => {
           ) : (
             <>
               {isvalidereserve() &&
-                isEditable(commande?.etat_commande ?? "en_attente") && (
+                isEditable(
+                  commande?.etat_commande ?? etat_commande.en_attente
+                ) && (
                   <Button
                     variant={"blue"}
                     className="mb-4"
@@ -550,7 +555,8 @@ const CommandeDetails = () => {
                   </div>
                   {item.produit.qte_produit !== undefined &&
                     item.produit.qte_produit >= item.quantite &&
-                    isEditable(commande?.etat_commande ?? "en_attente") && (
+                    isEditable(commande?.etat_commande ?? "en_attente") &&
+                    isSortie && (
                       <div className="flex justify-end pt-2">
                         <ValideBoutton item={item} />
                       </div>
@@ -581,9 +587,8 @@ const CommandeDetails = () => {
                 <div className="hidden lg:col-span-2 lg:flex lg:items-center lg:justify-center">
                   {item.produit.qte_produit !== undefined &&
                     item.produit.qte_produit >= item.quantite &&
-                    isEditable(commande?.etat_commande ?? "en_attente") && (
-                      <ValideBoutton item={item} />
-                    )}
+                    isEditable(commande?.etat_commande ?? "en_attente") &&
+                    isSortie && <ValideBoutton item={item} />}
                 </div>
               </div>
             ))}
@@ -597,7 +602,8 @@ const CommandeDetails = () => {
               </span>
               <br />
               <span className="font-bold">
-                le bouton reserver est disponible uniquement si la quantité en stock des produits est supérieure à la quantité commandée.
+                le bouton reserver est disponible uniquement si la quantité en
+                stock des produits est supérieure à la quantité commandée.
               </span>
             </p>
           </div>
@@ -606,24 +612,27 @@ const CommandeDetails = () => {
         {/* Section détails */}
         <div className="space-y-6">
           {/* Détails de la commande */}
-          {commande?.etat_commande === "en_attente" && (
+          {(commande?.etat_commande === etat_commande.en_attente ||
+            commande?.etat_commande === etat_commande.en_cours) &&
+            !isSortie && (
+              <Button
+                variant={"blue"}
+                onClick={() => navigate("modifier")}
+                className="w-full"
+              >
+                Modifier
+              </Button>
+            )}
+          {!isSortie && (
             <Button
-              variant={"blue"}
-              onClick={() => navigate("modifier")}
-              className="w-full"
+              variant="outline"
+              onClick={handlePrint}
+              className="w-full mb-4"
             >
-              Modifier
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimer la commande
             </Button>
           )}
-
-          <Button
-            variant="outline"
-            onClick={handlePrint}
-            className="w-full mb-4"
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimer la commande
-          </Button>
 
           <Card>
             <CardHeader>
@@ -660,6 +669,15 @@ const CommandeDetails = () => {
               </div>
 
               <div>
+                <h4 className="font-medium text-gray-900 mb-2">
+                  Date de livraison
+                </h4>
+                <p className="text-sm text-gray-600">
+                  {commande?.date_livraison ?? "aucune date de livraison"}
+                </p>
+              </div>
+
+              <div>
                 <h4 className="font-medium text-gray-900 mb-2">Paiement</h4>
                 <p className="text-sm text-gray-600">
                   {commande?.mode_de_paiement}
@@ -685,7 +703,8 @@ const CommandeDetails = () => {
                   </div>
                 </div>
               </div>
-              {commande?.etat_commande.toLowerCase() === "annulée" ? (
+              {commande?.etat_commande === etat_commande.annulee &&
+              !isSortie ? (
                 <div>
                   <div>
                     <h4 className="font-medium text-red-600 mb-2">
@@ -702,7 +721,9 @@ const CommandeDetails = () => {
                   </Button>
                 </div>
               ) : (
-                commande?.etat_commande === "en_attente" && (
+                (commande?.etat_commande === etat_commande.en_cours ||
+                  commande?.etat_commande === etat_commande.en_attente) &&
+                !isSortie && (
                   <Button
                     className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white"
                     size="lg"
