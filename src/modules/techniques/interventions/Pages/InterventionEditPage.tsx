@@ -114,7 +114,10 @@ export const InterventionEditPage: React.FC = () => {
       if (data.mode_intervention) interventionData.mode_intervention = data.mode_intervention;
       if (data.statut_intervention) interventionData.statut_intervention = data.statut_intervention;
       if (intervention?.type) interventionData.type = intervention.type;
-      if (data.id_contrat !== undefined) interventionData.id_contrat = data.id_contrat;
+      // Gérer le contrat - peut être null pour dissocier un contrat
+      if (data.id_contrat !== undefined) {
+        interventionData.id_contrat = data.id_contrat;
+      }
     
       console.log("🔍 [InterventionEditPage] Données envoyées à updateIntervention:", interventionData);
       console.log("🔍 [InterventionEditPage] ID de l'intervention:", id);

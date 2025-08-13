@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useApi } from "@/api/api";
+import axios from "axios";
 import {
   ContratDocument,
   ContratResponse,
@@ -94,33 +95,54 @@ export const useContratsApi = () => {
       contratData: UpdateContratData,
       documentFile?: File
     ): Promise<ContratResponse> => {
-      let response;
-      if (documentFile) {
-        const formData = new FormData();
-        Object.entries(contratData).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            formData.append(key, value.toString());
-          }
-        });
-        formData.append("document", documentFile);
+      try {
+        let response;
+        if (documentFile) {
+          const formData = new FormData();
+          Object.entries(contratData).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              formData.append(key, value.toString());
+            }
+          });
+          formData.append("document", documentFile);
 
-        response = await api.put<ContratResponse>(
-          `/administration/contrats/${id}`,
-          formData,
-          { headers: { "Content-Type": "multipart/form-data" } }
-        );
-      } else {
-        const cleanData = Object.fromEntries(
-          Object.entries(contratData).filter(
-            ([, value]) => value !== undefined && value !== null
-          )
-        );
-        response = await api.put<ContratResponse>(
-          `/administration/contrats/${id}`,
-          cleanData
-        );
+          response = await api.put<ContratResponse>(
+            `/administration/contrats/${id}`,
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
+        } else {
+          // Nettoyer les données en s'assurant que les valeurs sont correctes
+          const cleanData = Object.fromEntries(
+            Object.entries(contratData).filter(
+              ([, value]) => value !== undefined && value !== null
+            )
+          );
+          
+          response = await api.put<ContratResponse>(
+            `/administration/contrats/${id}`,
+            cleanData
+          );
+        }
+        return response.data;
+      } catch (error: unknown) {
+        console.error("Erreur lors de la mise à jour du contrat:", error);
+        console.error("Données envoyées:", contratData);
+        console.error("ID du contrat:", id);
+        
+        // Log détaillé de l'erreur Axios
+        if (axios.isAxiosError(error)) {
+          console.error("Réponse d'erreur du serveur:", error.response?.data);
+          console.error("Status code:", error.response?.status);
+          console.error("Headers:", error.response?.headers);
+        } else if (error && typeof error === 'object' && 'request' in error) {
+          console.error("Aucune réponse reçue:", (error as { request: unknown }).request);
+        } else {
+          console.error("Erreur de configuration:", (error as Error)?.message);
+        }
+        
+        throw error;
       }
-      return response.data;
     },
     [api]
   );
@@ -128,21 +150,68 @@ export const useContratsApi = () => {
   const deleteContrat = useCallback(
     async (id: string | number) => {
       try {
+        console.log(`[DELETE] Début de la suppression du contrat ${id}`);
+        
+        // D'abord, récupérer le contrat pour voir s'il a des documents
+        console.log(`[DELETE] Récupération des détails du contrat ${id}`);
         const contratResponse = await api.get(`/administration/contrats/${id}`);
         const contrat = contratResponse.data;
+        console.log(`[DELETE] Contrat récupéré:`, contrat);
 
-        if (Array.isArray(contrat.documents) && contrat.documents.length > 0) {
+        // Supprimer les documents associés s'ils existent
+        if (contrat.documents && Array.isArray(contrat.documents) && contrat.documents.length > 0) {
+          console.log(`[DELETE] Suppression de ${contrat.documents.length} document(s) associé(s) au contrat ${id}`);
           for (const doc of contrat.documents) {
-            await api.delete(
-              `/administration/contrats/docContrat/${doc.id_documents}`
-            );
+            try {
+              console.log(`[DELETE] Suppression du document ${doc.id_documents}`);
+              await api.delete(`/administration/contrats/docContrat/${doc.id_documents}`);
+              console.log(`[DELETE] ✓ Document ${doc.id_documents} supprimé avec succès`);
+            } catch (docError) {
+              console.error(`[DELETE] ✗ Erreur lors de la suppression du document ${doc.id_documents}:`, docError);
+              // Continuer même si un document ne peut pas être supprimé
+            }
           }
+        } else {
+          console.log(`[DELETE] Aucun document à supprimer pour le contrat ${id}`);
         }
 
+        // Maintenant supprimer le contrat
+        console.log(`[DELETE] Suppression du contrat ${id}`);
         const response = await api.delete(`/administration/contrats/${id}`);
+        console.log(`[DELETE] ✓ Contrat ${id} supprimé avec succès`);
+        console.log(`[DELETE] Réponse du serveur:`, response.data);
         return response.data;
-      } catch (error) {
-        console.error("Erreur lors de la suppression du contrat:", error);
+      } catch (error: unknown) {
+        console.error("[DELETE] ID du contrat:", id);
+        
+        // Log détaillé de l'erreur Axios
+        if (axios.isAxiosError(error)) {
+          console.error("[DELETE] Réponse d'erreur du serveur:", error.response?.data);
+          console.error("[DELETE] Status code:", error.response?.status);
+          console.error("[DELETE] Headers:", error.response?.headers);
+          
+          // Détecter les erreurs de contrainte de clé étrangère
+          const errorMessage = error.response?.data?.message || "";
+          const errorDetails = error.response?.data?.details || "";
+          
+          if (errorMessage.includes("foreign key") || 
+              errorDetails.includes("foreign key") ||
+              errorMessage.includes("contrainte") ||
+              errorDetails.includes("contrainte") ||
+              errorMessage.includes("intervention") ||
+              errorDetails.includes("intervention")) {
+            
+            // Créer une erreur personnalisée pour les contraintes de clé étrangère
+            const customError = new Error("CONTRAT_LINKED_TO_INTERVENTION");
+            customError.message = "Ce contrat est lié à une ou plusieurs interventions. Veuillez d'abord dissocier le contrat de toutes les interventions avant de le supprimer.";
+            throw customError;
+          }
+        } else if (error && typeof error === 'object' && 'request' in error) {
+          console.error("[DELETE] Aucune réponse reçue:", (error as { request: unknown }).request);
+        } else {
+          console.error("[DELETE] Erreur de configuration:", (error as Error)?.message);
+        }
+        
         throw error;
       }
     },

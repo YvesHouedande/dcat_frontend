@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Save, Building, X, Plus } from "lucide-react";
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
 import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
+import { useEntiteApi } from "@/modules/administration-Finnance/services/entiteService";
 import { toast } from "sonner";
 
 const EditPartnerForm: React.FC = () => {
@@ -32,6 +33,7 @@ const EditPartnerForm: React.FC = () => {
     updateInterlocuteur,
     deleteInterlocuteur,
   } = usePartenaireApi();
+  const { fetchEntites } = useEntiteApi();
 
   // Charger le partenaire
   const {
@@ -61,7 +63,11 @@ const EditPartnerForm: React.FC = () => {
     localisation: "",
     type_partenaire: "",
     statut: "Actif",
+    id_entite: undefined,
   });
+
+  // État pour les entités
+  const [entites, setEntites] = useState<Array<{ id_entite: number; denomination: string }>>([]);
 
   const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
   const [newInterlocuteur, setNewInterlocuteur] = useState<
@@ -90,6 +96,22 @@ const EditPartnerForm: React.FC = () => {
   useEffect(() => {
     if (initialInterlocuteurs) setInterlocuteurs(initialInterlocuteurs);
   }, [initialInterlocuteurs]);
+
+  // Charger les entités au montage du composant
+  useEffect(() => {
+    const loadEntites = async () => {
+      try {
+        const entitesData = await fetchEntites();
+        setEntites(entitesData.map(entite => ({
+          id_entite: entite.id_entite,
+          denomination: entite.denomination
+        })));
+      } catch (error) {
+        console.error("Erreur lors du chargement des entités:", error);
+      }
+    };
+    loadEntites();
+  }, [fetchEntites]);
 
   const types_partenaire = [
     "Fournisseur",
@@ -561,6 +583,31 @@ const EditPartnerForm: React.FC = () => {
                 </Select>
                 {errors.statut && (
                   <p className="text-red-500 text-sm">{errors.statut}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="id_entite">Entité associée</Label>
+                <Select
+                  value={formData.id_entite?.toString() || ""}
+                  onValueChange={(value) => handleSelectChange("id_entite", value ? parseInt(value) : undefined)}
+                >
+                  <SelectTrigger
+                    className={errors.id_entite ? "border-red-500" : ""}
+                  >
+                    <SelectValue placeholder="Sélectionner une entité (optionnel)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Aucune entité</SelectItem>
+                    {entites.map((entite) => (
+                      <SelectItem key={entite.id_entite} value={entite.id_entite.toString()}>
+                        {entite.denomination}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.id_entite && (
+                  <p className="text-red-500 text-sm">{errors.id_entite}</p>
                 )}
               </div>
             </CardContent>

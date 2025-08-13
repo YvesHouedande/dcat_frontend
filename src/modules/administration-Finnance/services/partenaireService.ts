@@ -63,6 +63,38 @@ export const usePartenaireApi = () => {
   // PARTENAIRES
   const fetchPartners = useCallback(
     async (page: number, limit: number): Promise<PartenaireResponse> => {
+      // Limite de sécurité pour éviter les boucles infinies
+      const safeLimit = Math.min(limit, 50);
+      
+      const response = await api.get<PartenaireResponse>(
+        "/administration/partenaires",
+        {
+          params: {
+            page,
+            limit: safeLimit,
+          },
+        }
+      );
+      const partenaires = response.data.data;
+      
+      // Par défaut, utiliser la version sans interlocuteurs pour éviter les erreurs de ressources
+      // et les boucles infinies
+      const partenairesWithEmptyInterlocuteurs = partenaires.map(partenaire => ({
+        ...partenaire,
+        interlocuteurs: [],
+      }));
+      
+      return {
+        data: partenairesWithEmptyInterlocuteurs,
+        pagination: response.data.pagination,
+      };
+    },
+    [api]
+  );
+
+  // Version optimisée sans interlocuteurs pour éviter les erreurs de ressources
+  const fetchPartnersWithoutInterlocuteurs = useCallback(
+    async (page: number, limit: number): Promise<PartenaireResponse> => {
       const response = await api.get<PartenaireResponse>(
         "/administration/partenaires",
         {
@@ -72,36 +104,70 @@ export const usePartenaireApi = () => {
           },
         }
       );
-      const partenaires = response.data.data;
-      const partenairesWithInterlocuteurs = await Promise.all(
-        partenaires.map(async (partenaire: Partenaires) => {
-          try {
-            const interlocuteursResponse = await api.get(
-              `/administration/interlocuteurs/partenaire/${partenaire.id_partenaire}`
-            );
-            return {
-              ...partenaire,
-              interlocuteurs: interlocuteursResponse.data,
-            };
-          } catch (error) {
-            console.error(
-              `Erreur lors de la récupération des interlocuteurs pour le partenaire ${partenaire.id_partenaire}:`,
-              error
-            );
-            return {
-              ...partenaire,
-              interlocuteurs: [],
-            };
-          }
-        })
-      );
+      
+      // Ajouter un tableau vide d'interlocuteurs pour maintenir la compatibilité
+      const partenairesWithEmptyInterlocuteurs = response.data.data.map(partenaire => ({
+        ...partenaire,
+        interlocuteurs: [],
+      }));
 
-      const partenaireWithInterlocuteurs = {
-        data: partenairesWithInterlocuteurs,
+      return {
+        data: partenairesWithEmptyInterlocuteurs,
         pagination: response.data.pagination,
       };
+    },
+    [api]
+  );
 
-      return partenaireWithInterlocuteurs;
+  // Fonction spéciale pour récupérer tous les partenaires pour les formulaires
+  // Utilise maintenant le service commun pour éviter la duplication
+  const fetchAllPartnersForForms = useCallback(
+    async (): Promise<PartenaireResponse> => {
+      const response = await api.get<PartenaireResponse>(
+        "/administration/partenaires",
+        {
+          params: {
+            page: 1,
+            limit: 1000, // Récupérer tous les partenaires
+          },
+        }
+      );
+      
+      // Ajouter un tableau vide d'interlocuteurs pour maintenir la compatibilité
+      const partenairesWithEmptyInterlocuteurs = response.data.data.map(partenaire => ({
+        ...partenaire,
+        interlocuteurs: [],
+      }));
+
+      return {
+        data: partenairesWithEmptyInterlocuteurs,
+        pagination: response.data.pagination,
+      };
+    },
+    [api]
+  );
+
+  // Fonction pour récupérer les interlocuteurs en batch avec gestion d'erreur
+  const fetchInterlocuteursBatch = useCallback(
+    async (partenaireIds: number[]): Promise<Record<number, Interlocuteur[]>> => {
+      const interlocuteursMap: Record<number, Interlocuteur[]> = {};
+      
+      for (let i = 0; i < partenaireIds.length; i++) {
+        const partenaireId = partenaireIds[i];
+        try {
+          const response = await api.get(`/administration/interlocuteurs/partenaire/${partenaireId}`);
+          interlocuteursMap[partenaireId] = response.data || [];
+        } catch (error) {
+          console.error(`Erreur lors de la récupération des interlocuteurs pour le partenaire ${partenaireId}:`, error);
+          interlocuteursMap[partenaireId] = [];
+        }
+        
+        // Délai progressif pour éviter la surcharge
+        const delay = Math.min(50 + (i * 10), 200);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      return interlocuteursMap;
     },
     [api]
   );
@@ -112,7 +178,14 @@ export const usePartenaireApi = () => {
       const response = await api.get(`/administration/partenaires/${id}`);
       console.log("fetchPartnerById - Réponse du backend:", response.data);
       console.log("fetchPartnerById - id_entite dans la réponse:", response.data?.id_entite);
-      return response.data;
+      
+      // S'assurer que l'id_entite est défini
+      const partenaire = response.data;
+      if (partenaire && partenaire.id_entite === undefined) {
+        partenaire.id_entite = null; // ou 0 selon votre logique métier
+      }
+      
+      return partenaire;
     },
     [api]
   );
@@ -331,6 +404,9 @@ export const usePartenaireApi = () => {
   return {
     // Partenaire
     fetchPartners,
+    fetchPartnersWithoutInterlocuteurs,
+    fetchAllPartnersForForms,
+    fetchInterlocuteursBatch,
     fetchPartnerById,
     addPartner,
     updatePartner,

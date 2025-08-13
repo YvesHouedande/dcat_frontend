@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/popover";
 import { MutationError, CreateContratData } from "../../types/interfaces";
 import { useContratsApi } from "../../../services/contratService";
-import { usePartenaireApi } from "../../../services/partenaireService";
+import { useCommonApi } from "../../../services/commonService";
 import { useEntiteApi } from '../../../services/entiteService';
 import { Interlocuteur, Entite } from "../../types/interfaces";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -38,10 +38,10 @@ const NouveauContrat: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { addContrat } = useContratsApi();
-  const { fetchPartners, fetchPartnerById, fetchInterlocuteursByPartenaire } = usePartenaireApi();
+  const { fetchPartnersForForms, fetchInterlocuteursByPartenaire } = useCommonApi();
   const { fetchEntites } = useEntiteApi();
   const [partenaires, setPartenaires] = useState<
-    Array<{ id: number; nom: string }>
+    Array<{ id: number; nom: string; id_entite?: number }>
   >([]);
   const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
   const [selectedEntite, setSelectedEntite] = useState<Entite | null>(null);
@@ -69,27 +69,30 @@ const NouveauContrat: React.FC = () => {
     };
   });
 
+  // Charger les partenaires et entités
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Charger les partenaires
-        const partenairesData = await fetchPartners(1, 100);
+        const [partenairesData, entitesData] = await Promise.all([
+          fetchPartnersForForms(),
+          fetchEntites()
+        ]);
         setPartenaires(
           partenairesData.data.map((partenaire) => ({
             id: partenaire.id_partenaire,
             nom: partenaire.nom_partenaire,
+            id_entite: partenaire.id_entite,
           }))
         );
 
         // Charger les entités
-        const entitesData = await fetchEntites();
         setEntites(entitesData);
       } catch (error) {
         console.error("Erreur lors du chargement des données:", error);
       }
     };
     loadData();
-  }, [fetchPartners, fetchEntites]);
+  }, [fetchPartnersForForms, fetchEntites]);
 
   // Effet pour charger les interlocuteurs et l'entité quand un partenaire est sélectionné
   useEffect(() => {
@@ -103,14 +106,31 @@ const NouveauContrat: React.FC = () => {
       }
 
       try {
-        // Charger les détails du partenaire (incluant potentiellement l'entité)
-        const partenaireDetails = await fetchPartnerById(formData.id_partenaire);
-        // setSelectedPartenaire(partenaireDetails); // This line was removed
+        // Trouver le partenaire dans les données déjà chargées
+        const partenaireDetails = partenaires.find(p => p.id === formData.id_partenaire);
+        if (!partenaireDetails) {
+          console.error("Partenaire non trouvé dans les données chargées");
+          return;
+        }
 
         // Filtrer les entités du partenaire sélectionné
-        const entitesAssociees = entites.filter(e => e.id_partenaire === partenaireDetails.id_partenaire);
+        const entitesAssociees = entites.filter(e => e.id_partenaire === partenaireDetails.id);
         setEntitesPartenaire(entitesAssociees);
-        if (entitesAssociees.length === 1) {
+        
+        // Si le partenaire a déjà une entité associée, l'utiliser
+        if (partenaireDetails.id_entite) {
+          const entiteExistante = entites.find(e => e.id_entite === partenaireDetails.id_entite);
+          if (entiteExistante) {
+            setSelectedEntite(entiteExistante);
+            setFormData(prev => ({ ...prev, id_entite: entiteExistante.id_entite }));
+          } else if (entitesAssociees.length === 1) {
+            setSelectedEntite(entitesAssociees[0]);
+            setFormData(prev => ({ ...prev, id_entite: entitesAssociees[0].id_entite }));
+          } else {
+            setSelectedEntite(null);
+            setFormData(prev => ({ ...prev, id_entite: 0 }));
+          }
+        } else if (entitesAssociees.length === 1) {
           setSelectedEntite(entitesAssociees[0]);
           setFormData(prev => ({ ...prev, id_entite: entitesAssociees[0].id_entite }));
         } else {
@@ -148,7 +168,7 @@ const NouveauContrat: React.FC = () => {
 
     loadPartenaireDetails();
     // eslint-disable-next-line
-  }, [formData.id_partenaire, fetchPartnerById, fetchInterlocuteursByPartenaire, entites]);
+  }, [formData.id_partenaire, partenaires, entites, fetchInterlocuteursByPartenaire]);
 
   const mutation = useMutation((data: CreateContratData) => addContrat(data), {
     onSuccess: (data) => {

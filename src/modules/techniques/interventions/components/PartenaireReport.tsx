@@ -88,23 +88,17 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState("");
-  const { fetchPartners } = usePartenaireApi();
+  const { fetchPartnersWithoutInterlocuteurs } = usePartenaireApi();
 
+  // Charger les partenaires pour la sélection
   const loadPartenaires = useCallback(async () => {
     try {
-      const partenairesData = await fetchPartners(1, 100);
+      const partenairesData = await fetchPartnersWithoutInterlocuteurs(1, 100);
       setPartenaires(partenairesData.data);
-      // Sélectionnez le premier partenaire par défaut si la liste n'est pas vide
-      if (partenairesData.data.length > 0 && !selectedPartenaireId) {
-        setSelectedPartenaireId(
-          partenairesData.data[0].id_partenaire.toString()
-        );
-      }
     } catch (error) {
       console.error("Erreur lors du chargement des partenaires:", error);
-      toast.error("Erreur lors du chargement des partenaires");
     }
-  }, [fetchPartners, selectedPartenaireId]);
+  }, [fetchPartnersWithoutInterlocuteurs]);
   useEffect(() => {
     // Charger l'image en base64 au chargement du composant
     loadImageAsBase64(logoSrc)
@@ -118,7 +112,7 @@ export const PartenaireReport: React.FC<PartenaireReportProps> = () => {
 
     // Charger la liste des partenaires
     loadPartenaires();
-  }, [fetchPartners, loadPartenaires]);
+  }, [fetchPartnersWithoutInterlocuteurs, loadPartenaires]);
 
   const loadInterventions = useCallback(async () => {
     if (!selectedPartenaireId) {

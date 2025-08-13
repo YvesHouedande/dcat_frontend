@@ -26,12 +26,12 @@ const EditEntiteForm: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { fetchEntiteById, updateEntite } = useEntiteApi();
-  const { fetchPartners } = usePartenaireApi();
+  const { fetchAllPartnersForForms } = usePartenaireApi();
 
-  // Charger les partenaires pour la sélection
+  // Charger les partenaires pour la sélection (sans interlocuteurs pour éviter les erreurs)
   const { data: partenairesData, isLoading: loadingPartenaires } = useQuery({
     queryKey: ["partenaires-editer-entite"],
-    queryFn: () => fetchPartners(1, 1000), // Récupérer tous les partenaires
+    queryFn: () => fetchAllPartnersForForms(), // Récupérer tous les partenaires sans interlocuteurs
   });
 
   const partenaires = partenairesData?.data || [];

@@ -47,10 +47,12 @@ import { fr } from "date-fns/locale";
 import { Contrat, Partenaires, MutationError } from "../../types/interfaces";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useContratsApi } from "../../../services/contratService";
-import { usePartenaireApi } from "../../../services/partenaireService";
+import { useCommonApi } from "../../../services/commonService";
 import { toast } from "sonner";
 
 const ModernContractGrid: React.FC = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [contractToDelete, setContractToDelete] = useState<Contrat | null>(
@@ -62,9 +64,10 @@ const ModernContractGrid: React.FC = () => {
   );
   const { fetchContrats, fetchContratsByType, deleteContrat } =
     useContratsApi();
-  const { fetchPartners } = usePartenaireApi();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { fetchPartnersForForms } = useCommonApi();
+
+  // Charger les partenaires pour le filtre (sans interlocuteurs pour éviter les erreurs)
+
 
   // Récupération des contrats
   const {
@@ -83,7 +86,7 @@ const ModernContractGrid: React.FC = () => {
   // Récupération des partenaires pour affichage du nom
   const { data: partenaires } = useQuery({
     queryKey: ["partenaires-contrats"],
-    queryFn: () => fetchPartners(1, 100),
+    queryFn: () => fetchPartnersForForms(),
   });
 
   // Mutation pour supprimer un contrat
@@ -100,9 +103,17 @@ const ModernContractGrid: React.FC = () => {
       setDeletingContractId(null);
     },
     onError: (error: MutationError) => {
-      toast.error("Erreur lors de la suppression du contrat", {
-        description: error.message || "Une erreur inattendue s'est produite",
-      });
+      // Vérifier si c'est une erreur de contrainte de clé étrangère
+      if (error.message && error.message.includes("lié à une ou plusieurs interventions")) {
+        toast.info("Contrat lié à des interventions", {
+          description: error.message,
+          duration: 5000,
+        });
+      } else {
+        toast.error("Erreur lors de la suppression du contrat", {
+          description: error.message || "Une erreur inattendue s'est produite",
+        });
+      }
       setIsDeleteDialogOpen(false);
       setContractToDelete(null);
       setDeletingContractId(null);

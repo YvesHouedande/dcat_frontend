@@ -27,6 +27,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { Interlocuteur } from "../../types/interfaces";
 import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
+import { useCommonApi } from "@/modules/administration-Finnance/services/commonService";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -64,7 +65,9 @@ const ModernPartenaireGrid: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const { fetchPartners, deletePartner } = usePartenaireApi();
+  const { deletePartner } = usePartenaireApi();
+  const { fetchPartnersPaginated } = useCommonApi();
+  
   // Charger les partenaires avec React Query
   const {
     data,
@@ -76,7 +79,7 @@ const ModernPartenaireGrid: React.FC = () => {
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ["partenaires"],
-    queryFn: ({ pageParam = 1 }) => fetchPartners(pageParam, 16),
+    queryFn: ({ pageParam = 1 }) => fetchPartnersPaginated(pageParam, 16),
     getNextPageParam: (lastPage) => {
       const currentPage = lastPage.pagination.page;
       const totalPages = lastPage.pagination.totalPages;

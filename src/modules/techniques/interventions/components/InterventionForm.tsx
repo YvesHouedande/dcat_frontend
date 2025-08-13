@@ -39,7 +39,7 @@ import { Contrat } from '@/modules/administration-Finnance/administration/types/
 const formSchema = z.object({
   date_intervention: z.string().min(1, 'La date d\'intervention est requise'),
   id_partenaire: z.number().min(1, 'Le client est requis'),
-  id_contrat: z.number().optional(),
+  id_contrat: z.number().nullable().optional(),
   probleme_signale: z.string().optional(),
   type_intervention: z.enum(['Corrective', 'Préventive']).optional(),
   type_defaillance: z.enum(['Électrique', 'Matérielle', 'Logiciel']).optional(),
@@ -55,7 +55,9 @@ const formSchema = z.object({
   superviseur: z.number().optional(),
 });
 
-export type FormData = z.infer<typeof formSchema>;
+export type FormData = z.infer<typeof formSchema> & {
+  id_contrat?: number | null;
+};
 
 interface InterventionFormProps {
   intervention?: Intervention;
@@ -199,8 +201,14 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                 <FormItem>
                   <FormLabel>Contrat</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value ? field.value.toString() : ''}
+                    onValueChange={(value) => {
+                      if (value === 'none') {
+                        field.onChange(null);
+                      } else {
+                        field.onChange(parseInt(value));
+                      }
+                    }}
+                    value={field.value ? field.value.toString() : 'none'}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -208,6 +216,9 @@ export const InterventionForm: React.FC<InterventionFormProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="none">
+                        Aucun contrat
+                      </SelectItem>
                       {contrats.map((contrat) => (
                         <SelectItem
                           key={contrat.id_contrat}

@@ -102,7 +102,7 @@ export const useApi = () => {
           } else if (status === 403) {
             toast.error("Accès non autorisé.");
           } else if (status === 500) {
-            toast.error(
+            console.error(
               "Erreur interne du serveur: " + getAxiosErrorMessage(error)
             );
           } else {

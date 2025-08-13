@@ -26,7 +26,7 @@ import {
   UpdateContratData,
 } from "../../types/interfaces";
 import { useContratsApi } from "../../../services/contratService";
-import { usePartenaireApi } from "../../../services/partenaireService";
+import { useCommonApi } from "../../../services/commonService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import DocumentSheet from "./DocumentSheet";
@@ -42,12 +42,12 @@ const EditerContrat: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [partenaires, setPartenaires] = useState<
-    Array<{ id: number; nom: string }>
+    Array<{ id: number; nom: string; id_entite?: number }>
   >([]);
   const [entites, setEntites] = useState<Entite[]>([]);
   const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
   const { fetchContratById, updateContrat } = useContratsApi();
-  const partenaireApi = usePartenaireApi();
+  const { fetchPartnersForForms, fetchInterlocuteursByPartenaire } = useCommonApi();
   const { fetchEntites } = useEntiteApi();
   const [formData, setFormData] = useState<ContratFormData>({
     nom_contrat: "",
@@ -98,34 +98,37 @@ const EditerContrat: React.FC = () => {
     }
   }, [contrat]);
 
-  // Récupérer les partenaires et entités
+  // Charger les partenaires
   useEffect(() => {
-    const loadData = async () => {
+    const loadPartenaires = async () => {
       try {
-        const [partenairesData, entitesData] = await Promise.all([
-          partenaireApi.fetchPartners(1, 100),
-          fetchEntites()
-        ]);
-        
+        const partenairesData = await fetchPartnersForForms();
         setPartenaires(
-          partenairesData.data.map(
-            (partenaire: {
-              id_partenaire: number;
-              nom_partenaire: string;
-            }) => ({
-              id: partenaire.id_partenaire,
-              nom: partenaire.nom_partenaire,
-            })
-          )
+          partenairesData.data.map((p) => ({
+            id: p.id_partenaire,
+            nom: p.nom_partenaire,
+            id_entite: p.id_entite,
+          }))
         );
-        
-        setEntites(entitesData);
       } catch (error) {
-        console.error("Erreur lors du chargement des données:", error);
+        console.error("Erreur lors du chargement des partenaires:", error);
       }
     };
-    loadData();
-  }, [partenaireApi, fetchEntites]);
+    loadPartenaires();
+  }, [fetchPartnersForForms]);
+
+  // Récupérer les entités
+  useEffect(() => {
+    const loadEntites = async () => {
+      try {
+        const entitesData = await fetchEntites();
+        setEntites(entitesData);
+      } catch (error) {
+        console.error("Erreur lors du chargement des entités:", error);
+      }
+    };
+    loadEntites();
+  }, [fetchEntites]);
 
   // Charger les détails du partenaire et de l'entité quand le partenaire change
   useEffect(() => {
@@ -137,20 +140,42 @@ const EditerContrat: React.FC = () => {
         return;
       }
       try {
-        const partenaireDetailsData = await partenaireApi.fetchPartnerById(formData.id_partenaire);
+        // Trouver le partenaire dans les données déjà chargées
+        const partenaireDetails = partenaires.find(p => p.id === formData.id_partenaire);
+        if (!partenaireDetails) {
+          console.error("Partenaire non trouvé dans les données chargées");
+          return;
+        }
+
         // Filtrer les entités du partenaire sélectionné
-        const entitesAssociees = entites.filter(e => e.id_partenaire === partenaireDetailsData.id_partenaire);
+        const entitesAssociees = entites.filter(e => e.id_partenaire === partenaireDetails.id);
         setEntitesPartenaire(entitesAssociees);
-        if (entitesAssociees.length === 1) {
+        
+        // Si le partenaire a déjà une entité associée, l'utiliser
+        if (partenaireDetails.id_entite) {
+          const entiteExistante = entites.find(e => e.id_entite === partenaireDetails.id_entite);
+          if (entiteExistante) {
+            setFormData(prev => ({ ...prev, id_entite: entiteExistante.id_entite }));
+          } else if (entitesAssociees.length === 1) {
+            setFormData(prev => ({ ...prev, id_entite: entitesAssociees[0].id_entite }));
+          } else {
+            // Si on édite, garder l'entité déjà sélectionnée si elle existe
+            const entiteExistante = entitesAssociees.find(e => e.id_entite === formData.id_entite);
+            setFormData(prev => ({ ...prev, id_entite: entiteExistante ? entiteExistante.id_entite : 0 }));
+          }
+        } else if (entitesAssociees.length === 1) {
           setFormData(prev => ({ ...prev, id_entite: entitesAssociees[0].id_entite }));
         } else {
           // Si on édite, garder l'entité déjà sélectionnée si elle existe
           const entiteExistante = entitesAssociees.find(e => e.id_entite === formData.id_entite);
           setFormData(prev => ({ ...prev, id_entite: entiteExistante ? entiteExistante.id_entite : 0 }));
         }
+        
         // Charger les interlocuteurs du partenaire
-        const interlocuteursData = await partenaireApi.fetchInterlocuteursByPartenaire(formData.id_partenaire);
+        const interlocuteursData = await fetchInterlocuteursByPartenaire(formData.id_partenaire);
         setInterlocuteurs(interlocuteursData);
+        
+        // Si il n'y a qu'un seul interlocuteur, le pré-remplir automatiquement
         if (interlocuteursData.length === 1) {
           const seulInterlocuteur = interlocuteursData[0];
           setFormData(prev => ({
@@ -168,7 +193,7 @@ const EditerContrat: React.FC = () => {
       }
     };
     loadPartenaireDetails();
-  }, [formData.id_partenaire, entites, partenaireApi]);
+  }, [formData.id_partenaire, entites, partenaires, fetchInterlocuteursByPartenaire]);
 
   // Fonction utilitaire pour calculer la durée du contrat
   const calculerDureeContrat = (
@@ -270,16 +295,37 @@ const EditerContrat: React.FC = () => {
       id_partenaire: formData.id_partenaire
         ? Number(formData.id_partenaire)
         : undefined,
-      id_entite: formData.id_entite,
-      nom_interlocuteur: formData.nom_interlocuteur,
-      contact_interlocuteur: formData.contact_interlocuteur,
-      contenu_contrat: formData.contenu_contrat,
-      cout: formData.cout,
-      modalite_paiement: formData.modalite_paiement,
+      // Ne pas envoyer id_entite si sa valeur n'est pas valide
+      ...(formData.id_entite && formData.id_entite > 0 && { id_entite: formData.id_entite }),
+      nom_interlocuteur: formData.nom_interlocuteur || "",
+      contact_interlocuteur: formData.contact_interlocuteur || "",
+      contenu_contrat: formData.contenu_contrat || "",
+      cout: formData.cout || "0",
+      modalite_paiement: formData.modalite_paiement || "",
       duree_contrat: duree_contrat, // Durée calculée automatiquement
     };
 
-    mutation.mutate(dataToSend);
+    // Nettoyer les données en supprimant les valeurs undefined et null
+    const cleanData = Object.fromEntries(
+      Object.entries(dataToSend).filter(([key, value]) => {
+        if (value === undefined || value === null) {
+          console.log(`Suppression du champ ${key} avec valeur:`, value);
+          return false;
+        }
+        // Ne pas supprimer les chaînes vides pour certains champs
+        if (value === "" && ["nom_interlocuteur", "contact_interlocuteur", "contenu_contrat", "modalite_paiement"].includes(key)) {
+          return true;
+        }
+        return true;
+      })
+    );
+
+    // Log pour déboguer
+    console.log("Données originales:", dataToSend);
+    console.log("Données nettoyées:", cleanData);
+    console.log("formData complet:", formData);
+
+    mutation.mutate(cleanData);
   };
 
   if (isLoading) {

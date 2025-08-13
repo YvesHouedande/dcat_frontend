@@ -1,5 +1,5 @@
 // src/components/AddEntiteForm.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,19 +26,12 @@ const AddEntiteForm: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { addEntite } = useEntiteApi();
-  const { fetchPartners } = usePartenaireApi();
+  const { fetchAllPartnersForForms } = usePartenaireApi();
 
-  // Invalider le cache des partenaires quand on revient sur la page
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ["partenaires-entites"] });
-  }, [queryClient]);
-
-  // Charger les partenaires pour la sélection
+  // Charger les partenaires pour la sélection (sans interlocuteurs pour éviter les erreurs)
   const { data: partenairesData, isLoading: loadingPartenaires } = useQuery({
-    queryKey: ["partenaires-entites"],
-    queryFn: () => fetchPartners(1, 1000), // Récupérer tous les partenaires
-    refetchOnMount: true, // Recharger à chaque montage
-    refetchOnWindowFocus: true, // Recharger quand la fenêtre reprend le focus
+    queryKey: ["partenaires-ajouter-entite"],
+    queryFn: () => fetchAllPartnersForForms(), // Récupérer tous les partenaires sans interlocuteurs
   });
 
   const partenaires = partenairesData?.data || [];
