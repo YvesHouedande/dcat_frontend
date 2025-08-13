@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  useMutation,
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -95,18 +94,42 @@ const ModernPartenaireGrid: React.FC = () => {
   const partenaires = data?.pages.flatMap((page) => page.data);
 
 
-  // Mutation pour supprimer un partenaire
-  const { mutate: deletePartenaire, isLoading: deleting } = useMutation({
-    mutationFn: deletePartner,
-    onSuccess: () => {
-      toast.success("Partenaire supprimé avec succès !");
+  // Gestionnaire de suppression de partenaire
+  const handleDeletePartner = async (id: number) => {
+    try {
+      const result = await deletePartner(id);
+      
+      if (result.success) {
+        toast.success(result.message);
+        
+        // Mettre à jour le cache immédiatement pour une UI plus réactive
+        queryClient.setQueryData(["partenaires"], (oldData: unknown) => {
+          if (!oldData || typeof oldData !== 'object' || !('pages' in oldData)) return oldData;
+          
+          const typedOldData = oldData as { pages: Array<{ data: Array<{ id_partenaire: number }> }> };
+          
+          return {
+            ...typedOldData,
+            pages: typedOldData.pages.map((page) => ({
+              ...page,
+              data: page.data.filter((partenaire) => partenaire.id_partenaire !== id)
+            }))
+          };
+        });
+        
+        // Invalider et refetch pour s'assurer que les données sont synchronisées
+        await queryClient.invalidateQueries({ queryKey: ["partenaires"] });
+        await refetch();
+      } else {
+        toast.info(result.message);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression du partenaire:", error);
+      toast.info("Une erreur inattendue est survenue lors de la suppression du partenaire.");
+    } finally {
       setConfirmDeleteId(null);
-      queryClient.invalidateQueries({ queryKey: ["partenaires"] });
-    },
-    onError: () => {
-      toast.error("Erreur lors de la suppression du partenaire.");
-    },
-  });
+    }
+  };
 
 
 
@@ -467,36 +490,10 @@ const ModernPartenaireGrid: React.FC = () => {
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() =>
-                  confirmDeleteId && deletePartenaire(confirmDeleteId)
+                  confirmDeleteId && handleDeletePartner(confirmDeleteId)
                 }
-                disabled={deleting}
               >
-                {deleting ? (
-                  <span className="flex items-center">
-                    <svg
-                      className="animate-spin h-4 w-4 mr-2 text-red-600"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8z"
-                      ></path>
-                    </svg>
-                    Suppression...
-                  </span>
-                ) : (
-                  "Supprimer"
-                )}
+                Supprimer
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

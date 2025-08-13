@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { omit } from "@/lib/utils";
 const EditEntiteForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -55,7 +54,7 @@ const EditEntiteForm: React.FC = () => {
     contact: "",
     adresse_postal: "",
     localisation: "",
-    id_partenaire: 0,
+    id_partenaire: undefined,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -85,7 +84,7 @@ const EditEntiteForm: React.FC = () => {
   };
 
   const handlePartenaireChange = (value: string) => {
-    const idPartenaire = value === "none" ? 0 : parseInt(value);
+    const idPartenaire = value === "none" ? undefined : parseInt(value);
     setFormData((prev) => ({ ...prev, id_partenaire: idPartenaire }));
 
     if (errors["id_partenaire"]) {
@@ -140,10 +139,18 @@ const EditEntiteForm: React.FC = () => {
       return;
     }
 
+    // Préparer les données à envoyer
+    const updateData = {
+      denomination: formData.denomination,
+      abreviation_nom: formData.abreviation_nom,
+      contact: formData.contact,
+      adresse_postal: formData.adresse_postal,
+      localisation: formData.localisation,
+      id_partenaire: formData.id_partenaire,
+    };
+
     // Utiliser la mutation updateEntiteMutation de TanStack Query
-    updateEntiteMutation({
-      ...omit(formData, ["id_partenaire"]),
-    });
+    updateEntiteMutation(updateData);
   };
 
   if (loadingEntite) {
@@ -242,9 +249,7 @@ const EditEntiteForm: React.FC = () => {
                 <Label htmlFor="id_partenaire">Partenaire associé</Label>
                 <Select
                   value={
-                    formData.id_partenaire === 0 ||
-                    formData.id_partenaire === undefined ||
-                    formData.id_partenaire === null
+                    !formData.id_partenaire || formData.id_partenaire === 0
                       ? "none"
                       : formData.id_partenaire.toString()
                   }

@@ -6,6 +6,7 @@ import {
 } from "../administration/types/interfaces";
 import { useCallback } from "react";
 import { useApi } from "@/api/api";
+import axios from "axios";
 
 // Services pour les projets
 // export const fetchProjetsByPartenaire = async (id_partenaire: number): Promise<Projet[]> => {
@@ -147,9 +148,67 @@ export const usePartenaireApi = () => {
   );
 
   const deletePartner = useCallback(
-    async (id: string | number): Promise<void> => {
-      const response = await api.delete(`/administration/partenaires/${id}`);
-      return response.data;
+    async (id: string | number): Promise<{ success: boolean; message: string; deletedId: number }> => {
+      try {
+        console.log(`[API] Suppression du partenaire ${id} avec ses interlocuteurs...`);
+        
+        // 1. Récupérer tous les interlocuteurs du partenaire
+        const interlocuteursResponse = await api.get(`/administration/interlocuteurs/partenaire/${id}`);
+        const interlocuteurs = interlocuteursResponse.data;
+        console.log(`[API] ${interlocuteurs.length} interlocuteur(s) trouvé(s) pour le partenaire ${id}`);
+        
+        // 2. Supprimer tous les interlocuteurs du partenaire
+        if (interlocuteurs.length > 0) {
+          console.log(`[API] Suppression des ${interlocuteurs.length} interlocuteur(s)...`);
+          await Promise.all(
+            interlocuteurs.map(async (interlocuteur: Interlocuteur) => {
+              try {
+                await api.delete(`/administration/interlocuteurs/${interlocuteur.id_interlocuteur}`);
+                console.log(`[API] ✓ Interlocuteur ${interlocuteur.id_interlocuteur} supprimé`);
+              } catch (error) {
+                console.error(`[API] Erreur lors de la suppression de l'interlocuteur ${interlocuteur.id_interlocuteur}:`, error);
+                throw error;
+              }
+            })
+          );
+          console.log(`[API] ✓ Tous les interlocuteurs supprimés`);
+        }
+        
+        // 3. Maintenant supprimer le partenaire
+        console.log(`[API] Suppression du partenaire ${id}...`);
+        const response = await api.delete(`/administration/partenaires/${id}`);
+        const apiResponse = response.data;
+        
+        if (!apiResponse.success) {
+          throw new Error(
+            apiResponse.message || "Erreur lors de la suppression du partenaire"
+          );
+        }
+        
+        const result = {
+          success: true,
+          message: interlocuteurs.length > 0 
+            ? `Partenaire et ${interlocuteurs.length} interlocuteur(s) supprimé(s) avec succès`
+            : apiResponse.message || "Partenaire supprimé avec succès",
+          deletedId: apiResponse.data?.id || Number(id),
+        };
+        console.log(`[API] ✓ Partenaire ${id} supprimé avec succès.`);
+        return result;
+      } catch (error: unknown) {
+        console.error(`[API] Erreur lors de la suppression du partenaire ${id}:`, error);
+        if (axios.isAxiosError(error) && (error.response?.status === 409 || error.response?.data?.message?.includes('foreign key'))) {
+          return {
+            success: false,
+            message: "Ce partenaire ne peut pas être supprimé pour le moment. Veuillez d'abord le dissocier de toutes les entités qui lui sont liées.",
+            deletedId: Number(id),
+          };
+        }
+        return {
+          success: false,
+          message: (error as { response?: { data?: { message?: string } } })?.response?.data?.message || (error as Error)?.message || "Une erreur inattendue est survenue lors de la suppression du partenaire.",
+          deletedId: Number(id),
+        };
+      }
     },
     [api]
   );

@@ -70,7 +70,7 @@ export interface Entite {
   contact: string;
   adresse_postal: string;
   localisation: string;
-  id_partenaire: number; // Relation avec le partenaire
+  id_partenaire?: number; // Relation avec le partenaire (optionnel)
 }
 
 export interface EntiteResponse {

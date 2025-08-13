@@ -8,6 +8,7 @@ import {
   Partenaire,
 } from "../../types/types"; // Assurez-vous que le chemin est correct et que Document et CreateDocumentTextPayload sont importés
 import { omit } from "@/lib/utils";
+import { getOperationsByProjet, deleteOperation } from "../../operation/api/operation";
 
 const API_URL = import.meta.env.VITE_APP_API_URL;
 
@@ -375,6 +376,63 @@ export const deleteProjet = async (
   projectId: number
 ): Promise<{ success: boolean; message: string; deletedId: number }> => {
   try {
+    console.log(`[API] Suppression du projet ${projectId} avec ses opérations, tâches et partenaires...`);
+    
+    // 1. Récupérer tous les partenaires associés au projet
+    const partenairesResponse = await getProjetAssociatedPartenaires(projectId);
+    const partenaires = partenairesResponse || [];
+    console.log(`[API] ${partenaires.length} partenaire(s) trouvé(s) pour le projet ${projectId}`);
+    
+    // 2. Dissocier tous les partenaires du projet
+    if (partenaires.length > 0) {
+      console.log(`[API] Dissociation des ${partenaires.length} partenaire(s)...`);
+      await Promise.all(
+        partenaires.map(async (partenaireId) => {
+          try {
+            await removePartenaireFromProjet(projectId, partenaireId);
+            console.log(`[API] ✓ Partenaire ${partenaireId} dissocié du projet`);
+          } catch (error) {
+            console.error(`[API] Erreur lors de la dissociation du partenaire ${partenaireId}:`, error);
+            throw error;
+          }
+        })
+      );
+      console.log(`[API] ✓ Tous les partenaires dissociés`);
+    }
+    
+    // 3. Récupérer toutes les opérations du projet
+    const operationsResponse = await getOperationsByProjet(projectId);
+    const operations = operationsResponse.data || [];
+    console.log(`[API] ${operations.length} opération(s) trouvée(s) pour le projet ${projectId}`);
+    
+    // 4. Supprimer toutes les opérations du projet (qui supprimeront automatiquement leurs tâches)
+    let totalTachesSupprimees = 0;
+    if (operations.length > 0) {
+      console.log(`[API] Suppression des ${operations.length} opération(s)...`);
+      
+      await Promise.all(
+        operations.map(async (operation) => {
+          try {
+            // deleteOperation supprime automatiquement toutes les tâches de l'opération
+            const result = await deleteOperation(operation.id_operation);
+            if (result.success) {
+              console.log(`[API] ✓ Opération ${operation.id_operation} supprimée`);
+              // Extraire le nombre de tâches supprimées du message si possible
+              const match = result.message.match(/(\d+) tâche\(s\)/);
+              if (match) {
+                totalTachesSupprimees += parseInt(match[1]);
+              }
+            }
+          } catch (error) {
+            console.error(`[API] Erreur lors de la suppression de l'opération ${operation.id_operation}:`, error);
+            throw error;
+          }
+        })
+      );
+      console.log(`[API] ✓ Toutes les opérations supprimées`);
+    }
+    
+    // 5. Maintenant supprimer le projet
     console.log(`[API] Suppression du projet ${projectId}...`);
     const response = await apiClient.delete(
       `${API_URL}/technique/projets/${projectId}`
@@ -389,17 +447,19 @@ export const deleteProjet = async (
     
     const result = {
       success: true,
-      message: apiResponse.message || "Projet supprimé avec succès",
+      message: operations.length > 0 || partenaires.length > 0
+        ? `Projet, ${partenaires.length} partenaire(s) dissocié(s), ${operations.length} opération(s) et ${totalTachesSupprimees} tâche(s) supprimé(s) avec succès`
+        : apiResponse.message || "Projet supprimé avec succès",
       deletedId: apiResponse.data?.id || projectId,
     };
     console.log(`[API] ✓ Projet ${projectId} supprimé avec succès:`, result);
     return result;
   } catch (error: unknown) {
-    // Si l'erreur est liée à des contraintes de clés étrangères (opérations liées)
+    console.error(`[API] Erreur lors de la suppression du projet ${projectId}:`, error);
     if (axios.isAxiosError(error) && (error.response?.status === 409 || error.response?.data?.message?.includes('foreign key'))) {
       return {
         success: false,
-        message: "Ce projet ne peut pas être supprimé pour le moment. Veuillez d'abord supprimer toutes les opérations liées à ce projet.",
+        message: "Ce projet ne peut pas être supprimé pour le moment. Veuillez d'abord le dissocier de toutes les entités qui lui sont liées.",
         deletedId: projectId
       };
     }
