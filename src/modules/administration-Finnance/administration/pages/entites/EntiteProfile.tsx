@@ -13,8 +13,6 @@ import {
   Home,
   Edit,
   ArrowLeft,
-  Calendar,
-  FileText,
   Users,
   ExternalLink,
 } from "lucide-react";
@@ -271,40 +269,6 @@ const EntiteProfile: React.FC = () => {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Retour à la liste
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Statistiques */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Statistiques</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Documents</span>
-                  </div>
-                  <Badge variant="secondary">0</Badge>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                      Interlocuteurs
-                    </span>
-                  </div>
-                  <Badge variant="secondary">0</Badge>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Contrats</span>
-                  </div>
-                  <Badge variant="secondary">0</Badge>
-                </div>
               </CardContent>
             </Card>
 

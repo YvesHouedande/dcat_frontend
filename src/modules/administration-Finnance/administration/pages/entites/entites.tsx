@@ -43,6 +43,16 @@ import {
 } from "lucide-react";
 import { useEntiteApi } from '@/modules/administration-Finnance/services/entiteService';
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const EntitesList: React.FC = () => {
   const { fetchEntites, deleteEntite } = useEntiteApi();
@@ -50,6 +60,8 @@ const EntitesList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [confirmDeleteName, setConfirmDeleteName] = useState<string>("");
 
   // Charger les entités
   const { data: entites, isLoading, error, refetch } = useQuery({
@@ -75,16 +87,38 @@ const EntitesList: React.FC = () => {
   const paginatedEntites = filteredEntites.slice(startIndex, endIndex);
 
   const handleDeleteEntite = async (id: number, denomination: string) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer l'entité "${denomination}" ?`)) {
-      try {
-        await deleteEntite(id);
-        toast.success("Entité supprimée avec succès !");
+    setConfirmDeleteId(id);
+    setConfirmDeleteName(denomination);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteId) return;
+    
+    try {
+      const result = await deleteEntite(confirmDeleteId);
+      
+      if (result.success) {
+        toast.success(result.message);
         refetch();
-      } catch (error) {
-        console.error("Erreur lors de la suppression de l'entité:", error);
-        toast.error("Erreur lors de la suppression de l'entité");
+      } else {
+        // Afficher un message d'information bleu au lieu d'une erreur rouge
+        toast.info(result.message, {
+          duration: 6000, // Durée plus longue pour permettre la lecture
+          description: "Vous pouvez gérer les contrats dans la section 'Gestion des contrats'"
+        });
       }
+    } catch (error) {
+      console.error("Erreur lors de la suppression de l'entité:", error);
+      toast.error("Une erreur inattendue s'est produite lors de la suppression de l'entité");
+    } finally {
+      setConfirmDeleteId(null);
+      setConfirmDeleteName("");
     }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmDeleteId(null);
+    setConfirmDeleteName("");
   };
 
   const getInitials = (name: string): string => {
@@ -386,6 +420,32 @@ const EntitesList: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* AlertDialog pour la confirmation de suppression */}
+        <AlertDialog
+          open={!!confirmDeleteId}
+          onOpenChange={(open) => {
+            if (!open) handleCancelDelete();
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+              <AlertDialogDescription>
+                Êtes-vous sûr de vouloir supprimer l'entité "{confirmDeleteName}" ? Cette action
+                est irréversible.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleCancelDelete}>
+                Annuler
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete}>
+                Supprimer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

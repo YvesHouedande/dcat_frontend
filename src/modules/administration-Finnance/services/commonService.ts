@@ -71,10 +71,10 @@ export const useCommonApi = () => {
     [api]
   );
 
-  // Récupération des partenaires avec pagination (sans interlocuteurs)
+  // Récupération des partenaires avec pagination (avec interlocuteurs)
   const fetchPartnersPaginated = useCallback(
     async (page: number, limit: number): Promise<PartenaireResponse> => {
-      const safeLimit = Math.min(limit, 50); // Limite de sécurité
+      const safeLimit = Math.min(limit, 20); // Limite réduite pour éviter les problèmes de performance
       
       const response = await api.get<PartenaireResponse>(
         "/administration/partenaires",
@@ -86,14 +86,31 @@ export const useCommonApi = () => {
         }
       );
       
-      // Ajouter un tableau vide d'interlocuteurs pour maintenir la compatibilité
-      const partenairesWithEmptyInterlocuteurs = response.data.data.map(partenaire => ({
-        ...partenaire,
-        interlocuteurs: [],
-      }));
+      // Récupérer les interlocuteurs pour chaque partenaire de manière séquentielle pour éviter les problèmes de ressources
+      const partenairesWithInterlocuteurs = [];
+      for (const partenaire of response.data.data) {
+        try {
+          const interlocuteursResponse = await api.get(
+            `/administration/interlocuteurs/partenaire/${partenaire.id_partenaire}`
+          );
+          partenairesWithInterlocuteurs.push({
+            ...partenaire,
+            interlocuteurs: interlocuteursResponse.data || [],
+          });
+        } catch (error) {
+          console.error(
+            `Erreur lors de la récupération des interlocuteurs pour le partenaire ${partenaire.id_partenaire}:`,
+            error
+          );
+          partenairesWithInterlocuteurs.push({
+            ...partenaire,
+            interlocuteurs: [],
+          });
+        }
+      }
 
       return {
-        data: partenairesWithEmptyInterlocuteurs,
+        data: partenairesWithInterlocuteurs,
         pagination: response.data.pagination,
       };
     },

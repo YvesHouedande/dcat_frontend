@@ -88,12 +88,16 @@ const ModernPartenaireGrid: React.FC = () => {
       }
       return undefined; // Plus de pages à charger
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    retry: 2,
+    retryDelay: 1000,
   });
 
 
   // Charger les entités avec React Query
  
-
   const partenaires = data?.pages.flatMap((page) => page.data);
 
 
@@ -109,20 +113,43 @@ const ModernPartenaireGrid: React.FC = () => {
         queryClient.setQueryData(["partenaires"], (oldData: unknown) => {
           if (!oldData || typeof oldData !== 'object' || !('pages' in oldData)) return oldData;
           
-          const typedOldData = oldData as { pages: Array<{ data: Array<{ id_partenaire: number }> }> };
+          const typedOldData = oldData as { 
+            pages: Array<{ 
+              data: Array<{ id_partenaire: number }>,
+              pagination: { total: number }
+            }> 
+          };
+          
+          // Calculer le nouveau total après suppression
+          const newTotal = typedOldData.pages.reduce((acc, page) => {
+            return acc + page.data.filter((partenaire) => partenaire.id_partenaire !== id).length;
+          }, 0);
           
           return {
             ...typedOldData,
             pages: typedOldData.pages.map((page) => ({
               ...page,
-              data: page.data.filter((partenaire) => partenaire.id_partenaire !== id)
+              data: page.data.filter((partenaire) => partenaire.id_partenaire !== id),
+              pagination: {
+                ...page.pagination,
+                total: newTotal
+              }
             }))
           };
         });
         
-        // Invalider et refetch pour s'assurer que les données sont synchronisées
-        await queryClient.invalidateQueries({ queryKey: ["partenaires"] });
-        await refetch();
+        // Invalider les requêtes liées aux partenaires et interlocuteurs
+        await queryClient.invalidateQueries({ 
+          queryKey: ["partenaires"],
+          exact: false 
+        });
+        
+        // Invalider aussi les requêtes d'interlocuteurs si elles existent
+        await queryClient.invalidateQueries({ 
+          queryKey: ["interlocuteurs"],
+          exact: false 
+        });
+        
       } else {
         toast.info(result.message);
       }
@@ -221,6 +248,21 @@ const ModernPartenaireGrid: React.FC = () => {
     navigate(`/gestion-administrative/partenaires/${id}`);
   };
 
+  // Fonction pour forcer le rechargement des données
+  const handleRefresh = async () => {
+    try {
+      await queryClient.invalidateQueries({ 
+        queryKey: ["partenaires"],
+        exact: false 
+      });
+      await refetch();
+      toast.success("Données actualisées");
+    } catch (error) {
+      console.error("Erreur lors de l'actualisation:", error);
+      toast.error("Erreur lors de l'actualisation des données");
+    }
+  };
+
   // Fonction pour afficher les interlocuteurs dans une tooltip
   const renderInterlocuteursList = (
     interlocuteurs: Interlocuteur[] | undefined
@@ -284,9 +326,14 @@ const ModernPartenaireGrid: React.FC = () => {
           <p className="text-red-600 mb-4">
             Une erreur est survenue lors du chargement des partenaires
           </p>
-          <Button variant="outline" onClick={() => refetch()}>
-            Réessayer
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => refetch()}>
+              Réessayer
+            </Button>
+            <Button variant="outline" onClick={handleRefresh}>
+              Actualiser
+            </Button>
+          </div>
         </div>
       );
     }
@@ -427,10 +474,10 @@ const ModernPartenaireGrid: React.FC = () => {
                   <Users size={14} className="mr-2 text-gray-500" />
                   <div className="group relative inline-block">
                     <p className="cursor-help">
-                      {partenaire.interlocuteurs?.length || 0} interlocuteur
-                      {(partenaire.interlocuteurs?.length || 0) > 1 ? "s" : ""}
+                      {Array.isArray(partenaire.interlocuteurs) ? partenaire.interlocuteurs.length : 0} interlocuteur
+                      {Array.isArray(partenaire.interlocuteurs) && partenaire.interlocuteurs.length > 1 ? "s" : ""}
                     </p>
-                    <div className="invisible group-hover:visible absolute z-10 w-64 bg-white rounded-lg shadow-lg p-2 text-sm mt-1 left-0">
+                    <div className="invisible group-hover:visible absolute z-10 w-64 bg-white rounded-lg shadow-lg p-2 text-sm mt-1 left-0 border border-gray-200">
                       {renderInterlocuteursList(partenaire.interlocuteurs)}
                     </div>
                   </div>
@@ -521,6 +568,27 @@ const ModernPartenaireGrid: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
+            <Button 
+              variant="outline" 
+              className="text-gray-700 border-gray-300"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <svg
+                className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Actualiser
+            </Button>
             <Button variant="outline" className="text-gray-700 border-gray-300">
               <Filter size={16} className="mr-2" />
               Filtres
