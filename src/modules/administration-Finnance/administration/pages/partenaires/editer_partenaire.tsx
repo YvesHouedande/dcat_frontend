@@ -14,6 +14,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Save, Building, X, Plus } from "lucide-react";
 import { Interlocuteur, Partenaires } from "../../types/interfaces";
 import { usePartenaireApi } from "@/modules/administration-Finnance/services/partenaireService";
@@ -65,7 +76,9 @@ const EditPartnerForm: React.FC = () => {
     id_entite: undefined,
   });
 
-
+  // Variables pour gérer les champs personnalisés
+  const [showCustomType, setShowCustomType] = useState(false);
+  const [showCustomSpecialite, setShowCustomSpecialite] = useState(false);
 
   const [interlocuteurs, setInterlocuteurs] = useState<Interlocuteur[]>([]);
   const [newInterlocuteur, setNewInterlocuteur] = useState<
@@ -95,21 +108,6 @@ const EditPartnerForm: React.FC = () => {
     if (initialInterlocuteurs) setInterlocuteurs(initialInterlocuteurs);
   }, [initialInterlocuteurs]);
 
-  // Initialiser les champs personnalisés quand les données sont chargées
-  useEffect(() => {
-    if (partnerData) {
-      // Vérifier si le type ou la spécialité ne sont pas dans les listes prédéfinies
-      if (partnerData.type_partenaire && !types_partenaire.includes(partnerData.type_partenaire)) {
-        setShowCustomType(true);
-      }
-      if (partnerData.specialite && !specialites.includes(partnerData.specialite)) {
-        setShowCustomSpecialite(true);
-      }
-    }
-  }, [partnerData]);
-
-
-
   const types_partenaire = [
     "Fournisseur",
     "Client",
@@ -133,6 +131,19 @@ const EditPartnerForm: React.FC = () => {
   ];
 
   const statuts = ["Actif", "Inactif", "En attente", "Suspendu", "Archivé"];
+
+  // Initialiser les champs personnalisés quand les données sont chargées
+  useEffect(() => {
+    if (partnerData) {
+      // Vérifier si le type ou la spécialité ne sont pas dans les listes prédéfinies
+      if (partnerData.type_partenaire && !types_partenaire.includes(partnerData.type_partenaire)) {
+        setShowCustomType(true);
+      }
+      if (partnerData.specialite && !specialites.includes(partnerData.specialite)) {
+        setShowCustomSpecialite(true);
+      }
+    }
+  }, [partnerData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -318,20 +329,16 @@ const EditPartnerForm: React.FC = () => {
   };
 
   const removeInterlocuteur = async (id: number, index: number) => {
-    if (
-      window.confirm("Êtes-vous sûr de vouloir supprimer cet interlocuteur ?")
-    ) {
-      try {
-        await deleteInterlocuteur(id);
-        setInterlocuteurs((prev) => prev.filter((_, i) => i !== index));
-        toast.success("Interlocuteur supprimé avec succès !");
-      } catch (error) {
-        console.error(
-          "Erreur lors de la suppression de l'interlocuteur:",
-          error
-        );
-        toast.error("Erreur lors de la suppression de l'interlocuteur");
-      }
+    try {
+      await deleteInterlocuteur(id);
+      setInterlocuteurs((prev) => prev.filter((_, i) => i !== index));
+      toast.success("Interlocuteur supprimé avec succès !");
+    } catch (error) {
+      console.error(
+        "Erreur lors de la suppression de l'interlocuteur:",
+        error
+      );
+      toast.error("Erreur lors de la suppression de l'interlocuteur");
     }
   };
 
@@ -382,11 +389,10 @@ const EditPartnerForm: React.FC = () => {
       navigate("/gestion-administrative/partenaires");
     },
     onError: (error: unknown) => {
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error("Erreur lors de la mise à jour du partenaire");
-      }
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Erreur lors de la mise à jour du partenaire";
+      toast.error(errorMessage);
     },
   });
 
@@ -798,19 +804,41 @@ const EditPartnerForm: React.FC = () => {
                             >
                               Modifier
                             </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                removeInterlocuteur(
-                                  interlocuteur.id_interlocuteur,
-                                  index
-                                )
-                              }
-                            >
-                              <X size={16} />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                >
+                                  <X size={16} />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Confirmer la suppression
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Êtes-vous sûr de vouloir supprimer cet interlocuteur ? 
+                                    Cette action ne peut pas être annulée.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() =>
+                                      removeInterlocuteur(
+                                        interlocuteur.id_interlocuteur,
+                                        index
+                                      )
+                                    }
+                                  >
+                                    Supprimer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       )}

@@ -44,10 +44,9 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { useCreateDemande, useEmployes } from "../../hooks/useDemandes";
+import { useCreateDemande, useEmployes, useAddDocumentToDemande } from "../../hooks/useDemandes";
 import { CreateDemandeData } from "../../services/demandeService";
 import { DossierCombobox } from "@/components/combobox/DossierCombobox";
-import useDocumentsApi from "../../services/finance_comptaService";
 import { toast } from "sonner";
 import { TypeDemandes } from "./enum";
 
@@ -90,7 +89,7 @@ const NouvelleDemandePage: React.FC = () => {
   const [fileName, setFileName] = useState("");
   const createDemande = useCreateDemande();
   const { data: employes, isLoading: loadingEmployes } = useEmployes();
-  const { createDocument } = useDocumentsApi();
+  const addDocumentToDemande = useAddDocumentToDemande();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -213,18 +212,25 @@ const NouvelleDemandePage: React.FC = () => {
         id_employes: formData.id_employes!, // Champ avec S partout
       };
       const demande = await createDemande.mutateAsync({ data: demandeData });
+      console.log("Demande créée:", demande);
       setShowSuccessDialog(true);
       if (selectedFile) {
-        await createDocument({
-          lien_document: selectedFile.name,
-          libelle_document: selectedFile.name,
-          date_document: new Date().toISOString(),
-          id_dossier: Number(formData.id_dossier),
-          id_nature_document: 0,
-
-          etat_document: "En attente",
-          id_demandes: String(demande.id_demandes),
+        console.log("Tentative d'ajout du document:", {
+          demandeId: demande.id_demandes,
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          fileType: selectedFile.type
         });
+        const result = await addDocumentToDemande.mutateAsync({
+          demandeId: demande.id_demandes,
+          documentData: {
+            file: selectedFile,
+            libelle_document: selectedFile.name,
+            id_nature_document: 1, // Nature document par défaut pour les demandes RH
+            id_dossier: formData.id_dossier, // Associer au dossier si sélectionné
+          },
+        });
+        console.log("Document ajouté avec succès:", result);
       }
     } catch {
       // L'erreur est déjà gérée par le hook avec toast

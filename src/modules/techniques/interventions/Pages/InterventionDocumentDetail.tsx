@@ -185,9 +185,7 @@ const InterventionDocumentDetail: React.FC = () => {
                     <span className="text-sm font-medium text-gray-600">
                       Classification
                     </span>
-                    <span className="text-sm text-gray-900">
-                      {documentData.classification_document}
-                    </span>
+                    
                   </div>
 
                   {documentData.id_dossier && (

@@ -38,7 +38,6 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQueryClient } from "@tanstack/react-query";
-import useDocumentsApi from "../../services/finance_comptaService";
 import { toast } from "sonner";
 import { DossierCombobox } from "@/components/combobox/DossierCombobox";
 import {
@@ -84,7 +83,6 @@ const getStatusBadge = (status: string) => {
 const InfoDemandePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { createDocument } = useDocumentsApi();
   const queryClient = useQueryClient();
   const {
     data: demande,
@@ -161,37 +159,37 @@ const InfoDemandePage: React.FC = () => {
     }
   };
 
-  const handleAddDocument = (e: React.FormEvent) => {
+  const handleAddDocument = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploadError(null);
     if (
       !file ||
       !libelle ||
-      !classification ||
-      !natureId ||
-      !demande ||
-      !id_dossier
+      !demande
     ) {
-      setUploadError("Tous les champs sont obligatoires.");
+      setUploadError("Le fichier et le libellé sont obligatoires.");
       return;
     }
 
     try {
-      createDocument({
-        lien_document: file.name,
-        libelle_document: libelle,
-        date_document: new Date().toISOString(),
-        id_dossier: Number(id_dossier),
-        id_nature_document: 0,
-        id_demandes: String(demande.id_demandes),
+      const result = await addDocument.mutateAsync({
+        demandeId: demande.id_demandes,
+        documentData: {
+          file: file,
+          libelle_document: libelle,
+          id_nature_document: 1, // Nature document par défaut pour les demandes RH
+        },
       });
+      console.log("Document ajouté avec succès:", result);
       setFile(null);
       setLibelle("");
-      setClassification("");
-      setNatureId(undefined);
+      toast.success("Document ajouté avec succès");
+      
+      // Invalider le cache pour rafraîchir les données
+      queryClient.invalidateQueries(["demandes", "detail", demande.id_demandes]);
     } catch (error) {
-      console.error("Erreur lors du chargement des types de documents:", error);
-      toast.error("Impossible de charger les types de documents");
+      console.error("Erreur lors de l'ajout du document:", error);
+      toast.error("Erreur lors de l'ajout du document");
     }
 
     // addDocument.mutate(
