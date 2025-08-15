@@ -178,6 +178,7 @@ const InfoDemandePage: React.FC = () => {
           file: file,
           libelle_document: libelle,
           id_nature_document: 1, // Nature document par défaut pour les demandes RH
+          id_dossier: id_dossier, // Ajout de l'ID du dossier sélectionné
         },
       });
       console.log("Document ajouté avec succès:", result);

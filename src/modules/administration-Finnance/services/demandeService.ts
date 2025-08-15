@@ -113,12 +113,18 @@ export const useDemandesApi = () => {
       formData.append("classification_document", "demande RH");
       formData.append("etat_document", "private");
       formData.append("id_nature_document", documentData.id_nature_document.toString());
+      
+      // Ajouter l'ID du dossier directement dans le FormData si spécifié
+      if (documentData.id_dossier) {
+        formData.append("id_dossier", documentData.id_dossier.toString());
+      }
 
       console.log("Upload document to demande:", {
         demandeId,
         fileName: documentData.file.name,
         fileSize: documentData.file.size,
-        formDataKeys: Array.from(formData.keys())
+        formDataKeys: Array.from(formData.keys()),
+        id_dossier: documentData.id_dossier
       });
 
       const response = await api.post<{ success: boolean; message: string; data: { document: DemandeDocument[] } }>(
@@ -127,28 +133,7 @@ export const useDemandesApi = () => {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       
-      const result = response.data;
-      
-      // Si un dossier est spécifié et que le document a été créé avec succès, l'associer au dossier
-      if (documentData.id_dossier && result.success && result.data.document.length > 0) {
-        try {
-          const documentId = result.data.document[0].id_documents;
-          console.log("Association du document", documentId, "au dossier", documentData.id_dossier);
-          
-          // Appel à l'API pour associer le document au dossier
-          await api.post(`/administration/dossier/${documentData.id_dossier}/document/${documentId}`, {
-            id_dossier: documentData.id_dossier,
-            id_documents: documentId
-          });
-          
-          console.log("Document associé au dossier avec succès");
-        } catch (dossierError) {
-          console.warn("Erreur lors de l'association au dossier:", dossierError);
-          // Ne pas faire échouer l'upload du document si l'association au dossier échoue
-        }
-      }
-      
-      return result;
+      return response.data;
     },
     [api]
   );
