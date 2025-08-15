@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Calendar as CalendarIcon,
   Save,
   X,
   Plus,
@@ -20,14 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { format, addMonths, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
 import { CardContent } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import Layout from "@/components/Layout";
 import {
   Projet,
@@ -126,7 +118,6 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
     CreateDocumentTextPayload & { file: File | null }
   >({
     libelle_document: "",
-    classification_document: "",
     date_document: "",
     id_nature_document: 0,
     file: null,
@@ -313,24 +304,8 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
     setIsSubmitting(false);
   };
 
-  const getDateForDisplay = (dateValue: string | Date | null) => {
-    if (!dateValue) return undefined;
 
-    try {
-      if (typeof dateValue === "string") {
-        if (dateValue.trim() === "") return undefined;
-        const parsed = parseISO(dateValue);
-        return !isNaN(parsed.getTime()) ? parsed : undefined;
-      } else {
-        return !isNaN(dateValue.getTime()) ? dateValue : undefined;
-      }
-    } catch {
-      return undefined;
-    }
-  };
 
-  const parsedDateDebut = getDateForDisplay(formData.date_debut);
-  const parsedDateFin = getDateForDisplay(formData.date_fin);
 
   const handleDocumentInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -373,12 +348,7 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
     }
   };
 
-  const handleDocumentDateChange = (date: Date | undefined) => {
-    setDocumentFormData((prev) => ({
-      ...prev,
-      date_document: date ? format(date, "yyyy-MM-dd") : "",
-    }));
-  };
+
 
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -407,7 +377,6 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
       try {
         await onSaveDocument(initialData.id_projet, documentFormData.file, {
           libelle_document: documentFormData.libelle_document,
-          classification_document: documentFormData.classification_document,
           date_document: documentFormData.date_document,
           id_nature_document: documentFormData.id_nature_document,
         });
@@ -416,7 +385,6 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
         // Reset document form data
         setDocumentFormData({
           libelle_document: "",
-          classification_document: "",
           date_document: "",
           id_nature_document: 0,
           file: null,
@@ -432,7 +400,6 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
         file: documentFormData.file,
         textPayload: {
           libelle_document: documentFormData.libelle_document,
-          classification_document: documentFormData.classification_document,
           date_document: documentFormData.date_document,
           id_nature_document: documentFormData.id_nature_document,
         }
@@ -445,7 +412,6 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
       // Reset document form data
       setDocumentFormData({
         libelle_document: "",
-        classification_document: "",
         date_document: "",
         id_nature_document: 0,
         file: null,
@@ -550,60 +516,22 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
                             required
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="classification_document">
-                            Classification
-                          </Label>
-                          <Input
-                            id="classification_document"
-                            name="classification_document"
-                            value={
-                              documentFormData.classification_document || ""
-                            }
-                            onChange={handleDocumentInputChange}
-                            placeholder="Ex: Confidentiel, Public"
-                          />
-                        </div>
+
                         <div className="space-y-2">
                           <Label htmlFor="date_document">
                             Date du document
                           </Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-start text-left font-normal"
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {documentFormData.date_document ? (
-                                  format(
-                                    parseISO(documentFormData.date_document),
-                                    "dd MMMMyyyy",
-                                    {
-                                      locale: fr,
-                                    }
-                                  )
-                                ) : (
-                                  <span>Sélectionner une date</span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-auto p-0"
-                              align="start"
-                            >
-                              <Calendar
-                                mode="single"
-                                selected={
-                                  documentFormData.date_document
-                                    ? parseISO(documentFormData.date_document)
-                                    : undefined
-                                }
-                                onSelect={handleDocumentDateChange}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <Input
+                            type="date"
+                            value={documentFormData.date_document}
+                            onChange={(e) => {
+                              setDocumentFormData({
+                                ...documentFormData,
+                                date_document: e.target.value,
+                              });
+                            }}
+                            className="w-full"
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="id_nature_document">
@@ -726,67 +654,34 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="date_debut">Date de début</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {parsedDateDebut ? (
-                              format(parsedDateDebut, "dd MMMMyyyy", {
-                                locale: fr,
-                              })
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={parsedDateDebut}
-                            onSelect={(date) => {
-                              if (date) {
-                                setFormData({
-                                  ...formData,
-                                  date_debut: format(date, "yyyy-MM-dd"),
-                                });
-                              } else {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  date_debut: "",
-                                }));
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                                              <Input
+                          type="date"
+                          value={typeof formData.date_debut === 'string' ? formData.date_debut : ''}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              date_debut: e.target.value,
+                            });
+                          }}
+                          className="w-full"
+                        />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="date_fin">Date de fin</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                            disabled
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {parsedDateFin ? (
-                              format(parsedDateFin, "dd MMMMyyyy", {
-                                locale: fr,
-                              })
-                            ) : (
-                              <span>Calculée automatiquement</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                      </Popover>
+                                              <Input
+                          type="date"
+                          value={typeof formData.date_fin === 'string' ? formData.date_fin : ''}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              date_fin: e.target.value,
+                            });
+                          }}
+                          className="w-full"
+                        />
                       <p className="text-xs text-gray-500 italic">
-                        La date de fin est calculée à partir de la date de début
+                        La date de fin est calculée automatiquement à partir de la date de début
                         et de la durée
                       </p>
                     </div>
@@ -1047,12 +942,10 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
                                 <p className="text-sm text-gray-600">
                                   {doc.file.name} • {natureName}
                                   {doc.textPayload.date_document && (
-                                    <> • {format(parseISO(doc.textPayload.date_document), "dd/MM/yyyy", { locale: fr })}</>
+                                    <> • {format(parseISO(doc.textPayload.date_document), "dd/MM/yyyy")}</>
                                   )}
                                 </p>
-                                {doc.textPayload.classification_document && (
-                                  <p className="text-xs text-gray-500">Classification: {doc.textPayload.classification_document}</p>
-                                )}
+
                               </div>
                             </div>
                           </div>

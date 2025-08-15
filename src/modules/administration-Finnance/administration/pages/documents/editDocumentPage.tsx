@@ -27,7 +27,6 @@ const EditDocumentPage: React.FC = () => {
   const [formData, setFormData] = useState<EmployeDocument>({
     id_documents: 0,
     libelle_document: "",
-    classification_document: "",
     lien_document: "",
     etat_document: "private",
     id_nature_document: 0,
@@ -53,7 +52,7 @@ const EditDocumentPage: React.FC = () => {
         const mockDocument = {
           id_document: parseInt(id || "0"),
           libele_document: "Rapport annuel 2024",
-          classification_document: "confidentiel",
+
           lien_document:
             "https://example.com/documents/rapport-annuel-2024.pdf",
           etat_document: "private",

@@ -4,15 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// import { Input } from "@/components/ui/input";
+// import { Label } from "@/components/ui/label";
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -31,8 +31,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   Plus, 
-  Search, 
-  Filter, 
+  // Search, 
+  // Filter, 
   MoreHorizontal, 
   Eye, 
   Edit, 
@@ -56,8 +56,8 @@ import {
 
 const EntitesList: React.FC = () => {
   const { fetchEntites, deleteEntite } = useEntiteApi();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchTerm] = useState("");
+  const [statusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -170,7 +170,7 @@ const EntitesList: React.FC = () => {
         </div>
 
         {/* Filtres */}
-        <Card className="mb-6">
+        {/* <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-lg">Filtres</CardTitle>
           </CardHeader>
@@ -213,7 +213,7 @@ const EntitesList: React.FC = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-3">
@@ -310,7 +310,7 @@ const EntitesList: React.FC = () => {
                             </Avatar>
                             <div>
                               <div className="font-medium">{entite.denomination}</div>
-                              <div className="text-sm text-gray-500">ID: {entite.id_entite}</div>
+                              {/* <div className="text-sm text-gray-500">ID: {entite.id_entite}</div> Utilisez le si vous voulez voir l'id de l'entité */}
                             </div>
                           </div>
                         </TableCell>

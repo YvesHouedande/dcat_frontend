@@ -20,7 +20,6 @@ export type UpdateDemandeData = Partial<CreateDemandeData>;
 export type AddDocumentData = {
   file: File;
   libelle_document: string;
-  classification_document: string;
   id_nature_document: number;
 };
 
@@ -109,10 +108,6 @@ export const useDemandesApi = () => {
       const formData = new FormData();
       formData.append("document", documentData.file);
       formData.append("libelle_document", documentData.libelle_document);
-      formData.append(
-        "classification_document",
-        documentData.classification_document
-      );
       formData.append(
         "id_nature_document",
         documentData.id_nature_document.toString()

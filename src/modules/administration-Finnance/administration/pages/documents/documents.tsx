@@ -43,9 +43,6 @@ const ModernDocumentGrid: React.FC = () => {
             .includes(searchQuery.toLowerCase()) ||
           document.lien_document
             ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          document.classification_document
-            ?.toLowerCase()
             .includes(searchQuery.toLowerCase())
       )
     : documents;

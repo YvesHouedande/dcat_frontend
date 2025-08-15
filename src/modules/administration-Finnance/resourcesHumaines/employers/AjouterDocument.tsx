@@ -11,21 +11,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { UploadCloud, File, X } from "lucide-react";
 import { EmployeDocument } from "../../administration/types/interfaces";
-import useDocumentsApi from "../../services/finance_comptaService";
+import { useContratsApi } from "../../services/documentService";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { DossierCombobox } from "@/components/combobox/DossierCombobox";
 
 // Fonction utilitaire pour fusionner les classes conditionnellement
 const cn = (...classes: (string | boolean | undefined)[]) => {
@@ -43,13 +35,10 @@ const AjouterDocument: React.FC = () => {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const { createDocument } = useDocumentsApi();
+  const { uploadDocument } = useContratsApi();
   const [documentInfo, setDocumentInfo] = useState<Partial<EmployeDocument>>({
     libelle_document: "",
-    classification_document: "",
     etat_document: "private",
-    id_nature_document: 0,
-    id_dossier: undefined,
     id_employes: id ? Number(id) : undefined,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,25 +106,15 @@ const AjouterDocument: React.FC = () => {
   const handleUpload = async () => {
     const newErrors: Errors = {};
 
-    if (!documentInfo.classification_document) {
-      newErrors.classification_document = "La classification est obligatoire";
-    }
+
 
     if (!documentInfo.libelle_document) {
       newErrors.libele_document = "Le libellé est obligatoire";
     }
 
-    if (!documentInfo.id_nature_document) {
-      newErrors.id_nature_document = "La nature du document est obligatoire";
-    }
-
     // Vérifier si nous avons un fichier
     if (!file) {
       newErrors.file = "Veuillez sélectionner un fichier";
-    }
-
-    if (!documentInfo.id_dossier) {
-      newErrors.id_dossier = "Le dossier est obligatoire";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -146,22 +125,22 @@ const AjouterDocument: React.FC = () => {
     // Préparation des données à envoyer au backend
 
     try {
-        await createDocument({
-          ...documentInfo,
-          id_dossier: documentInfo.id_dossier
-            ? Number(documentInfo.id_dossier)
-            : undefined,
-          id_employes: documentInfo.id_employes
-            ? Number(documentInfo.id_employes)
-            : undefined,
-          document: file,
+      if (!file || !documentInfo.id_employes) {
+        throw new Error("Fichier ou ID employé manquant");
+      }
 
-        });
+      await uploadDocument(
+        Number(documentInfo.id_employes),
+        file,
+        documentInfo.libelle_document || "Document employé"
+      );
+      
       console.log(JSON.stringify(documentInfo));
       toast.success("Document ajouté avec succès");
       navigate(-1);
     } catch (error) {
-      toast.error("Erreur lors de l'ajout du document " + error);
+      console.error("Erreur lors de l'ajout du document:", error);
+      toast.error("Erreur lors de l'ajout du document: " + (error instanceof Error ? error.message : "Erreur inconnue"));
     }
     setUploading(false);
     setUploadProgress(100);
@@ -203,81 +182,6 @@ const AjouterDocument: React.FC = () => {
         </CardHeader>
 
         <CardContent>
-          <div className="grid w-full items-center gap-2 my-4">
-            <Label htmlFor="classification_document">Classification*</Label>
-            <Select
-              value={documentInfo.classification_document || ""}
-              onValueChange={(value) => {
-                setDocumentInfo((prev) => ({
-                  ...prev,
-                  classification_document: value,
-                }));
-                setErrors((prev) => ({
-                  ...prev,
-                  classification_document: undefined,
-                }));
-              }}
-            >
-              <SelectTrigger
-                className={
-                  errors.classification_document ? "border-red-500" : ""
-                }
-              >
-                <SelectValue placeholder="Sélectionnez une classification" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="confidentiel">Confidentiel</SelectItem>
-                <SelectItem value="interne">Interne</SelectItem>
-                <SelectItem value="public">Public</SelectItem>
-                <SelectItem value="personnel">Personnel</SelectItem>
-                <SelectItem value="restreint">Restreint</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.classification_document && (
-              <p className="text-sm text-red-500">
-                {errors.classification_document}
-              </p>
-            )}
-          </div>
-
-          <div className="grid w-full items-center gap-2 my-4">
-            <Label htmlFor="id_nature_document">Nature du document*</Label>
-            <Select
-              value={
-                documentInfo.id_nature_document
-                  ? documentInfo.id_nature_document.toString()
-                  : ""
-              }
-              onValueChange={(value) => {
-                setDocumentInfo((prev) => ({
-                  ...prev,
-                  id_nature_document: parseInt(value),
-                }));
-                setErrors((prev) => ({
-                  ...prev,
-                  id_nature_document: undefined,
-                }));
-              }}
-            >
-              <SelectTrigger
-                className={errors.id_nature_document ? "border-red-500" : ""}
-              >
-                <SelectValue placeholder="Sélectionnez une nature" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Contrat</SelectItem>
-                <SelectItem value="2">Facture</SelectItem>
-                <SelectItem value="3">Rapport</SelectItem>
-                <SelectItem value="4">CV</SelectItem>
-                <SelectItem value="5">Procédure</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.id_nature_document && (
-              <p className="text-sm text-red-500">
-                {errors.id_nature_document}
-              </p>
-            )}
-          </div>
 
           <div className="grid w-full items-center gap-2 my-4">
             <Label>État du document</Label>
@@ -361,22 +265,7 @@ const AjouterDocument: React.FC = () => {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="dossier">Dossier *</Label>
-              <DossierCombobox
-                value={documentInfo.id_dossier}
-                onChange={(value) =>
-                  setDocumentInfo((prev) => ({
-                    ...prev,
-                    id_dossier: value,
-                  }))
-                }
-                type={"demandes RH"}
-              />
-              {errors.id_dossier && (
-                <p className="text-sm text-red-500 mt-2">{errors.id_dossier}</p>
-              )}
-            </div>
+
 
             {/* Fichier sélectionné */}
             {file && (
@@ -429,11 +318,8 @@ const AjouterDocument: React.FC = () => {
             onClick={handleUpload}
             disabled={
               uploading ||
-              !documentInfo.classification_document ||
               !documentInfo.libelle_document ||
-              !documentInfo.id_nature_document ||
-              !file ||
-              !documentInfo.id_dossier
+              !file
             }
             className="ml-2"
           >

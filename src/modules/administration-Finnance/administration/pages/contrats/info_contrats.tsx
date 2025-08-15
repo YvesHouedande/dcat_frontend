@@ -434,9 +434,7 @@ const InfoContract: React.FC = () => {
                               <p className="font-medium text-gray-900">
                                 {doc.libelle_document}
                               </p>
-                              <p className="text-sm text-gray-500">
-                                {doc.classification_document}
-                              </p>
+
                               <p className="text-xs text-gray-400">
                                 Ajouté le{" "}
                                 {new Date(doc.date_document).toLocaleDateString(

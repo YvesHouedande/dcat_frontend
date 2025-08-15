@@ -11,6 +11,7 @@ export interface Employe {
   date_de_naissance?: string;
   contrat: string;
   id_fonction: number; // Clé étrangère vers la table fonction
+  photo_employes?: string; // URL de la photo de profil de l'employé
 }
 
 export interface EmployeResponse {
@@ -91,7 +92,6 @@ export interface NatureDocument {
 export interface DemandeDocument {
   id_documents: number;
   libelle_document: string;
-  classification_document: string;
   lien_document: string; // Chemin ou URL du document
   etat_document?: string; // Optionnel
   date_document: string; // ISO date string
@@ -162,7 +162,6 @@ export interface Contrat {
 export interface EmployeDocument {
   id_documents: number;
   libelle_document: string;
-  classification_document: string;
   lien_document: string; // Chemin ou URL du document
   etat_document?: string; // Optionnel
   date_document: string; // ISO date string
@@ -176,7 +175,6 @@ export interface EmployeDocument {
 export interface ContratDocument {
   id_documents: number;
   libelle_document: string;
-  classification_document: string;
   date_document: string; // ISO date string
   lien_document: string; // Chemin ou URL du document
   etat_document?: string; // Optionnel

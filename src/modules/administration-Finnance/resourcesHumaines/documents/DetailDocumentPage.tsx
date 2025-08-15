@@ -189,15 +189,6 @@ const DetailDocumentPage: React.FC = () => {
 
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
-                      Classification
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {documentData.classification_document}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                    <span className="text-sm font-medium text-gray-600">
                       ID Dossier
                     </span>
                     <span className="text-sm text-gray-900">

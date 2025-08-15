@@ -191,6 +191,21 @@ export const useContratsApi = () => {
     [api]
   );
 
+  const downloadDocumentByUrl = useCallback(
+    async (documentUrl: string): Promise<Blob> => {
+      // Construire l'URL complète pour le téléchargement
+      const fullUrl = documentUrl.startsWith('http') 
+        ? documentUrl 
+        : `${import.meta.env.VITE_APP_API_URL.replace('/api', '')}/${documentUrl}`;
+      
+      const res = await api.get(fullUrl, {
+        responseType: "blob",
+      });
+      return res.data;
+    },
+    [api]
+  );
+
   const uploadDocument = useCallback(
     async (
       id_employes: number,
@@ -226,6 +241,7 @@ export const useContratsApi = () => {
     fetchDocumentsByProjetId,
     fetchEmployeDocuments,
     downloadDocument,
+    downloadDocumentByUrl,
     uploadDocument,
   };
 };

@@ -41,7 +41,6 @@ const AddDocumentPage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [documentInfo, setDocumentInfo] = useState<Partial<EmployeDocument>>({
     libelle_document: "",
-    classification_document: "",
     etat_document: "private",
     id_nature_document: 0,
   });
@@ -106,9 +105,7 @@ const AddDocumentPage: React.FC = () => {
   const handleUpload = () => {
     const newErrors: Errors = {};
 
-    if (!documentInfo.classification_document) {
-      newErrors.classification_document = "La classification est obligatoire";
-    }
+
 
     if (!documentInfo.libelle_document) {
       newErrors.libele_document = "Le libellé est obligatoire";
@@ -136,7 +133,7 @@ const AddDocumentPage: React.FC = () => {
 
     // Ajouter les informations du document
     formData.append('libelle_document', documentInfo.libelle_document || '');
-    formData.append('classification_document', documentInfo.classification_document || '');
+
     formData.append('etat_document', documentInfo.etat_document || 'private');
     formData.append('id_nature_document', documentInfo.id_nature_document?.toString() || '0');
 
@@ -316,32 +313,7 @@ const AddDocumentPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid w-full items-center gap-2">
-                  <Label htmlFor="classification_document">Classification*</Label>
-                  <Select
-                    value={documentInfo.classification_document || ""}
-                    onValueChange={(value) => {
-                      setDocumentInfo((prev) => ({ ...prev, classification_document: value }));
-                      setErrors((prev) => ({ ...prev, classification_document: undefined }));
-                    }}
-                  >
-                    <SelectTrigger
-                      className={errors.classification_document ? "border-red-500" : ""}
-                    >
-                      <SelectValue placeholder="Sélectionnez une classification" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="confidentiel">Confidentiel</SelectItem>
-                      <SelectItem value="interne">Interne</SelectItem>
-                      <SelectItem value="public">Public</SelectItem>
-                      <SelectItem value="personnel">Personnel</SelectItem>
-                      <SelectItem value="restreint">Restreint</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.classification_document && (
-                    <p className="text-sm text-red-500">{errors.classification_document}</p>
-                  )}
-                </div>
+
 
                 <div className="grid w-full items-center gap-2">
                   <Label htmlFor="id_nature_document">Nature du document*</Label>
@@ -416,8 +388,7 @@ const AddDocumentPage: React.FC = () => {
           <Button
             onClick={handleUpload}
             disabled={
-              uploading ||  !documentInfo.classification_document ||
-              !documentInfo.libelle_document ||
+              uploading ||  !documentInfo.libelle_document ||
               !documentInfo.id_nature_document ||
               !file
             }

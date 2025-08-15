@@ -19,6 +19,13 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -62,10 +69,11 @@ const getInitials = (name: string) => {
 
 const ModernPartenaireGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const { deletePartner } = usePartenaireApi();
+  const { deletePartner, fetchPartnersByType } = usePartenaireApi();
   const { fetchPartnersPaginated } = useCommonApi();
   
   // Charger les partenaires avec React Query
@@ -78,9 +86,20 @@ const ModernPartenaireGrid: React.FC = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["partenaires"],
-    queryFn: ({ pageParam = 1 }) => fetchPartnersPaginated(pageParam, 16),
+    queryKey: ["partenaires", selectedType],
+    queryFn: ({ pageParam = 1 }) => {
+      // Si un type est sélectionné, utiliser l'API de filtrage par type
+      if (selectedType && selectedType !== "all") {
+        return fetchPartnersByType(selectedType);
+      }
+      // Sinon, utiliser la pagination normale
+      return fetchPartnersPaginated(pageParam, 16);
+    },
     getNextPageParam: (lastPage) => {
+      // Si on filtre par type, pas de pagination
+      if (selectedType && selectedType !== "all") {
+        return undefined;
+      }
       const currentPage = lastPage.pagination.page;
       const totalPages = lastPage.pagination.totalPages;
       if (currentPage < totalPages) {
@@ -165,9 +184,10 @@ const ModernPartenaireGrid: React.FC = () => {
 
   
   const filteredPartenaires =
-    searchQuery && partenaires
-      ? partenaires.filter(
-          (partenaire) =>
+    partenaires
+      ? partenaires.filter((partenaire) => {
+          // Filtre par recherche textuelle
+          const matchesSearch = !searchQuery || 
             partenaire.nom_partenaire
               .toLowerCase()
               .includes(searchQuery.toLowerCase()) ||
@@ -180,15 +200,20 @@ const ModernPartenaireGrid: React.FC = () => {
             partenaire.type_partenaire
               .toLowerCase()
               .includes(searchQuery.toLowerCase()) ||
-
             (partenaire.interlocuteurs &&
               partenaire.interlocuteurs.some((interlocuteur) =>
                 `${interlocuteur.prenom_interlocuteur} ${interlocuteur.nom_interlocuteur}`
                   .toLowerCase()
                   .includes(searchQuery.toLowerCase())
-              ))
-        )
-      : partenaires || [];
+              ));
+
+          // Filtre par type (si un type est sélectionné et que ce n'est pas "all")
+          const matchesType = selectedType === "all" || 
+            partenaire.type_partenaire === selectedType;
+
+          return matchesSearch && matchesType;
+        })
+      : [];
 
   const getAvatarColor = (id: number) => {
     const colors = [
@@ -247,6 +272,24 @@ const ModernPartenaireGrid: React.FC = () => {
   const handleClickVoirProfile = (id: string | number) => {
     navigate(`/gestion-administrative/partenaires/${id}`);
   };
+
+  // Gestionnaire de changement de filtre par type
+  const handleTypeFilterChange = (type: string) => {
+    setSelectedType(type);
+    // Réinitialiser la recherche quand on change de filtre
+    setSearchQuery("");
+  };
+
+  // Types de partenaires disponibles pour le filtre
+  const partnerTypes = [
+    { value: "all", label: "Tous les types" },
+    { value: "Client", label: "Client" },
+    { value: "Fournisseur", label: "Fournisseur" },
+    { value: "Prestataire de service", label: "Prestataire de service" },
+    { value: "Revendeur", label: "Revendeur" },
+    { value: "Partenaire technique", label: "Partenaire technique" },
+    { value: "Partenaire commercial", label: "Partenaire commercial" },
+  ];
 
   // Fonction pour forcer le rechargement des données
   const handleRefresh = async () => {
@@ -616,38 +659,60 @@ const ModernPartenaireGrid: React.FC = () => {
         </div>
 
         <div className="mb-6">
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={18}
-            />
-            <Input
-              placeholder="Rechercher par nom, spécialité, localisation, type, entité ou interlocuteur..."
-              className="pl-10 py-6 border-gray-300 rounded-lg"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Barre de recherche */}
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <Input
+                placeholder="Rechercher par nom, spécialité, localisation, type, entité ou interlocuteur..."
+                className="pl-10 py-6 border-gray-300 rounded-lg"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Filtre par type */}
+            <div className="relative">
+              <Select value={selectedType} onValueChange={handleTypeFilterChange}>
+                <SelectTrigger className="py-6 border-gray-300 rounded-lg">
+                  <SelectValue placeholder="Filtrer par type de partenaire" />
+                </SelectTrigger>
+                <SelectContent>
+                  {partnerTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {renderPartenairesList()}
         </div>
-        <div className="flex justify-center gap-4">
-          <Button
-            variant="outline"
-            className="text-gray-700 border-gray-300"
-            onClick={() => fetchNextPage()}
-            disabled={!hasNextPage || isFetchingNextPage}
-          >
-            {isFetchingNextPage ? (
-              <Loader2 size={16} className="mr-2 animate-spin" />
-            ) : (
-              <ArrowDown size={16} className="mr-2" />
-            )}
-            Charger plus de partenaires
-          </Button>
-        </div>
+        {/* Pagination - seulement si on n'utilise pas le filtre par type */}
+        {selectedType === "all" && (
+          <div className="flex justify-center gap-4">
+            <Button
+              variant="outline"
+              className="text-gray-700 border-gray-300"
+              onClick={() => fetchNextPage()}
+              disabled={!hasNextPage || isFetchingNextPage}
+            >
+              {isFetchingNextPage ? (
+                <Loader2 size={16} className="mr-2 animate-spin" />
+              ) : (
+                <ArrowDown size={16} className="mr-2" />
+              )}
+              Charger plus de partenaires
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

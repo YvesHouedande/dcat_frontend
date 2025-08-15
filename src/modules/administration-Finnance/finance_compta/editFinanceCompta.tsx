@@ -19,19 +19,18 @@ import {
 } from "../administration/types/interfaces";
 import useDocumentsApi from "../services/finance_comptaService";
 
-// Définir le type du formulaire pour inclure classification_document
-
 const EditFinanceCompta: React.FC = () => {
   const { type, id } = useParams<{ type: string; id: string }>();
   const navigate = useNavigate();
   const { getAllNatureDocument, updateDocument, getDocumentsByNature } =
     useDocumentsApi();
+
+  // États du formulaire
   const [formData, setFormData] = useState<Partial<DemandeDocument>>({
     libelle_document: "",
     lien_document: "",
     date_document: "",
     id_nature_document: 0,
-    classification_document: "",
   });
 
   const [natures, setNatures] = useState<NatureDocument[]>([]);
@@ -97,7 +96,7 @@ const EditFinanceCompta: React.FC = () => {
             ? documentData.date_document.split("T")[0]
             : "",
           id_nature_document: documentData.id_nature_document || 0,
-          classification_document: documentData.classification_document || "",
+
         });
 
         setFileName(documentData.lien_document || "");

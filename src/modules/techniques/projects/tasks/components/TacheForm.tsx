@@ -9,16 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Save, X } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
+import { Save, X } from "lucide-react";
+import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 // Assurez-vous que l'importation inclut le nouveau type TacheWithAssignedEmployes
 import { Employe,TacheWithAssignedEmployes, CreateTachePayload, Operation } from "../../types/types";
@@ -213,23 +206,6 @@ const TacheForm: React.FC<TacheFormProps> = ({
     }
   };
 
-  const getDateForDisplay = (dateValue: string | Date | null): Date | undefined => {
-    if (!dateValue) return undefined;
-    try {
-      if (typeof dateValue === 'string') {
-        if (dateValue.trim() === '') return undefined;
-        const parsed = parseISO(dateValue);
-        return !isNaN(parsed.getTime()) ? parsed : undefined;
-      } else {
-        return !isNaN(dateValue.getTime()) ? dateValue : undefined;
-      }
-    } catch {
-      return undefined;
-    }
-  };
-
-  const parsedDateDebut = getDateForDisplay(formData.date_debut);
-  const parsedDateFin = getDateForDisplay(formData.date_fin);
 
   // Helpers pour min/max date
   const minDate = operationDates?.date_debut ? new Date(operationDates.date_debut) : undefined;
@@ -299,62 +275,32 @@ const TacheForm: React.FC<TacheFormProps> = ({
                       <Label htmlFor="date_debut">
                         Date de début <span className="text-red-500">*</span>
                       </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {parsedDateDebut ? (
-                              format(parsedDateDebut, "dd MMMM yyyy", { locale: fr })
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={parsedDateDebut}
-                            onSelect={(date) => handleDateChange("date_debut", date)}
-                            initialFocus
-                            fromDate={minDate}
-                            toDate={maxDate}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <div className="flex gap-2">
+                        <Input
+                          type="date"
+                          value={formData.date_debut}
+                          onChange={(e) => handleDateChange("date_debut", e.target.value ? new Date(e.target.value) : undefined)}
+                          className={`flex-1 ${dateError ? 'border-red-500 focus:border-red-500' : ''}`}
+                          min={minDate?.toISOString().split('T')[0]}
+                          max={maxDate?.toISOString().split('T')[0]}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="date_fin">
                         Date de fin <span className="text-red-500">*</span>
                       </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {parsedDateFin ? (
-                              format(parsedDateFin, "dd MMMM yyyy", { locale: fr })
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={parsedDateFin}
-                            onSelect={(date) => handleDateChange("date_fin", date)}
-                            initialFocus
-                            fromDate={minDate}
-                            toDate={maxDate}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <div className="flex gap-2">
+                        <Input
+                          type="date"
+                          value={formData.date_fin}
+                          onChange={(e) => handleDateChange("date_fin", e.target.value ? new Date(e.target.value) : undefined)}
+                          className={`flex-1 ${dateError ? 'border-red-500 focus:border-red-500' : ''}`}
+                          min={minDate?.toISOString().split('T')[0]}
+                          max={maxDate?.toISOString().split('T')[0]}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -501,7 +447,10 @@ const TacheForm: React.FC<TacheFormProps> = ({
           </div>
         </form>
         {dateError && (
-          <div className="text-xs text-red-500 mt-1">{dateError}</div>
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div className="text-sm text-red-600 font-medium">Erreur de validation des dates :</div>
+            <div className="text-sm text-red-500 mt-1">{dateError}</div>
+          </div>
         )}
       </div>
     </div>

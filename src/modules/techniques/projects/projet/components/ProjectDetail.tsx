@@ -58,7 +58,6 @@ import {
   FolderOpen,
   Plus,
   Save,
-  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   format,
@@ -67,7 +66,6 @@ import {
   isAfter,
   isBefore,
 } from "date-fns"; // Import parseISO for document/livrable dates
-import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TriangleAlert } from "lucide-react";
@@ -131,12 +129,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+
 import OperationTable from "../../operation/components/OperationTable";
 import OperationForm from "../../operation/components/OperationForm";
 import OperationDetailsPage from "../../operation/pages/OperationDetailsPage";
@@ -598,7 +591,6 @@ const ProjetDetailsPage: React.FC = () => {
     CreateDocumentTextPayload & { file: File | null }
   >({
     libelle_document: "",
-    classification_document: "",
     date_document: "",
     id_nature_document: 0,
     file: null,
@@ -1157,12 +1149,6 @@ const ProjetDetailsPage: React.FC = () => {
     }
   };
 
-  const handleDocumentDateChange = (date: Date | undefined) => {
-    setDocumentFormData((prev: typeof documentFormData) => ({
-      ...prev,
-      date_document: date ? format(date, "yyyy-MM-dd") : "",
-    }));
-  };
 
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1190,7 +1176,6 @@ const ProjetDetailsPage: React.FC = () => {
     try {
       await addDocumentToProjet(projet.id_projet, documentFormData.file, {
         libelle_document: documentFormData.libelle_document,
-        classification_document: documentFormData.classification_document,
         date_document: documentFormData.date_document,
         id_nature_document: documentFormData.id_nature_document,
       });
@@ -1198,7 +1183,6 @@ const ProjetDetailsPage: React.FC = () => {
       setShowDocumentSheet(false);
       setDocumentFormData({
         libelle_document: "",
-        classification_document: "",
         date_document: "",
         id_nature_document: 0,
         file: null,
@@ -1427,11 +1411,8 @@ const ProjetDetailsPage: React.FC = () => {
                         <Tag className="h-4 w-4" />#{projet.id_projet}
                       </span>
                       <span className="flex items-center gap-1">
-                        <CalendarIcon className="h-4 w-4" />
                         {projet.date_debut
-                          ? format(new Date(projet.date_debut), "dd MMM yyyy", {
-                              locale: fr,
-                            })
+                          ? format(new Date(projet.date_debut), "dd/MM/yyyy")
                           : "N/A"}
                       </span>
                     </div>
@@ -1945,56 +1926,22 @@ const ProjetDetailsPage: React.FC = () => {
                               required
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="classification_document">
-                              Classification
-                            </Label>
-                            <Input
-                              id="classification_document"
-                              name="classification_document"
-                              value={documentFormData.classification_document}
-                              onChange={handleDocumentInputChange}
-                              placeholder="Ex: Confidentiel, Public"
-                            />
-                          </div>
+
                           <div className="space-y-2">
                             <Label htmlFor="date_document">
                               Date du document
                             </Label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full justify-start text-left font-normal"
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {documentFormData.date_document ? (
-                                    format(
-                                      parseISO(documentFormData.date_document),
-                                      "dd MMMM yyyy",
-                                      { locale: fr }
-                                    )
-                                  ) : (
-                                    <span>Sélectionner une date</span>
-                                  )}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                className="w-auto p-0"
-                                align="start"
-                              >
-                                <Calendar
-                                  mode="single"
-                                  selected={
-                                    documentFormData.date_document
-                                      ? parseISO(documentFormData.date_document)
-                                      : undefined
-                                  }
-                                  onSelect={handleDocumentDateChange}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
+                            <Input
+                              type="date"
+                              value={documentFormData.date_document || ""}
+                              onChange={(e) => {
+                                setDocumentFormData({
+                                  ...documentFormData,
+                                  date_document: e.target.value,
+                                });
+                              }}
+                              className="w-full"
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="id_nature_document">
@@ -2075,19 +2022,12 @@ const ProjetDetailsPage: React.FC = () => {
                             </div>
 
                             <div className="space-y-1 text-xs text-gray-600 mb-3">
-                              {doc.classification_document && (
-                                <p className="truncate">
-                                  <span className="font-medium">Classif.:</span>{" "}
-                                  {doc.classification_document}
-                                </p>
-                              )}
                               {doc.date_document && (
                                 <p>
                                   <span className="font-medium">Date:</span>{" "}
                                   {format(
                                     parseISO(doc.date_document),
-                                    "dd/MM/yyyy",
-                                    { locale: fr }
+                                    "dd/MM/yyyy"
                                   )}
                                 </p>
                               )}

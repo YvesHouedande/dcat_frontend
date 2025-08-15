@@ -281,7 +281,6 @@ export const useAddDocumentToDemande = () => {
       documentData: {
         file: File;
         libelle_document: string;
-        classification_document: string;
         id_nature_document: number;
       };
     }) => addDocumentToDemande(demandeId, documentData),

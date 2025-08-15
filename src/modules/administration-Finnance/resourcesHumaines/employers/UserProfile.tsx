@@ -21,13 +21,13 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Employe,
-  EmployeDocument,
-  PaginationResponse,
+  EmployeDocument
 } from "../../administration/types/interfaces";
 import { useEmployesApi } from "../../services/employeService";
 import { fetchFonctionById } from "../../services/fonctionService";
 import { useContratsApi } from "../../services/documentService";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const ModernUserProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -36,8 +36,9 @@ const ModernUserProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [jobTitle, setJobTitle] = useState<string>("Non spécifié");
-  const { fetchEmployeDocuments, downloadDocument } = useContratsApi();
-  const { fetchEmployeById } = useEmployesApi();
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const { downloadDocument, downloadDocumentByUrl } = useContratsApi();
+  const { fetchEmployeById, uploadEmployePhoto, fetchEmployeDocuments } = useEmployesApi();
 
   const {
     data: documentsData,
@@ -45,14 +46,14 @@ const ModernUserProfile: React.FC = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useInfiniteQuery<PaginationResponse<EmployeDocument[]>>({
-    queryKey: ["documents", id],
+  } = useInfiniteQuery<{ data?: EmployeDocument[]; documents?: EmployeDocument[]; pagination?: { page: number; total: number } }>({
+    queryKey: ["employe-documents", id],
     queryFn: ({ pageParam = 1 }) =>
       fetchEmployeDocuments(parseInt(String(id)), pageParam, 10),
     enabled: !!id,
     getNextPageParam: (lastPage) => {
-      const currentPage = lastPage.pagination.page;
-      const totalPages = lastPage.pagination.total;
+      const currentPage = lastPage.pagination?.page || 1;
+      const totalPages = lastPage.pagination?.total || 1;
       if (currentPage < totalPages) {
         return currentPage + 1;
       }
@@ -61,9 +62,21 @@ const ModernUserProfile: React.FC = () => {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Extract all documents from pages
-  const documents =
-    documentsData?.pages?.flatMap((page) => page.data).flat() || [];
+  // Extract all documents from pages - gérer les différents formats de réponse API
+  const documents = documentsData?.pages?.flatMap((page) => {
+    console.log("Page de documents reçue:", page);
+    // L'API peut retourner les documents dans différents formats
+    if (page.data && Array.isArray(page.data)) {
+      return page.data;
+    } else if (page.documents && Array.isArray(page.documents)) {
+      return page.documents;
+    } else if (Array.isArray(page)) {
+      return page;
+    }
+    return [];
+  }).flat() || [];
+
+  console.log("Documents extraits:", documents);
 
   useEffect(() => {
     const loadEmploye = async () => {
@@ -140,20 +153,120 @@ const ModernUserProfile: React.FC = () => {
     navigate(`/resources-humaines/employes/${id}/editer`);
   };
 
-  const handleDownloadDocument = async (docId: string) => {
+  const handleDownloadDocument = async (doc: EmployeDocument) => {
     try {
-      const blob = await downloadDocument(docId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `document-${docId}`; // Le nom du fichier sera défini par le Content-Disposition du serveur
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      console.log("Tentative de téléchargement du document:", doc);
+      
+      // Vérifier si nous avons un lien direct vers le document
+      if (doc.lien_document) {
+        console.log("Utilisation du lien direct:", doc.lien_document);
+        // Utiliser le lien direct du document
+        const blob = await downloadDocumentByUrl(doc.lien_document);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        
+        // Extraire le nom de fichier du lien ou utiliser le libellé
+        const fileName = doc.libelle_document || doc.lien_document.split('/').pop() || `document-${doc.id_documents}`;
+        a.download = fileName;
+        
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.success("Document téléchargé avec succès");
+      } else {
+        console.log("Utilisation de l'ID du document:", doc.id_documents);
+        // Fallback vers l'ancienne méthode avec l'ID
+        const docId = doc.id_documents;
+        if (!docId) {
+          toast.error("Aucune méthode de téléchargement disponible");
+          return;
+        }
+
+        const blob = await downloadDocument(docId.toString());
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        
+        const fileName = doc.libelle_document || `document-${docId}`;
+        a.download = fileName;
+        
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.success("Document téléchargé avec succès");
+      }
     } catch (err) {
       console.error("Erreur lors du téléchargement:", err);
-      alert("Erreur lors du téléchargement du document");
+      toast.error("Erreur lors du téléchargement du document");
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !id) return;
+
+    // Validation du fichier
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Format de fichier non supporté. Utilisez JPEG, PNG ou GIF.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB max
+      toast.error("Fichier trop volumineux. Taille maximale : 5MB");
+      return;
+    }
+
+    try {
+      setIsUploadingPhoto(true);
+      console.log("=== DÉBUT UPLOAD PHOTO ===");
+      console.log("ID employé:", id, "Fichier:", file.name, "Taille:", file.size);
+      
+      const updatedEmploye = await uploadEmployePhoto(parseInt(id), file);
+      
+      console.log("Employé mis à jour:", updatedEmploye);
+      
+      if (updatedEmploye && updatedEmploye.id_employes) {
+        console.log("Employé valide après upload, mise à jour de l'état");
+        setUserInfo(updatedEmploye);
+        toast.success("Photo de profil mise à jour avec succès");
+      } else {
+        console.error("Données d'employé invalides après upload:", updatedEmploye);
+        toast.error("Erreur: données d'employé invalides après upload");
+        
+        // Essayer de récupérer les données de l'employé pour vérifier s'il existe toujours
+        try {
+          console.log("Tentative de récupération des données de l'employé...");
+          const currentEmploye = await fetchEmployeById(parseInt(id));
+          if (currentEmploye && currentEmploye.id_employes) {
+            console.log("Employé existe toujours, mise à jour avec les données actuelles");
+            setUserInfo(currentEmploye);
+          } else {
+            console.error("L'employé n'existe plus après l'upload de photo");
+            setError("L'employé a été supprimé lors de l'upload de la photo");
+          }
+        } catch (recoveryError) {
+          console.error("Erreur lors de la récupération de l'employé:", recoveryError);
+          setError("Impossible de récupérer les données de l'employé après l'upload");
+        }
+      }
+    } catch (error) {
+      console.error("=== ERREUR UPLOAD PHOTO ===");
+      console.error("Erreur complète:", error);
+      console.error("Type d'erreur:", typeof error);
+      console.error("Message d'erreur:", error instanceof Error ? error.message : "Erreur inconnue");
+      
+      if (error instanceof Error) {
+        toast.error(`Erreur lors de l'upload de la photo: ${error.message}`);
+      } else {
+        toast.error("Erreur lors de l'upload de la photo");
+      }
+    } finally {
+      setIsUploadingPhoto(false);
+      console.log("=== FIN UPLOAD PHOTO ===");
     }
   };
 
@@ -193,12 +306,34 @@ const ModernUserProfile: React.FC = () => {
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
-            <Avatar className="w-24 h-24 border-4 border-white">
-              <AvatarFallback className="bg-gray-800 text-xl">
-                {userInfo.nom_employes.charAt(0) +
-                  userInfo.prenom_employes.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="w-24 h-24 border-4 border-white cursor-pointer">
+                {userInfo.photo_employes ? (
+                  <img 
+                    src={userInfo.photo_employes} 
+                    alt={`${userInfo.prenom_employes} ${userInfo.nom_employes}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <AvatarFallback className="bg-gray-800 text-xl">
+                    {userInfo.nom_employes.charAt(0) +
+                      userInfo.prenom_employes.charAt(0)}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                <label className="cursor-pointer text-white text-sm font-medium">
+                  {isUploadingPhoto ? "Upload..." : "Changer"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    disabled={isUploadingPhoto}
+                  />
+                </label>
+              </div>
+            </div>
 
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-2xl font-bold">
@@ -351,16 +486,16 @@ const ModernUserProfile: React.FC = () => {
                     className="overflow-hidden hover:shadow-md transition-shadow"
                   >
                     <div className="bg-gray-50 p-4 border-b">
-                      <div className="flex justify-between">
-                        <Badge
-                          className={getStatusColor(doc.etat_document || "")}
-                        >
-                          {doc.etat_document}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          {doc.date_document}
-                        </span>
-                      </div>
+                                             <div className="flex justify-between">
+                         <Badge
+                           className={getStatusColor(doc.etat_document || "private")}
+                         >
+                           {doc.etat_document || "Privé"}
+                         </Badge>
+                         <span className="text-xs text-gray-500">
+                           {doc.date_document ? new Date(doc.date_document).toLocaleDateString('fr-FR') : "Date inconnue"}
+                         </span>
+                       </div>
                       <div className="mt-6 mb-4 flex justify-center">
                         <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
                           <FileText size={24} className="text-gray-400" />
@@ -368,12 +503,12 @@ const ModernUserProfile: React.FC = () => {
                       </div>
                     </div>
                     <CardContent className="p-4">
-                      <h3 className="font-medium text-gray-800 mb-1">
-                        {doc.libelle_document}
-                      </h3>
-                      <p className="text-sm text-gray-500 mb-4">
-                        {doc.lien_document}
-                      </p>
+                                             <h3 className="font-medium text-gray-800 mb-1">
+                         {doc.libelle_document || doc.nom_document || "Document sans nom"}
+                       </h3>
+                       <p className="text-sm text-gray-500 mb-4">
+                         {doc.nature_document ? `Type: ${doc.nature_document}` : "Type non spécifié"}
+                       </p>
                       <div className="flex justify-between">
                         <Button
                           variant="outline"
@@ -392,9 +527,7 @@ const ModernUserProfile: React.FC = () => {
                           variant="outline"
                           size="sm"
                           className="text-blue-600 text-xs"
-                          onClick={() =>
-                            handleDownloadDocument(doc.id_documents.toString())
-                          }
+                          onClick={() => handleDownloadDocument(doc)}
                         >
                           <Download size={14} className="mr-1" />
                           Télécharger

@@ -25,7 +25,6 @@ const AddFinanceCompta: React.FC = () => {
     lien_document: "",
     date_document: "",
     id_nature_document: 0,
-    classification_document: "",
     etat_document: "",
     id_dossier: undefined,
   });

@@ -34,17 +34,6 @@ const DocumentDetailPage: React.FC = () => {
     return natures[natureId as keyof typeof natures] || "Inconnu";
   };
 
-  const getClassificationBadge = (classification?: string) => {
-    if (!classification) return "bg-gray-100 text-gray-800";
-    const classColors = {
-      confidentiel: "bg-red-100 text-red-800 hover:bg-red-200",
-      interne: "bg-orange-100 text-orange-800 hover:bg-orange-200",
-      public: "bg-green-100 text-green-800 hover:bg-green-200",
-      personnel: "bg-purple-100 text-purple-800 hover:bg-purple-200",
-      restreint: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
-    };
-    return classColors[classification as keyof typeof classColors] || "bg-gray-100 text-gray-800";
-  };
 
   const getStatusBadge = (status?: string) => {
     if (!status) return { color: "bg-gray-100 text-gray-800", label: "Inconnu" };
@@ -147,11 +136,6 @@ const DocumentDetailPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold">{document.libelle_document}</h1>
           <div className="flex items-center mt-2 space-x-2">
-            {document.classification_document && (
-              <Badge className={getClassificationBadge(document.classification_document)}>
-                {document.classification_document.charAt(0).toUpperCase() + document.classification_document.slice(1)}
-              </Badge>
-            )}
             {document.etat_document && (
               <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
             )}
@@ -219,16 +203,6 @@ const DocumentDetailPage: React.FC = () => {
                           <dd className="mt-1 text-sm text-gray-900 flex items-center">
                             <File className="h-4 w-4 mr-1 text-gray-400" />
                             {getNatureLabel(document.id_nature_document)}
-                          </dd>
-                        </div>
-                      )}
-                      {document.classification_document && (
-                        <div>
-                          <dt className="text-sm font-medium text-gray-500">Classification</dt>
-                          <dd className="mt-1">
-                            <Badge className={getClassificationBadge(document.classification_document)}>
-                              {document.classification_document.charAt(0).toUpperCase() + document.classification_document.slice(1)}
-                            </Badge>
                           </dd>
                         </div>
                       )}

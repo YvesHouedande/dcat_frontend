@@ -11,21 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Calendar as CalendarIcon,
   Save,
   Plus,
   FileText,
   Trash2,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { toast } from "sonner"; // Import toast for messages
 
 // Import Shadcn Sheet components
@@ -129,7 +121,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     CreateDocumentTextPayload & { file: File | null }
   >({
     libelle_document: "",
-    classification_document: "",
     date_document: "",
     id_nature_document: 0,
     file: null, // To hold the actual file object
@@ -250,13 +241,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     }));
   };
 
-  // Handles date changes
-  const handleDateChange = (name: keyof Livrable, date: Date | undefined) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: date ? format(date, "yyyy-MM-dd") : "",
-    }));
-  };
 
   // --- Document Form Handlers ---
 
@@ -295,12 +279,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
     }
   };
 
-  const handleDocumentDateChange = (date: Date | undefined) => {
-    setDocumentFormData((prev) => ({
-      ...prev,
-      date_document: date ? format(date, "yyyy-MM-dd") : "",
-    }));
-  };
 
   // --- Form Submission Logic ---
 
@@ -399,7 +377,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       try {
         await onSaveDocument(initialData.id_livrable, documentFormData.file, {
           libelle_document: documentFormData.libelle_document,
-          classification_document: documentFormData.classification_document,
           date_document: documentFormData.date_document,
           id_nature_document: documentFormData.id_nature_document,
         });
@@ -408,7 +385,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
         // Reset document form data
         setDocumentFormData({
           libelle_document: "",
-          classification_document: "",
           date_document: "",
           id_nature_document: 0,
           file: null,
@@ -424,7 +400,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
         file: documentFormData.file,
         textPayload: {
           libelle_document: documentFormData.libelle_document,
-          classification_document: documentFormData.classification_document,
           date_document: documentFormData.date_document,
           id_nature_document: documentFormData.id_nature_document,
         },
@@ -439,7 +414,6 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
       // Reset document form data
       setDocumentFormData({
         libelle_document: "",
-        classification_document: "",
         date_document: "",
         id_nature_document: 0,
         file: null,
@@ -518,54 +492,20 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                         required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="classification_document">
-                        Classification
-                      </Label>
-                      <Input
-                        id="classification_document"
-                        name="classification_document"
-                        value={documentFormData.classification_document}
-                        onChange={handleDocumentInputChange}
-                        placeholder="Ex: Confidentiel, Public"
-                      />
-                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="date_document">Date du document</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {documentFormData.date_document ? (
-                              format(
-                                parseISO(documentFormData.date_document),
-                                "dd MMMM yyyy",
-                                {
-                                  // Corrected format string
-                                  locale: fr,
-                                }
-                              )
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={
-                              documentFormData.date_document
-                                ? parseISO(documentFormData.date_document)
-                                : undefined
-                            }
-                            onSelect={handleDocumentDateChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={documentFormData.date_document || ""}
+                        onChange={(e) => {
+                          setDocumentFormData({
+                            ...documentFormData,
+                            date_document: e.target.value,
+                          });
+                        }}
+                        className="w-full"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="id_nature_document">
@@ -744,33 +684,18 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                       <Label htmlFor="date">
                         Date du livrable <span className="text-red-500">*</span>
                       </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formData.date ? (
-                              format(parseISO(formData.date), "dd MMMM yyyy", { // Corrected format string
-                                locale: fr,
-                              })
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={formData.date ? parseISO(formData.date) : undefined}
-                            onSelect={(date) =>
-                              handleDateChange("date", date)
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={formData.date || ""}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            date: e.target.value,
+                          });
+                        }}
+                        className="w-full"
+                        required
+                      />
                     </div>
                   </div>
 
@@ -887,20 +812,14 @@ export const LivrableForm: React.FC<LivrableFormProps> = ({
                                     <>
                                       {" "}
                                       •{" "}
-                                      {format(
-                                        parseISO(doc.textPayload.date_document),
-                                        "dd/MM/yyyy",
-                                        { locale: fr }
-                                      )}
+                                                                        {format(
+                                    parseISO(doc.textPayload.date_document),
+                                    "dd/MM/yyyy"
+                                  )}
                                     </>
                                   )}
                                 </p>
-                                {doc.textPayload.classification_document && (
-                                  <p className="text-xs text-gray-500">
-                                    Classification:{" "}
-                                    {doc.textPayload.classification_document}
-                                  </p>
-                                )}
+
                               </div>
                             </div>
                           </div>

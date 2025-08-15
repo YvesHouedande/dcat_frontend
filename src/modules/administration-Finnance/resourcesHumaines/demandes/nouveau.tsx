@@ -221,7 +221,7 @@ const NouvelleDemandePage: React.FC = () => {
           date_document: new Date().toISOString(),
           id_dossier: Number(formData.id_dossier),
           id_nature_document: 0,
-          classification_document: "demande rh",
+
           etat_document: "En attente",
           id_demandes: String(demande.id_demandes),
         });

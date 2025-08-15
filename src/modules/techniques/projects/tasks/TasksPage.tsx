@@ -22,7 +22,7 @@ import { fetchAllProjets } from "../projet/api/projets";
 import { useEmployesApi } from "../projet/api/employes";
 import { getOperationsByProjet } from "../operation/api/operation";
 import { getTachesByOperation } from "../tasks/api/taches";
-import { SquareKanban, Clock, Flag, Gauge } from "lucide-react"; 
+import { SquareKanban, Clock, Flag, CheckCircle} from "lucide-react";
 
 
 const TachesPage = () => {
@@ -167,14 +167,73 @@ const TachesPage = () => {
         console.log('[TachesPage] Filtres changés. currentPage reset à 1');
     }, [searchTerm, filterProjet, filterAssignee]);
 
-    // KPI Calculations (plus de statut/priorite)
+    // KPI Calculations - Amélioré avec des statistiques détaillées
     const kpiData = useMemo(() => {
         const tasksForKPIs = filterProjet === 0
             ? taches
             : taches.filter(tache => operations.some((op: Operation) => op.id_projet === filterProjet && tache.id_operation === op.id_operation));
+        
         const totalTasks = tasksForKPIs.length;
-        // Plus de tasksByStatus, completionRate, overdueTasks liés à statut/priorite
-        return { totalTasks };
+        
+        // Calculs par statut
+        const byStatut: { [key: string]: number } = {
+            "planifié": 0,
+            "en cours": 0,
+            "terminé": 0,
+            "annulé": 0,
+            "bloqué": 0,
+        };
+        
+        // Calculs par priorité
+        const byPriorite: { [key: string]: number } = {
+            "basse": 0,
+            "moyenne": 0,
+            "haute": 0,
+            "critique": 0,
+        };
+        
+        // Calcul des tâches en retard
+        const today = new Date();
+        let overdueTasks = 0;
+        let tasksInProgress = 0;
+        
+        tasksForKPIs.forEach((tache) => {
+            // Comptage par statut
+            if (tache.statut in byStatut) {
+                byStatut[tache.statut]++;
+            }
+            
+            // Comptage par priorité
+            if (tache.priorite in byPriorite) {
+                byPriorite[tache.priorite]++;
+            }
+            
+            // Calcul des tâches en cours
+            if (tache.statut === "en cours") {
+                tasksInProgress++;
+            }
+            
+            // Calcul des tâches en retard (tâches non terminées avec date_fin dépassée)
+            if (tache.date_fin && 
+                tache.statut !== "terminé" && 
+                tache.statut !== "annulé") {
+                const fin = new Date(tache.date_fin);
+                if (fin < today) {
+                    overdueTasks++;
+                }
+            }
+        });
+        
+        return {
+            totalTasks,
+            tasksInProgress,
+            overdueTasks,
+            tasksByStatus: byStatut,
+            tasksByPriority: byPriorite,
+            completedTasks: byStatut["terminé"] || 0,
+            plannedTasks: byStatut["planifié"] || 0,
+            blockedTasks: byStatut["bloqué"] || 0,
+        };
     }, [taches, filterProjet, operations]); 
 
 
@@ -325,20 +384,19 @@ const TachesPage = () => {
                                 />
                                 <TacheKPICard
                                     title="Tâches en Cours"
-                                    value={kpiData.totalTasks}
+                                    value={kpiData.tasksInProgress}
                                     icon={<Clock className="h-8 w-8 text-yellow-500" />}
                                 />
                                 <TacheKPICard
-                                    title="Taux d'Achèvement"
-                                    value={`${kpiData.totalTasks} sur ${kpiData.totalTasks} terminées`}
-                                    icon={<Gauge className="h-8 w-8 text-purple-500" />}
-                                    subtext={`${kpiData.totalTasks} sur ${kpiData.totalTasks} terminées`}
+                                    title="Tâches Terminées"
+                                    value={kpiData.completedTasks}
+                                    icon={<CheckCircle className="h-8 w-8 text-green-500" />}
                                 />
                                 <TacheKPICard
                                     title="Tâches en Retard"
-                                    value={0}
+                                    value={kpiData.overdueTasks}
                                     icon={<Flag className="h-8 w-8 text-red-500" />}
-                                    subtext="À jour"
+                                    subtext={kpiData.overdueTasks === 0 ? "À jour" : "Nécessite attention"}
                                 />
                             </>
                         )}

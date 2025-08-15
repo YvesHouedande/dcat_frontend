@@ -95,6 +95,19 @@ const EditPartnerForm: React.FC = () => {
     if (initialInterlocuteurs) setInterlocuteurs(initialInterlocuteurs);
   }, [initialInterlocuteurs]);
 
+  // Initialiser les champs personnalisés quand les données sont chargées
+  useEffect(() => {
+    if (partnerData) {
+      // Vérifier si le type ou la spécialité ne sont pas dans les listes prédéfinies
+      if (partnerData.type_partenaire && !types_partenaire.includes(partnerData.type_partenaire)) {
+        setShowCustomType(true);
+      }
+      if (partnerData.specialite && !specialites.includes(partnerData.specialite)) {
+        setShowCustomSpecialite(true);
+      }
+    }
+  }, [partnerData]);
+
 
 
   const types_partenaire = [
@@ -107,6 +120,7 @@ const EditPartnerForm: React.FC = () => {
     "Fabricant",
     "Institution",
     "Association",
+    "Autres",
   ];
 
   const specialites = [
@@ -129,7 +143,23 @@ const EditPartnerForm: React.FC = () => {
   };
 
   const handleSelectChange = (field: string, value: string | number | undefined) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Gestion des options "Autres"
+    if (field === "type_partenaire" && value === "Autres") {
+      setShowCustomType(true);
+      setFormData((prev) => ({ ...prev, [field]: "" }));
+    } else if (field === "specialite" && value === "Autres") {
+      setShowCustomSpecialite(true);
+      setFormData((prev) => ({ ...prev, [field]: "" }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      // Masquer les champs personnalisés si une option normale est sélectionnée
+      if (field === "type_partenaire") {
+        setShowCustomType(false);
+      } else if (field === "specialite") {
+        setShowCustomSpecialite(false);
+      }
+    }
+    
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
@@ -140,6 +170,17 @@ const EditPartnerForm: React.FC = () => {
   ) => {
     const { name, value } = e.target;
     setNewInterlocuteur((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Gestionnaires pour les champs personnalisés
+  const handleCustomTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, type_partenaire: value }));
+  };
+
+  const handleCustomSpecialiteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, specialite: value }));
   };
 
   const addInterlocuteurHandler = async () => {
@@ -479,25 +520,34 @@ const EditPartnerForm: React.FC = () => {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="specialite">Spécialité</Label>
-                  <Select
-                    value={formData.specialite}
-                    onValueChange={(value) =>
-                      handleSelectChange("specialite", value)
-                    }
-                  >
-                    <SelectTrigger
+                  {showCustomSpecialite ? (
+                    <Input
+                      placeholder="Entrez votre spécialité personnalisée"
+                      value={formData.specialite}
+                      onChange={handleCustomSpecialiteChange}
                       className={errors.specialite ? "border-red-500" : ""}
+                    />
+                  ) : (
+                    <Select
+                      value={formData.specialite}
+                      onValueChange={(value) =>
+                        handleSelectChange("specialite", value)
+                      }
                     >
-                      <SelectValue placeholder="Sélectionner une spécialité" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {specialites.map((specialite) => (
-                        <SelectItem key={specialite} value={specialite}>
-                          {specialite}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger
+                        className={errors.specialite ? "border-red-500" : ""}
+                      >
+                        <SelectValue placeholder="Sélectionner une spécialité" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {specialites.map((specialite) => (
+                          <SelectItem key={specialite} value={specialite}>
+                            {specialite}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {errors.specialite && (
                     <p className="text-red-500 text-sm">{errors.specialite}</p>
                   )}
@@ -505,25 +555,34 @@ const EditPartnerForm: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="type_partenaire">Type de partenaire</Label>
-                  <Select
-                    value={formData.type_partenaire}
-                    onValueChange={(value) =>
-                      handleSelectChange("type_partenaire", value)
-                    }
-                  >
-                    <SelectTrigger
+                  {showCustomType ? (
+                    <Input
+                      placeholder="Entrez votre type de partenaire personnalisé"
+                      value={formData.type_partenaire}
+                      onChange={handleCustomTypeChange}
                       className={errors.type_partenaire ? "border-red-500" : ""}
+                    />
+                  ) : (
+                    <Select
+                      value={formData.type_partenaire}
+                      onValueChange={(value) =>
+                        handleSelectChange("type_partenaire", value)
+                      }
                     >
-                      <SelectValue placeholder="Sélectionner un type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {types_partenaire.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger
+                        className={errors.type_partenaire ? "border-red-500" : ""}
+                      >
+                        <SelectValue placeholder="Sélectionner un type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {types_partenaire.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {errors.type_partenaire && (
                     <p className="text-red-500 text-sm">
                       {errors.type_partenaire}

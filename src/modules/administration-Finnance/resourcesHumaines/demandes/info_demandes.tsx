@@ -183,7 +183,6 @@ const InfoDemandePage: React.FC = () => {
         date_document: new Date().toISOString(),
         id_dossier: Number(id_dossier),
         id_nature_document: 0,
-        classification_document: classification,
         id_demandes: String(demande.id_demandes),
       });
       setFile(null);
@@ -201,7 +200,6 @@ const InfoDemandePage: React.FC = () => {
     //     documentData: {
     //       file,
     //       libelle_document: libelle,
-    //       classification_document: classification,
     //       id_nature_document: natureId,
     //     },
     //   },
@@ -476,9 +474,7 @@ const InfoDemandePage: React.FC = () => {
                           <div className="font-medium text-sm">
                             {doc.libelle_document}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {doc.classification_document}
-                          </div>
+
                         </div>
                         <a
                           href={`${STATIC_FILES_BASE_URL}/${doc.lien_document}`}

@@ -388,6 +388,41 @@ export const usePartenaireApi = () => {
     [api]
   );
 
+  // Récupérer les partenaires par type (pour le filtrage)
+  const fetchPartnersByType = useCallback(
+    async (type: string): Promise<PartenaireResponse> => {
+      try {
+        const response = await api.get<PartenaireResponse>(
+          `/administration/partenaires/type/${encodeURIComponent(type)}`
+        );
+        
+        // Retourner les partenaires sans interlocuteurs pour éviter les erreurs de ressources
+        const partenairesWithoutInterlocuteurs = response.data.data.map(partenaire => ({
+          ...partenaire,
+          interlocuteurs: [],
+        }));
+
+        return {
+          data: partenairesWithoutInterlocuteurs,
+          pagination: response.data.pagination,
+        };
+      } catch (error) {
+        console.error(`Erreur lors de la récupération des partenaires de type ${type}:`, error);
+        // En cas d'erreur, retourner un tableau vide
+        return {
+          data: [],
+          pagination: {
+            page: 1,
+            limit: 0,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+    },
+    [api]
+  );
+
 
 
   // INTERVENTIONS
@@ -407,6 +442,7 @@ export const usePartenaireApi = () => {
     fetchPartnersWithoutInterlocuteurs,
     fetchAllPartnersForForms,
     fetchInterlocuteursBatch,
+    fetchPartnersByType,
     fetchPartnerById,
     addPartner,
     updatePartner,

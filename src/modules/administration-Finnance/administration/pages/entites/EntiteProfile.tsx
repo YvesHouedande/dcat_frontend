@@ -126,9 +126,9 @@ const EntiteProfile: React.FC = () => {
                         {entite.abreviation_nom}
                       </Badge>
                     )}
-                    <p className="text-sm text-gray-500 mt-1">
+                    {/* <p className="text-sm text-gray-500 mt-1">
                       ID: {entite.id_entite}
-                    </p>
+                    </p> Utilisez le si vous voulez voir l'id de l'entité */}
                   </div>
                 </div>
 
@@ -273,7 +273,7 @@ const EntiteProfile: React.FC = () => {
             </Card>
 
             {/* Informations système */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Informations système</CardTitle>
               </CardHeader>
@@ -301,7 +301,7 @@ const EntiteProfile: React.FC = () => {
                   <p>Statut: Actif</p>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </div>

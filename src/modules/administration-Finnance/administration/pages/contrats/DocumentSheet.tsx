@@ -61,7 +61,6 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
     Omit<ContratDocument, "id_documents" | "id_employes">
   >({
     libelle_document: "",
-    classification_document: "",
     date_document: new Date().toISOString().split("T")[0],
     lien_document: "",
     etat_document: "actif",
@@ -79,17 +78,7 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
     queryFn: fetchNaturesDocument,
   });
 
-  // Options pour les selects
-  const classifications = [
-    "Contrat principal",
-    "Annexe technique",
-    "Annexe financière",
-    "Bon de commande",
-    "Facture",
-    "Devis",
-    "Document légal",
-    "Autre",
-  ];
+
 
   const etats = ["actif", "inactif", "archivé", "en révision"];
 
@@ -133,9 +122,7 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
       newErrors.libelle_document = "Le libellé du document est obligatoire";
     }
 
-    if (!formData.classification_document) {
-      newErrors.classification_document = "La classification est obligatoire";
-    }
+
 
     if (!formData.date_document) {
       newErrors.date_document = "La date du document est obligatoire";
@@ -208,7 +195,6 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
       // Réinitialiser le formulaire
       setFormData({
         libelle_document: "",
-        classification_document: "",
         date_document: new Date().toISOString().split("T")[0],
         lien_document: "",
         etat_document: "actif",
@@ -250,7 +236,6 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
   const resetForm = () => {
     setFormData({
       libelle_document: "",
-      classification_document: "",
       date_document: new Date().toISOString().split("T")[0],
       lien_document: "",
       etat_document: "actif",
@@ -336,38 +321,7 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
             )}
           </div>
 
-          {/* Classification */}
-          <div className="space-y-2">
-            <Label htmlFor="classification_document">
-              Classification <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={formData.classification_document}
-              onValueChange={(value) =>
-                handleSelectChange("classification_document", value)
-              }
-            >
-              <SelectTrigger
-                className={
-                  errors.classification_document ? "border-red-500" : ""
-                }
-              >
-                <SelectValue placeholder="Sélectionner une classification" />
-              </SelectTrigger>
-              <SelectContent>
-                {classifications.map((classification) => (
-                  <SelectItem key={classification} value={classification}>
-                    {classification}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.classification_document && (
-              <p className="text-red-500 text-sm">
-                {errors.classification_document}
-              </p>
-            )}
-          </div>
+
 
           {/* Nature du document */}
           <div className="space-y-2">

@@ -2,17 +2,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { ArrowLeft, Edit, FileText, Download, Trash2, Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Save } from "lucide-react";
-import { Calendar as CalendarIcon } from "lucide-react";
 
 // Import components
 import { Button } from "@/components/ui/button";
@@ -63,7 +59,6 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
   const [natureDocuments, setNatureDocuments] = useState<Nature[]>([]);
   const [documentFormData, setDocumentFormData] = useState<CreateDocumentTextPayload & { file: File | null }>({
     libelle_document: "",
-    classification_document: "",
     date_document: "",
     id_nature_document: 0,
     file: null,
@@ -182,10 +177,6 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
     }
   };
 
-  const handleDocumentDateChange = (date: Date | undefined) => {
-    setDocumentFormData((prev: typeof documentFormData) => ({ ...prev, date_document: date ? format(date, "yyyy-MM-dd") : "" }));
-  };
-
   const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!livrable?.id_livrable) {
@@ -215,7 +206,6 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
         documentFormData.file,
         {
           libelle_document: documentFormData.libelle_document,
-          classification_document: documentFormData.classification_document,
           date_document: documentFormData.date_document,
           id_nature_document: documentFormData.id_nature_document,
         }
@@ -224,7 +214,6 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
       setShowDocumentSheet(false);
       setDocumentFormData({
         libelle_document: "",
-        classification_document: "",
         date_document: "",
         id_nature_document: 0,
         file: null,
@@ -300,7 +289,7 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
         </p>
         <p className="text-gray-600 mb-4">
           <span className="font-semibold">Date :</span>{" "}
-          {livrable.date ? format(parseISO(livrable.date), "dd MMMMyyyy", { locale: fr }) : "N/A"}
+          {livrable.date ? format(parseISO(livrable.date), "dd MMMMyyyy") : "N/A"}
         </p>
 
         <div className="mb-6">
@@ -377,41 +366,20 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="classification_document">Classification</Label>
-                  <Input
-                    id="classification_document"
-                    name="classification_document"
-                    value={documentFormData.classification_document}
-                    onChange={handleDocumentInputChange}
-                    placeholder="Ex: Confidentiel, Public"
-                  />
-                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="date_document">Date du document</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {documentFormData.date_document ? (
-                          format(parseISO(documentFormData.date_document), "dd MMMM yyyy", { locale: fr })
-                        ) : (
-                          <span>Sélectionner une date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={documentFormData.date_document ? parseISO(documentFormData.date_document) : undefined}
-                        onSelect={handleDocumentDateChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Input
+                    type="date"
+                    value={documentFormData.date_document || ""}
+                    onChange={(e) => {
+                      setDocumentFormData({
+                        ...documentFormData,
+                        date_document: e.target.value,
+                      });
+                    }}
+                    className="w-full"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="id_nature_document">Nature du document <span className="text-red-500">*</span></Label>
@@ -464,15 +432,11 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0 text-sm text-gray-600 flex-grow">
-                  {doc.classification_document && (
-                    <p>
-                      <span className="font-medium">Classification:</span> {doc.classification_document}
-                    </p>
-                  )}
+
                   {doc.date_document && (
                     <p>
                       <span className="font-medium">Date du document:</span>{" "}
-                      {format(parseISO(doc.date_document), "dd MMMMyyyy", { locale: fr })}
+                      {format(parseISO(doc.date_document), "dd/MM/yyyy")}
                     </p>
                   )}
                 </CardContent>
