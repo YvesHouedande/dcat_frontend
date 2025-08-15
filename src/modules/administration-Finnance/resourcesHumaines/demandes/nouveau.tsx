@@ -96,19 +96,12 @@ const NouvelleDemandePage: React.FC = () => {
     if (file) {
       setSelectedFile(file);
       setFileName(file.name);
-      setFormData((prev) => ({
-        ...prev,
-        lien_document: file.name,
-        libelle_document: file.name,
-        date_document: new Date().toISOString(),
-      }));
     }
   };
 
   const removeFile = () => {
     setSelectedFile(null);
     setFileName("");
-    setFormData((prev) => ({ ...prev, lien_document: "" }));
   };
 
   // Fonction pour extraire le nombre de jours depuis la durée

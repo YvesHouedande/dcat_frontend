@@ -282,6 +282,7 @@ export const useAddDocumentToDemande = () => {
         file: File;
         libelle_document: string;
         id_nature_document: number;
+        id_dossier?: number;
       };
     }) => addDocumentToDemande(demandeId, documentData),
     onSuccess: (_newDocument, { demandeId }) => {
