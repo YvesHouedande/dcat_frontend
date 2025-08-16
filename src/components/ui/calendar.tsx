@@ -8,26 +8,13 @@ import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { buttonVariants } from "@/components/ui/buttonVariants"
+import { buttonVariants } from "./buttonVariants"
 
-/**
- * Composant Calendar amélioré avec navigation par dropdowns
- * 
- * Exemple d'utilisation :
- * <Calendar
- *   mode="single"
- *   selected={date}
- *   onSelect={setDate}
- *   // Les dropdowns sont activés par défaut
- *   // Pour désactiver : captionLayout="label"
- *   // Pour personnaliser : captionLayout="dropdown"
- * />
- */
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  captionLayout = "dropdown", // Changé de "label" à "dropdown" par défaut
+  captionLayout = "label",
   buttonVariant = "ghost",
   formatters,
   components,
@@ -49,9 +36,7 @@ function Calendar({
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString("fr-FR", { month: "long" }), // Amélioré pour afficher le mois complet en français
-        formatYearDropdown: (date) =>
-          date.getFullYear().toString(), // Affiche l'année complète
+          date.toLocaleString("default", { month: "short" }),
         ...formatters,
       }}
       classNames={{
@@ -80,11 +65,11 @@ function Calendar({
           defaultClassNames.month_caption
         ),
         dropdowns: cn(
-          "w-full flex items-center text-sm font-medium justify-center h-(--cell-size) gap-2", // Augmenté le gap pour plus d'espace
+          "w-full flex items-center text-sm font-medium justify-center h-(--cell-size) gap-1.5",
           defaultClassNames.dropdowns
         ),
         dropdown_root: cn(
-          "relative has-focus:border-ring border border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] rounded-md min-w-[80px]", // Ajouté min-width pour les dropdowns
+          "relative has-focus:border-ring border border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] rounded-md",
           defaultClassNames.dropdown_root
         ),
         dropdown: cn(
