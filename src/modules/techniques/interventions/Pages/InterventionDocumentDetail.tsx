@@ -155,9 +155,13 @@ const InterventionDocumentDetail: React.FC = () => {
                 </div>
               </div>
 
-              {documentData.etat_document && (
+              {documentData.etat_document ? (
                 <Badge className={getStatusColor(documentData.etat_document)}>
                   {documentData.etat_document}
+                </Badge>
+              ) : (
+                <Badge className="bg-gray-100 text-gray-800 border-gray-200">
+                  actif
                 </Badge>
               )}
             </div>
@@ -183,32 +187,30 @@ const InterventionDocumentDetail: React.FC = () => {
 
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
-                      Classification
+                      Type de document
                     </span>
-                    
+                    <span className="text-sm text-gray-900">
+                      {documentData.id_nature_document || "Non renseigné"}
+                    </span>
                   </div>
 
-                  {documentData.id_dossier && (
-                    <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                      <span className="text-sm font-medium text-gray-600">
-                        ID Dossier
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {documentData.id_dossier}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
+                    <span className="text-sm font-medium text-gray-600">
+                      ID Dossier
+                    </span>
+                    <span className="text-sm text-gray-900">
+                      {documentData.id_dossier || "Non renseigné"}
+                    </span>
+                  </div>
 
-                  {documentData.id_intervention && (
-                    <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                      <span className="text-sm font-medium text-gray-600">
-                        ID Intervention
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {documentData.id_intervention}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
+                    <span className="text-sm font-medium text-gray-600">
+                      ID Intervention
+                    </span>
+                    <span className="text-sm text-gray-900">
+                      {documentData.id_intervention || "Non renseigné"}
+                    </span>
+                  </div>
 
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
@@ -233,28 +235,32 @@ const InterventionDocumentDetail: React.FC = () => {
                       Date du document
                     </span>
                     <span className="text-sm text-gray-900">
-                      {format(
-                        new Date(documentData.date_document),
-                        "dd MMMM yyyy",
-                        {
-                          locale: fr,
-                        }
-                      )}
+                      {documentData.date_document && documentData.date_document !== "1970-01-01T00:00:00.000Z"
+                        ? format(
+                            new Date(documentData.date_document),
+                            "dd MMMM yyyy",
+                            {
+                              locale: fr,
+                            }
+                          )
+                        : "Non renseignée"}
                     </span>
                   </div>
 
-                  {documentData.etat_document && (
-                    <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                      <span className="text-sm font-medium text-gray-600">
-                        État
-                      </span>
+                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
+                    <span className="text-sm font-medium text-gray-600">
+                      État
+                    </span>
+                    {documentData.etat_document ? (
                       <Badge
                         className={getStatusColor(documentData.etat_document)}
                       >
                         {documentData.etat_document}
                       </Badge>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-sm text-gray-500">Non renseigné</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -102,6 +102,7 @@ const InfoDemandePage: React.FC = () => {
   const deleteDocument = useDeleteDocumentFromDemande();
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const [id_dossier, setIdDossier] = React.useState<number | undefined>(undefined);
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
 
   const approuverDemande = useApprouverDemande();
   const refuserDemande = useRefuserDemande();
@@ -184,7 +185,12 @@ const InfoDemandePage: React.FC = () => {
       console.log("Document ajouté avec succès:", result);
       setFile(null);
       setLibelle("");
+      setClassification("");
+      setIdDossier(undefined);
       toast.success("Document ajouté avec succès");
+      
+      // Fermer le sheet après succès
+      setIsSheetOpen(false);
       
       // Invalider le cache pour rafraîchir les données
       queryClient.invalidateQueries(["demandes", "detail", demande.id_demandes]);
@@ -355,7 +361,7 @@ const InfoDemandePage: React.FC = () => {
                   DOCUMENTS JOINTS
                 </div>
                 <div className="flex justify-between items-center mb-2">
-                  <Sheet>
+                  <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                     <SheetTrigger asChild>
                       <Button
                         variant="outline"
@@ -378,24 +384,36 @@ const InfoDemandePage: React.FC = () => {
                       >
                         <div>
                           <label className="block text-sm font-medium mb-1">
-                            Fichier
+                            Fichier <span className="text-red-500">*</span>
                           </label>
-                          <input
-                            type="file"
-                            onChange={handleFileChange}
-                            accept="image/*,application/pdf"
-                            className="block w-full"
-                          />
+                          <div className="relative">
+                            <input
+                              type="file"
+                              onChange={handleFileChange}
+                              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            {file && (
+                              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                                <div className="flex items-center gap-2 text-sm text-green-700">
+                                  <FileText size={16} />
+                                  <span className="font-medium">{file.name}</span>
+                                  <span className="text-xs">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div>
                           <label className="block text-sm font-medium mb-1">
-                            Libellé
+                            Libellé <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
                             value={libelle}
                             onChange={(e) => setLibelle(e.target.value)}
-                            className="block w-full border rounded px-2 py-1"
+                            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Nom du document"
                           />
                         </div>
                         <div>
@@ -406,7 +424,8 @@ const InfoDemandePage: React.FC = () => {
                             type="text"
                             value={classification}
                             onChange={(e) => setClassification(e.target.value)}
-                            className="block w-full border rounded px-2 py-1"
+                            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Classification du document (optionnel)"
                           />
                         </div>
                         <div>
