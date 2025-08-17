@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 
-import { DemandeDocument } from "@/modules/administration-Finnance/administration/types/interfaces";
+import { InterventionDocument as InterventionDocumentType } from "../interface/interface";
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
 const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
@@ -29,7 +29,7 @@ const InterventionDocumentDetail: React.FC = () => {
   const location = useLocation();
 
   // Récupération des données du document depuis les paramètres
-  let documentData: DemandeDocument | null = null;
+  let documentData: InterventionDocumentType | null = null;
 
   if (
     location.state &&
@@ -196,15 +196,6 @@ const InterventionDocumentDetail: React.FC = () => {
 
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
-                      ID Dossier
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {documentData.id_dossier || "Non renseigné"}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                    <span className="text-sm font-medium text-gray-600">
                       ID Intervention
                     </span>
                     <span className="text-sm text-gray-900">
@@ -217,7 +208,7 @@ const InterventionDocumentDetail: React.FC = () => {
                       ID Nature
                     </span>
                     <span className="text-sm text-gray-900">
-                      {documentData.id_nature_document}
+                      {documentData.id_nature_document || "Non renseigné"}
                     </span>
                   </div>
                 </div>

@@ -8,7 +8,9 @@ import {
   deleteIntervention,
   assignEmployeeToIntervention,
   removeEmployeeFromIntervention,
-  assignSuperviseurToIntervention
+  assignSuperviseurToIntervention,
+  getAllInterventionDocuments,
+  getInterventionDocuments
 } from '../api/intervention';
 import { Intervention, ApiResponse, UpdateInterventionPayload } from '../interface/interface';
 import { 
@@ -24,6 +26,9 @@ const interventionKeys = {
   list: (filters: string) => [...interventionKeys.lists(), { filters }] as const,
   details: () => [...interventionKeys.all, 'detail'] as const,
   detail: (id: number) => [...interventionKeys.details(), id] as const,
+  documents: () => [...interventionKeys.all, 'documents'] as const,
+  documentsList: (page: number, limit: number) => [...interventionKeys.documents(), 'list', { page, limit }] as const,
+  interventionDocuments: (interventionId: number) => [...interventionKeys.documents(), 'intervention', interventionId] as const,
 };
 
 // Types pour les résultats d'assignation
@@ -266,6 +271,26 @@ export const useAssignEmployeesToIntervention = () => {
       console.error('Erreur lors de l\'assignation des employés:', error);
       toast.error('Erreur lors de l\'assignation des employés');
     },
+  });
+};
+
+// Hook pour récupérer tous les documents des interventions avec pagination
+export const useAllInterventionDocuments = (page: number = 1, limit: number = 10) => {
+  return useQuery({
+    queryKey: interventionKeys.documentsList(page, limit),
+    queryFn: () => getAllInterventionDocuments(page, limit),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+};
+
+// Hook pour récupérer les documents d'une intervention spécifique
+export const useInterventionDocuments = (interventionId: number) => {
+  return useQuery({
+    queryKey: interventionKeys.interventionDocuments(interventionId),
+    queryFn: () => getInterventionDocuments(interventionId),
+    enabled: !!interventionId,
+    staleTime: 5 * 60 * 1000,
   });
 };
 

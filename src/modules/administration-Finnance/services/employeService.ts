@@ -8,11 +8,15 @@ const API_URL = import.meta.env.VITE_APP_API_URL;
 export const useEmployesApi = () => {
   const api = useApi();
 
-  const fetchEmployes = useCallback(async (): Promise<Employe[]> => {
+  const fetchEmployes = useCallback(async (page: number = 1, limit: number = 10): Promise<{ data: Employe[], pagination: { total: number; page: number; limit: number; totalPages: number } }> => {
     try {
-      const response = await api.get(`${API_URL}/administration/employes`);
+      const response = await api.get(`${API_URL}/administration/employes`, {
+        params: { page, limit }
+      });
 
       const employes = response.data.data;
+      const pagination = response.data.pagination;
+      
       if (!Array.isArray(employes)) {
         throw new Error("Format de données invalide");
       }
@@ -27,7 +31,7 @@ export const useEmployesApi = () => {
         return isValid;
       });
 
-      return validEmployes;
+      return { data: validEmployes, pagination };
     } catch (error) {
       console.error("Erreur lors de la récupération des employés:", error);
       if (error instanceof AxiosError) {
@@ -245,6 +249,33 @@ export const useEmployesApi = () => {
     }
   }, [api]);
 
+  const deleteEmploye = useCallback(async (id: number): Promise<void> => {
+    if (!id || isNaN(id) || id <= 0) {
+      throw new Error("ID employé invalide");
+    }
+
+    try {
+      await api.delete(`${API_URL}/administration/employes/${id}`);
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        const status = error.response?.status;
+        switch (status) {
+          case 404:
+            throw new Error("Employé non trouvé");
+          case 400:
+            throw new Error("Impossible de supprimer cet employé");
+          case 403:
+            throw new Error("Vous n'avez pas les permissions pour supprimer cet employé");
+          case 500:
+            throw new Error("Erreur serveur lors de la suppression");
+          default:
+            throw new Error("Erreur lors de la suppression de l'employé");
+        }
+      }
+      throw error;
+    }
+  }, [api]);
+
   return {
     fetchEmployes,
     fetchEmployeById,
@@ -253,5 +284,6 @@ export const useEmployesApi = () => {
     updateEmploye,
     uploadEmployePhoto,
     fetchEmployeDocuments,
+    deleteEmploye,
   };
 };

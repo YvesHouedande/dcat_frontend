@@ -9,12 +9,12 @@ export interface Nature {
 export interface InterventionDocument {
     id_documents: number;
     libelle_document: string;
-    classification_document: string;
+    classification_document?: string; // Optionnel car pas toujours présent dans l'API
     lien_document: string; // Chemin ou URL du document
     etat_document?: string; // Optionnel
-    date_document?: string; // ISO date string - peut être null si non fourni
+    date_document: string; // ISO date string - peut être null si non fourni
     id_intervention?: number | null; // Lien vers Intervention 
-    id_nature_document: number; // Clé étrangère vers NatureDocument (maintenue car les documents ont une nature)
+    id_nature_document?: number; // Optionnel car pas toujours présent dans l'API
 }
   
 export interface Employe {
@@ -82,8 +82,8 @@ export type UpdateInterventionPayload = Partial<Omit<Intervention, 'id_intervent
 export interface CreateInterventionDocumentTextPayload {
   libelle_document: string;
   classification_document?: string; 
-  date_document?: string; // Optionnel - le backend utilisera la date de création si non fournie
-  id_nature_document: number; 
+  date_document: string; // Optionnel - le backend utilisera la date de création si non fournie
+  id_nature_document?: number; // Optionnel - le backend peut utiliser une valeur par défaut
   etat_document?: string;
 }
 // --- Interface de réponse API générique pour le module Intervention ---

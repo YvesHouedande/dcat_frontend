@@ -54,4 +54,4 @@ export const InterventionsReportsPage: React.FC = () => {
       </div>
     </Layout>
   );
-}; 
+};

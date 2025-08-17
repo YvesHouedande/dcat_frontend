@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Search,
@@ -11,6 +11,9 @@ import {
   Mail,
   Phone,
   X,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +33,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { Employe } from "../../administration/types/interfaces";
 import { useEmployesApi } from "../../services/employeService";
 import { fetchFonctionById } from "../../services/fonctionService";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ModernProfileGrid: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,22 +52,35 @@ const ModernProfileGrid: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [jobTitles, setJobTitles] = useState<Record<number, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+  });
   const navigate = useNavigate();
-  const { fetchEmployes } = useEmployesApi();
+  const { fetchEmployes, deleteEmploye } = useEmployesApi();
+  
+  // États pour la suppression
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [employeToDelete, setEmployeToDelete] = useState<Employe | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   useEffect(() => {
     const loadEmployes = async () => {
       try {
         console.log("Début du chargement des employés..."); // Debug log
-        const data = await fetchEmployes();
-        console.log("Employés chargés avec succès:", data); // Debug log
-        setEmployes(data);
+        const response = await fetchEmployes(currentPage, 10);
+        console.log("Employés chargés avec succès:", response); // Debug log
+        setEmployes(response.data);
+        setPagination(response.pagination);
 
         // Charger les titres des postes pour chaque employé
         const titles: Record<number, string> = {};
         try {
           console.log("Début du chargement des fonctions..."); // Debug log
           await Promise.all(
-            data.map(async (employe) => {
+            response.data.map(async (employe) => {
               if (employe.id_fonction) {
                 try {
                   const fonctionData = await fetchFonctionById(
@@ -90,7 +117,7 @@ const ModernProfileGrid: React.FC = () => {
     };
 
     loadEmployes();
-  }, [fetchEmployes]);
+  }, [fetchEmployes, currentPage]);
 
   // Filter profiles based on search query and status
   const filteredProfiles = employes.filter((profile) => {
@@ -116,6 +143,11 @@ const ModernProfileGrid: React.FC = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   const handleClickVoirProfile = (id_employes: number) => {
     // Debug log
@@ -171,6 +203,7 @@ const ModernProfileGrid: React.FC = () => {
   const resetFilters = () => {
     setSearchQuery("");
     setStatusFilter("tous");
+    setCurrentPage(1);
   };
 
   const getFilterCount = () => {
@@ -178,6 +211,85 @@ const ModernProfileGrid: React.FC = () => {
     if (searchQuery) count++;
     if (statusFilter !== "tous") count++;
     return count;
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  // Fonctions de gestion de la suppression
+  const handleDeleteClick = (employe: Employe) => {
+    setEmployeToDelete(employe);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!employeToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteEmploye(employeToDelete.id_employes);
+      toast.success("Employé supprimé avec succès");
+      
+      // Recharger la liste des employés
+      const response = await fetchEmployes(currentPage, 10);
+      setEmployes(response.data);
+      setPagination(response.pagination);
+      
+      // Si c'était le dernier employé de la page et qu'il y a une page précédente
+      if (response.data.length === 0 && currentPage > 1) {
+        const prevPageResponse = await fetchEmployes(currentPage - 1, 10);
+        setEmployes(prevPageResponse.data);
+        setPagination(prevPageResponse.pagination);
+        setCurrentPage(currentPage - 1);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression de l'employé");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setEmployeToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setEmployeToDelete(null);
+  };
+
+  const getPhotoUrl = (photoPath: string | null | undefined): string | undefined => {
+    if (!photoPath) {
+      console.log('Pas de photo pour cet employé');
+      return undefined;
+    }
+    
+    console.log('Photo path reçu:', photoPath);
+    
+    // Si c'est déjà une URL complète, on la retourne
+    if (photoPath.startsWith('http')) {
+      console.log('URL complète détectée:', photoPath);
+      return photoPath;
+    }
+    
+    // Construire l'URL correcte pour les images
+    // Enlever /api/ de l'URL de base car les images sont servies directement
+    const API_URL = import.meta.env.VITE_APP_API_URL;
+    const baseUrl = API_URL.replace('/api', ''); // Enlever /api/ de l'URL
+    const fullUrl = `${baseUrl}/${photoPath}`;
+    console.log('URL construite:', fullUrl);
+    
+    // Test rapide de l'accessibilité de l'image
+    const img = new Image();
+    img.onload = () => {
+      console.log('✅ Image accessible:', fullUrl);
+    };
+    img.onerror = () => {
+      console.log('❌ Image non accessible:', fullUrl);
+    };
+    img.src = fullUrl;
+    
+    return fullUrl;
   };
 
   if (loading) {
@@ -260,37 +372,64 @@ const ModernProfileGrid: React.FC = () => {
               className="overflow-hidden hover:shadow-md transition-all duration-200 group flex flex-col h-full"
             >
               <CardContent className="px-5 py-4 flex-grow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-start">
-                    <Avatar
-                      className={`h-10 w-10 ${getAvatarColor(
-                        profile.id_employes
-                      )}`}
-                    >
-                      <AvatarFallback>
-                        {profile.nom_employes.charAt(0) +
-                          profile.prenom_employes.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="ml-3 max-w-full overflow-hidden">
-                      <h3
-                        onClick={() =>
-                          handleClickVoirProfile(profile.id_employes)
-                        }
-                        className="font-semibold text-gray-800 cursor-pointer hover:underline truncate max-w-full"
-                        title={`${profile.nom_employes} ${profile.prenom_employes}`}
+                                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start flex-1 min-w-0">
+                    {profile.photo_employes ? (
+                      <div className="relative flex-shrink-0">
+                        <Avatar
+                          className={`h-10 w-10 ${getAvatarColor(
+                            profile.id_employes
+                          )}`}
+                        >
+                          <AvatarImage 
+                            src={getPhotoUrl(profile.photo_employes)} 
+                            alt={`${profile.nom_employes} ${profile.prenom_employes}`}
+                            onError={(e) => {
+                              console.log('❌ Erreur de chargement image pour:', profile.nom_employes);
+                              console.log('URL qui a échoué:', getPhotoUrl(profile.photo_employes));
+                              console.log('Erreur:', e);
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Image chargée avec succès pour:', profile.nom_employes);
+                            }}
+                          />
+                          <AvatarFallback>
+                            {profile.nom_employes.charAt(0) +
+                              profile.prenom_employes.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    ) : (
+                      <Avatar
+                        className={`h-10 w-10 flex-shrink-0 ${getAvatarColor(
+                          profile.id_employes
+                        )}`}
                       >
-                        {profile.nom_employes} {profile.prenom_employes}
-                      </h3>
-                      <p
-                        className="text-xs text-gray-500 truncate max-w-full"
-                        title={profile.email_employes}
-                      >
-                        {profile.email_employes}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative flex-shrink-0 ml-2">
+                        <AvatarFallback>
+                          {profile.nom_employes.charAt(0) +
+                            profile.prenom_employes.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                   <div className="ml-3 min-w-0 flex-1">
+                     <h3
+                       onClick={() =>
+                         handleClickVoirProfile(profile.id_employes)
+                       }
+                       className="font-semibold text-gray-800 cursor-pointer hover:underline truncate"
+                       title={`${profile.nom_employes} ${profile.prenom_employes}`}
+                     >
+                       {profile.nom_employes} {profile.prenom_employes}
+                     </h3>
+                     <p
+                       className="text-xs text-gray-500 truncate"
+                       title={profile.email_employes}
+                     >
+                       {profile.email_employes}
+                     </p>
+                   </div>
+                 </div>
+                 <div className="relative flex-shrink-0 ml-2">
                     <div
                       className={`h-2.5 w-2.5 rounded-full ${getStatusColor(
                         profile.status_employes
@@ -334,6 +473,14 @@ const ModernProfileGrid: React.FC = () => {
                           <Link to={`tel:${profile.contact_employes}`}>
                             Appeler
                           </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          key={`delete-${profile.id_employes}`}
+                          onClick={() => handleDeleteClick(profile)}
+                          className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 size={16} className="mr-2" />
+                          Supprimer
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -415,6 +562,89 @@ const ModernProfileGrid: React.FC = () => {
             </Button>
           </div>
         )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex justify-center items-center mt-8 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="flex items-center gap-1"
+            >
+              <ChevronLeft size={16} />
+              Précédent
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(page)}
+                  className="w-8 h-8 p-0"
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === pagination.totalPages}
+              className="flex items-center gap-1"
+            >
+              Suivant
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        )}
+
+        {/* Pagination info */}
+        {pagination.total > 0 && (
+          <div className="text-center text-sm text-gray-500 mt-4">
+            Affichage de {((currentPage - 1) * pagination.limit) + 1} à {Math.min(currentPage * pagination.limit, pagination.total)} sur {pagination.total} employés
+          </div>
+        )}
+
+        {/* Dialog de confirmation de suppression */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+              <AlertDialogDescription>
+                Êtes-vous sûr de vouloir supprimer l'employé{" "}
+                <strong>
+                  {employeToDelete?.prenom_employes} {employeToDelete?.nom_employes}
+                </strong>
+                ? Cette action est irréversible et supprimera définitivement toutes les données associées à cet employé.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleDeleteCancel} disabled={isDeleting}>
+                Annuler
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Suppression...
+                  </>
+                ) : (
+                  "Supprimer définitivement"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

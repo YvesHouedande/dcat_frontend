@@ -77,19 +77,12 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
         file!,
         {
           libelle_document: libelle.trim(),
-          classification_document: '',
-          // Ne pas envoyer date_document, laisser le backend utiliser la date de création
-          id_nature_document: 1, // Valeur par défaut
+          date_document: new Date().toISOString().split("T")[0],
+          // La date sera automatiquement gérée par l'API
         }
       );
 
-      // Utiliser la date de création retournée par l'API pour mettre à jour le document
-      if (response.data && typeof response.data === 'object' && 'details' in response.data) {
-        const details = (response.data as { details?: { dateCreation?: string } }).details;
-        if (details?.dateCreation) {
-          console.log('Date de création utilisée:', details.dateCreation);
-        }
-      }
+      console.log('Document ajouté avec succès:', response);
 
       toast.success('Document ajouté avec succès');
       onDocumentAdded();

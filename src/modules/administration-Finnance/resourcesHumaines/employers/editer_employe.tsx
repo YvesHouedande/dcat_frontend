@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Camera,
   Save,
@@ -24,10 +24,11 @@ import {
   User,
   Briefcase,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Employe, Fonction } from "../../administration/types/interfaces";
-import { fetchFonctions, createFonction } from "../../services/fonctionService";
+import { fetchFonctions, createFonction, deleteFonction } from "../../services/fonctionService";
 import { useEmployesApi } from "../../services/employeService";
 import {
   Dialog,
@@ -36,6 +37,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 const EditEmployeForm: React.FC = () => {
   const router = useNavigate();
@@ -43,7 +55,9 @@ const EditEmployeForm: React.FC = () => {
   const [fonctions, setFonctions] = useState<Fonction[]>([]);
   const [newFonction, setNewFonction] = useState("");
   const [isAddingFonction, setIsAddingFonction] = useState(false);
-  const { fetchEmployeById, updateEmploye } = useEmployesApi();
+  const [isDeletingFonction, setIsDeletingFonction] = useState(false);
+  const [fonctionToDelete, setFonctionToDelete] = useState<Fonction | null>(null);
+  const { fetchEmployeById, updateEmploye, uploadEmployePhoto } = useEmployesApi();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<Employe>({
     id_employes: 0,
@@ -62,6 +76,27 @@ const EditEmployeForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Fonction pour construire l'URL de la photo
+  const getPhotoUrl = (photoPath: string | null | undefined): string | undefined => {
+    if (!photoPath) {
+      return undefined;
+    }
+    
+    // Si c'est déjà une URL complète, on la retourne
+    if (photoPath.startsWith('http')) {
+      return photoPath;
+    }
+    
+    // Construire l'URL correcte pour les images
+    // Enlever /api/ de l'URL de base car les images sont servies directement
+    const API_URL = import.meta.env.VITE_APP_API_URL;
+    const baseUrl = API_URL.replace('/api', ''); // Enlever /api/ de l'URL
+    const fullUrl = `${baseUrl}/${photoPath}`;
+    
+    return fullUrl;
+  };
 
   useEffect(() => {
     loadFonctions();
@@ -94,9 +129,43 @@ const EditEmployeForm: React.FC = () => {
       await loadFonctions();
       setNewFonction("");
       setIsAddingFonction(false);
+      toast.success("Fonction créée avec succès");
     } catch (error) {
       console.error("Erreur lors de la création de la fonction:", error);
+      toast.error("Erreur lors de la création de la fonction");
     }
+  };
+
+  // Fonctions de gestion de la suppression de fonction
+  const handleDeleteFonction = async (fonction: Fonction) => {
+    // Vérifier si la fonction est utilisée par l'employé actuel
+    if (formData.id_fonction === fonction.id_fonction) {
+      toast.error("Impossible de supprimer la fonction actuellement attribuée à cet employé");
+      return;
+    }
+
+    setFonctionToDelete(fonction);
+  };
+
+  const handleDeleteFonctionConfirm = async () => {
+    if (!fonctionToDelete) return;
+
+    setIsDeletingFonction(true);
+    try {
+      await deleteFonction(fonctionToDelete.id_fonction);
+      await loadFonctions();
+      toast.success("Fonction supprimée avec succès");
+      setFonctionToDelete(null);
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la fonction:", error);
+      toast.error("Erreur lors de la suppression de la fonction");
+    } finally {
+      setIsDeletingFonction(false);
+    }
+  };
+
+  const handleDeleteFonctionCancel = () => {
+    setFonctionToDelete(null);
   };
 
   const getInitials = (name: string) => {
@@ -124,6 +193,22 @@ const EditEmployeForm: React.FC = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validation du fichier
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Format de fichier non supporté. Utilisez JPEG, PNG ou GIF.");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) { // 5MB max
+        toast.error("Fichier trop volumineux. Taille maximale : 5MB");
+        return;
+      }
+
+      // Stocker le fichier pour l'upload
+      setSelectedFile(file);
+      
+      // Créer l'aperçu
       const reader = new FileReader();
       reader.onload = (event) => {
         setProfileImage(event.target?.result as string);
@@ -188,13 +273,29 @@ const EditEmployeForm: React.FC = () => {
         id_fonction: formData.id_fonction,
       };
       console.log("Données envoyées (nettoyées) :", employeToSend);
+      
+      // Mettre à jour les données de l'employé
       await updateEmploye(formData.id_employes, employeToSend);
-      alert("Employé modifié avec succès !");
-      router("/resources-humaines/employes");
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour :", error);
-      alert("Erreur lors de la modification de l'employé. Veuillez réessayer.");
-    } finally {
+      
+             // Upload de la photo si un fichier a été sélectionné
+       if (selectedFile) {
+         console.log("Upload de la photo...");
+         try {
+           await uploadEmployePhoto(formData.id_employes, selectedFile);
+           console.log("Photo uploadée avec succès");
+           toast.success("Photo de profil mise à jour avec succès");
+         } catch (photoError) {
+           console.error("Erreur lors de l'upload de la photo:", photoError);
+           toast.warning("L'employé a été modifié mais l'upload de la photo a échoué.");
+         }
+       }
+       
+       toast.success("Employé modifié avec succès !");
+       router("/resources-humaines/employes");
+     } catch (error) {
+       console.error("Erreur lors de la mise à jour :", error);
+       toast.error("Erreur lors de la modification de l'employé. Veuillez réessayer.");
+     } finally {
       setIsSubmitting(false);
     }
   };
@@ -254,25 +355,20 @@ const EditEmployeForm: React.FC = () => {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
-                    {profileImage ? (
-                      <div className="h-full w-full overflow-hidden rounded-full">
-                        <img
-                          src={profileImage}
-                          alt="Profile"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <AvatarFallback className="bg-white text-blue-600 text-xl font-bold">
-                        {formData.nom_employes && formData.prenom_employes ? (
-                          getInitials(
-                            `${formData.prenom_employes} ${formData.nom_employes}`
-                          )
-                        ) : (
-                          <UserPlus size={32} />
-                        )}
-                      </AvatarFallback>
-                    )}
+                    <AvatarImage 
+                      src={profileImage || getPhotoUrl(formData.photo_employes)} 
+                      alt={`${formData.prenom_employes} ${formData.nom_employes}`}
+                      className="h-full w-full object-cover"
+                    />
+                    <AvatarFallback className="bg-white text-blue-600 text-xl font-bold">
+                      {formData.nom_employes && formData.prenom_employes ? (
+                        getInitials(
+                          `${formData.prenom_employes} ${formData.nom_employes}`
+                        )
+                      ) : (
+                        <UserPlus size={32} />
+                      )}
+                    </AvatarFallback>
                   </Avatar>
                   <button
                     type="button"
@@ -635,6 +731,55 @@ const EditEmployeForm: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Section de gestion des fonctions */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Gestion des fonctions
+                  </Label>
+                  <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {fonctions.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-2">
+                          Aucune fonction disponible
+                        </p>
+                      ) : (
+                        fonctions.map((fonction) => (
+                          <div
+                            key={fonction.id_fonction}
+                            className="flex items-center justify-between p-2 bg-white rounded border hover:bg-gray-50"
+                          >
+                            <span className="text-sm font-medium text-gray-700">
+                              {fonction.nom_fonction}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              {formData.id_fonction === fonction.id_fonction && (
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                  Actuelle
+                                </span>
+                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteFonction(fonction)}
+                                disabled={formData.id_fonction === fonction.id_fonction}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title={
+                                  formData.id_fonction === fonction.id_fonction
+                                    ? "Impossible de supprimer la fonction actuellement attribuée"
+                                    : "Supprimer cette fonction"
+                                }
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label
                     htmlFor="contrat"
@@ -722,6 +867,44 @@ const EditEmployeForm: React.FC = () => {
             </div>
           </div>
         </form>
+
+        {/* Dialog de confirmation de suppression de fonction */}
+        <AlertDialog open={!!fonctionToDelete} onOpenChange={(open) => !open && setFonctionToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+              <AlertDialogDescription>
+                Êtes-vous sûr de vouloir supprimer la fonction{" "}
+                <strong>{fonctionToDelete?.nom_fonction}</strong> ? 
+                Cette action est irréversible et supprimera définitivement cette fonction.
+                {formData.id_fonction === fonctionToDelete?.id_fonction && (
+                  <span className="block mt-2 text-red-600 font-medium">
+                    ⚠️ Cette fonction est actuellement attribuée à cet employé et ne peut pas être supprimée.
+                  </span>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleDeleteFonctionCancel} disabled={isDeletingFonction}>
+                Annuler
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteFonctionConfirm}
+                disabled={isDeletingFonction || formData.id_fonction === fonctionToDelete?.id_fonction}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeletingFonction ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Suppression...
+                  </>
+                ) : (
+                  "Supprimer définitivement"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

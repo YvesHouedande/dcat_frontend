@@ -198,38 +198,6 @@ const InfoDemandePage: React.FC = () => {
       console.error("Erreur lors de l'ajout du document:", error);
       toast.error("Erreur lors de l'ajout du document");
     }
-
-    // addDocument.mutate(
-    //   {
-    //     demandeId: demande.id_demandes,
-    //     documentData: {
-    //       file,
-    //       libelle_document: libelle,
-    //       id_nature_document: natureId,
-    //     },
-    //   },
-    //   {
-    //     onSuccess: () => {
-    //       setFile(null);
-    //       setLibelle("");
-    //       setClassification("");
-    //       setNatureId(null);
-    //     },
-    //     onError: (err: unknown) => {
-    //       if (err instanceof Error) {
-    //         setUploadError(err.message);
-    //       } else if (
-    //         typeof err === "object" &&
-    //         err !== null &&
-    //         "message" in err
-    //       ) {
-    //         setUploadError(String((err as { message?: string }).message));
-    //       } else {
-    //         setUploadError("Erreur lors de l'upload");
-    //       }
-    //     },
-    //   }
-    // );
   };
 
   if (loadingDemande || loadingEmploye) {

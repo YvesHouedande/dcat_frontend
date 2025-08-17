@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 import {
@@ -16,6 +16,7 @@ import {
   MapPin,
   Briefcase,
   Calendar,
+  Trash2,
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
@@ -28,6 +29,16 @@ import { fetchFonctionById } from "../../services/fonctionService";
 import { useContratsApi } from "../../services/documentService";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ModernUserProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -37,8 +48,30 @@ const ModernUserProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [jobTitle, setJobTitle] = useState<string>("Non spécifié");
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { downloadDocument, downloadDocumentByUrl } = useContratsApi();
-  const { fetchEmployeById, uploadEmployePhoto, fetchEmployeDocuments } = useEmployesApi();
+  const { fetchEmployeById, uploadEmployePhoto, fetchEmployeDocuments, deleteEmploye } = useEmployesApi();
+
+  // Fonction pour construire l'URL de la photo
+  const getPhotoUrl = (photoPath: string | null | undefined): string | undefined => {
+    if (!photoPath) {
+      return undefined;
+    }
+    
+    // Si c'est déjà une URL complète, on la retourne
+    if (photoPath.startsWith('http')) {
+      return photoPath;
+    }
+    
+    // Construire l'URL correcte pour les images
+    // Enlever /api/ de l'URL de base car les images sont servies directement
+    const API_URL = import.meta.env.VITE_APP_API_URL;
+    const baseUrl = API_URL.replace('/api', ''); // Enlever /api/ de l'URL
+    const fullUrl = `${baseUrl}/${photoPath}`;
+    
+    return fullUrl;
+  };
 
   const {
     data: documentsData,
@@ -270,6 +303,32 @@ const ModernUserProfile: React.FC = () => {
     }
   };
 
+  // Fonctions de gestion de la suppression
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!id) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteEmploye(parseInt(id));
+      toast.success("Employé supprimé avec succès");
+      navigate("/resources-humaines/employes");
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      toast.error(error instanceof Error ? error.message : "Erreur lors de la suppression de l'employé");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen">
@@ -308,18 +367,15 @@ const ModernUserProfile: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative group">
               <Avatar className="w-24 h-24 border-4 border-white cursor-pointer">
-                {userInfo.photo_employes ? (
-                  <img 
-                    src={userInfo.photo_employes} 
-                    alt={`${userInfo.prenom_employes} ${userInfo.nom_employes}`}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <AvatarFallback className="bg-gray-800 text-xl">
-                    {userInfo.nom_employes.charAt(0) +
-                      userInfo.prenom_employes.charAt(0)}
-                  </AvatarFallback>
-                )}
+                <AvatarImage 
+                  src={getPhotoUrl(userInfo.photo_employes)} 
+                  alt={`${userInfo.prenom_employes} ${userInfo.nom_employes}`}
+                  className="w-full h-full object-cover"
+                />
+                <AvatarFallback className="bg-gray-800 text-xl">
+                  {userInfo.nom_employes.charAt(0) +
+                    userInfo.prenom_employes.charAt(0)}
+                </AvatarFallback>
               </Avatar>
               <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                 <label className="cursor-pointer text-white text-sm font-medium">
@@ -607,10 +663,28 @@ const ModernUserProfile: React.FC = () => {
                     className="border-red-200 text-red-600 hover:bg-red-50"
                     onClick={() => {
                       // TODO: Implémenter la logique de suspension
-                      alert("Fonctionnalité en cours de développement");
+                      toast.info("Fonctionnalité en cours de développement");
                     }}
                   >
                     Suspendre
+                  </Button>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <div>
+                    <h3 className="font-medium text-red-600">
+                      Suppression définitive
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Supprimer définitivement cet employé et toutes ses données
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={handleDeleteClick}
+                  >
+                    <Trash2 size={16} className="mr-2" />
+                    Supprimer
                   </Button>
                 </div>
               </CardContent>
@@ -618,6 +692,41 @@ const ModernUserProfile: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Dialog de confirmation de suppression */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer l'employé{" "}
+              <strong>
+                {userInfo?.prenom_employes} {userInfo?.nom_employes}
+              </strong>
+              ? Cette action est irréversible et supprimera définitivement toutes les données associées à cet employé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel} disabled={isDeleting}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Suppression...
+                </>
+              ) : (
+                "Supprimer définitivement"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

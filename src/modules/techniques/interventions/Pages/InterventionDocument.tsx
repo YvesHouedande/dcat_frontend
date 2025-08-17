@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect} from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,68 +19,35 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useNavigate} from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import {
-  useDeleteDocumentDossier,
-  useDocumentsDossierIntervention,
-} from "@/modules/administration-Finnance/dossier/hooks/useDosier";
-import { useDebounce } from "@/modules/stocks/entree/utils/helpers";
-import { DemandeDocument } from "@/modules/administration-Finnance/administration/types/interfaces";
+import { useAllInterventionDocuments } from "../hooks/useInterventions";
+import { InterventionDocument as InterventionDocumentType } from "../interface/interface";
 // Ajoute un type local pour la structure de réponse API attendue
 
 export const InterventionDocument: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const { id } = useParams();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [documents, setDocuments] = useState<DemandeDocument[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [documents, setDocuments] = useState<InterventionDocumentType[]>([]);
   const navigate = useNavigate();
-  const location = useLocation();
-  // Déterminer l'onglet actif basé sur la route
-  const getActiveTabFromRoute = useCallback((): "finance" | "comptabilite" => {
-    if (location.pathname.includes("/comptabilite")) {
-      return "comptabilite";
-    }
-    return "finance"; // par défaut
-  }, [location.pathname]);
-
-  const [activeTab, setActiveTab] = useState<"finance" | "comptabilite">(
-    getActiveTabFromRoute()
-  );
-
-  const debouncedSearchTerm = useDebounce(searchQuery, 300);
-  const { deleteDocumentAsync, isDeletingDocument } =
-    useDeleteDocumentDossier();
+  
+  
+  // Utiliser le nouveau hook pour récupérer les documents des interventions
   const {
-    infiniteDocumentsByDossier: documentsByDossier,
-    refetchDocumentsByDossier,
-    isLoadingInfiniteDocumentsByDossier,
-    isErrorInfiniteDocumentsByDossier,
-    fetchNextPageInfiniteDocumentsByDossier,
-    hasNextPageInfiniteDocumentsByDossier,
-    isFetchingNextPageInfiniteDocumentsByDossier,
-  } = useDocumentsDossierIntervention({
-    limit: 20,
-    libelle_document: debouncedSearchTerm,
-  });
+    data: documentsData,
+    isLoading,
+    isError
+  } = useAllInterventionDocuments(currentPage, 20);
 
-  // Synchroniser l'onglet actif avec la route
+  // Mettre à jour les documents quand les données changent
   useEffect(() => {
-    const newActiveTab = getActiveTabFromRoute();
-    setActiveTab((currentTab) => {
-      if (newActiveTab !== currentTab) {
-        return newActiveTab;
-      }
-      return currentTab;
-    });
-  }, [location.pathname, getActiveTabFromRoute]);
-
-  useEffect(() => {
-    refetchDocumentsByDossier();
-    setDocuments(documentsByDossier?.pages.flatMap((page) => page.data) || []);
-  }, [activeTab, refetchDocumentsByDossier, documentsByDossier?.pages]); // L'effet se déclenchera uniquement lorsque l'onglet change
+    if (documentsData?.data) {
+      setDocuments(documentsData.data);
+    }
+  }, [documentsData]);
 
   // Fonction pour extraire le type de fichier à partir de l'extension
   const getFileType = (filename: string): string => {
@@ -89,7 +56,7 @@ export const InterventionDocument: React.FC = () => {
   };
 
   const handleViewDocument = (idDoc: number) => {
-    navigate(`/gestion-des-interventions/documents/${id}/detail`, {
+    navigate(`/gestion-des-interventions/documents/${idDoc}/detail`, {
       state: {
         data: JSON.stringify(
           documents.find((doc) => doc.id_documents === idDoc)
@@ -102,7 +69,8 @@ export const InterventionDocument: React.FC = () => {
     e.stopPropagation();
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce document ?")) {
       try {
-        await deleteDocumentAsync(String(id));
+        // TODO: Implémenter la suppression de document
+        console.log("Suppression du document:", id);
         setDocuments((docs) => docs.filter((doc) => doc.id_documents !== id));
       } catch (err) {
         console.error("Erreur lors de la suppression:", err);
@@ -144,7 +112,7 @@ export const InterventionDocument: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString?: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
     try {
       const date = new Date(dateString);
@@ -166,10 +134,10 @@ export const InterventionDocument: React.FC = () => {
     }
   };
 
-  if (isErrorInfiniteDocumentsByDossier) {
+  if (isError) {
     return (
       <div className="flex justify-center items-center h-64 text-red-600">
-        {isErrorInfiniteDocumentsByDossier}
+        Erreur lors du chargement des documents
       </div>
     );
   }
@@ -270,7 +238,7 @@ export const InterventionDocument: React.FC = () => {
           </div>
         </div>
 
-        {isLoadingInfiniteDocumentsByDossier ? (
+        {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
           </div>
@@ -454,7 +422,6 @@ export const InterventionDocument: React.FC = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="cursor-pointer text-xs text-red-500"
-                                  disabled={isDeletingDocument}
                                   onClick={(e) =>
                                     handleDeleteDocument(
                                       document.id_documents,
@@ -478,15 +445,13 @@ export const InterventionDocument: React.FC = () => {
           </>
         )}
 
-        {hasNextPageInfiniteDocumentsByDossier && (
+        {documentsData?.pagination && documentsData.pagination.page < documentsData.pagination.totalPages && (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchNextPageInfiniteDocumentsByDossier()}
+            onClick={() => setCurrentPage(prev => prev + 1)}
           >
-            {isFetchingNextPageInfiniteDocumentsByDossier
-              ? "Chargement..."
-              : "Charger plus"}
+            Charger plus
           </Button>
         )}
 
@@ -497,9 +462,7 @@ export const InterventionDocument: React.FC = () => {
             <p className="text-gray-600 mb-2">
               {searchQuery
                 ? "Aucun document ne correspond à votre recherche"
-                : `Aucun document ${
-                    activeTab === "finance" ? "de finance" : "de comptabilité"
-                  } n'a encore été ajouté`}
+                : "Aucun document d'intervention n'a encore été ajouté"}
             </p>
             {searchQuery ? (
               <Button

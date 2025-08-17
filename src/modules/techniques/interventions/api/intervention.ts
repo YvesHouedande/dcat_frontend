@@ -241,7 +241,43 @@ export const addDocumentToIntervention = async (
     );
 
     console.log('[API Interventions] Document ajouté avec succès:', response.data);
-    return response.data;
+    
+    // Extraire la date de création et l'ID du document
+    const responseData = response.data;
+    const documentId = responseData.document?.id_documents;
+    const dateCreation = responseData.details?.dateCreation;
+    
+    // Si on a une date de création et un ID de document, mettre à jour le document
+    if (dateCreation && documentId) {
+      console.log('[API Interventions] Mise à jour de la date du document:', { documentId, dateCreation });
+      
+      try {
+        // Mettre à jour le document avec la date de création
+        const updateResponse = await axios.put(
+          `${BASE_PATH}/${interventionId}/documents/${documentId}`,
+          {
+            date_document: dateCreation
+          }
+        );
+        
+        console.log('[API Interventions] Date du document mise à jour:', updateResponse.data);
+        
+        // Retourner la réponse mise à jour
+        return {
+          ...responseData,
+          document: {
+            ...responseData.document,
+            date_document: dateCreation
+          }
+        };
+      } catch (updateError) {
+        console.error('[API Interventions] Erreur lors de la mise à jour de la date:', updateError);
+        // Retourner la réponse originale même si la mise à jour de la date échoue
+        return responseData;
+      }
+    }
+    
+    return responseData;
   } catch (error) {
     console.error('[API Interventions] Erreur lors de l\'ajout du document:', error);
     throw error;
@@ -350,13 +386,17 @@ export const getAllNatureDocuments = async (): Promise<Nature[]> => {
 };
 
 /**
- * Récupère tous les documents des interventions.
- * @returns Promesse résolue avec un tableau de InterventionDocument.
+ * Récupère tous les documents des interventions avec pagination.
+ * @param page - Numéro de page (défaut: 1)
+ * @param limit - Nombre d'éléments par page (défaut: 10)
+ * @returns Promesse résolue avec un tableau de InterventionDocument et pagination.
  */
-export const getAllInterventionDocuments = async (): Promise<ApiResponse<InterventionDocument[]>> => {
+export const getAllInterventionDocuments = async (page: number = 1, limit: number = 10): Promise<ApiResponse<InterventionDocument[]>> => {
   try {
-    console.log('[API Interventions] Tentative de récupération de tous les documents des interventions...');
-    const response = await axios.get(`${BASE_PATH}/documents`);
+    console.log('[API Interventions] Tentative de récupération de tous les documents des interventions...', { page, limit });
+    const response = await axios.get(`${API_URL}/administration/dossier/documents/intervention`, {
+      params: { page, limit }
+    });
     console.log('[API Interventions] Documents des interventions récupérés:', response.data);
     return response.data;
   } catch (error) {
