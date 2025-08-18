@@ -119,23 +119,7 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
       }
       
       // Traiter les documents pour ajouter une date par défaut si date_document n'est pas disponible
-      const processedDocs = docsToSet.map(doc => {
-        console.log("Document brut:", doc);
-        
-        // Si le document n'a pas de date_document, utiliser la date actuelle comme fallback
-        if (!doc.date_document) {
-          console.log("Aucune date trouvée pour le document, utilisation de la date actuelle");
-          return {
-            ...doc,
-            date_document: new Date().toISOString()
-          };
-        }
-        
-        return doc;
-      });
-      
-      console.log("Documents traités:", processedDocs);
-      setDocuments(processedDocs);
+      setDocuments(docsToSet);
 
       setEmployes(employesResponse.data || []);
       setAllEmployes(allEmployesResponse || []);
@@ -297,7 +281,8 @@ export const InterventionDetails: React.FC<InterventionDetailsProps> = ({
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "-";
     try {
       return format(new Date(dateString), "dd MMMM yyyy", { locale: fr });
     } catch {

@@ -3,13 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Download,
   FileText,
-  Calendar,
-  FolderOpen,
   Tag,
   AlertCircle,
 } from "lucide-react";
@@ -168,59 +165,31 @@ const InterventionDocumentDetail: React.FC = () => {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <Tag className="w-5 h-5" />
-                  Informations générales
+                  Informations du document
                 </h3>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
-                      ID Document
+                      Nom du document
                     </span>
                     <span className="text-sm text-gray-900">
-                      #{documentData.id_documents}
+                      {documentData.libelle_document}
                     </span>
                   </div>
-
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
-                      Type de document
+                      Fichier
                     </span>
                     <span className="text-sm text-gray-900">
-                      {documentData.id_nature_document || "Non renseigné"}
+                      {documentData.lien_document}
                     </span>
                   </div>
-
-                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                    <span className="text-sm font-medium text-gray-600">
-                      ID Intervention
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {documentData.id_intervention || "Non renseigné"}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                    <span className="text-sm font-medium text-gray-600">
-                      ID Nature
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {documentData.id_nature_document || "Non renseigné"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Informations temporelles
-                </h3>
-
-                <div className="space-y-3">
+               
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
                       Date du document
@@ -237,62 +206,12 @@ const InterventionDocumentDetail: React.FC = () => {
                         : "Non renseignée"}
                     </span>
                   </div>
-
-                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                    <span className="text-sm font-medium text-gray-600">
-                      État
-                    </span>
-                    {documentData.etat_document ? (
-                      <Badge
-                        className={getStatusColor(documentData.etat_document)}
-                      >
-                        {documentData.etat_document}
-                      </Badge>
-                    ) : (
-                      <span className="text-sm text-gray-500">Non renseigné</span>
-                    )}
-                  </div>
                 </div>
               </div>
-            </div>
 
-            <Separator />
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <FolderOpen className="w-5 h-5" />
-                Fichier associé
-              </h3>
 
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-blue-600" />
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {documentData.libelle_document}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Chemin: {documentData.lien_document}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleDownload}
-                    variant="outline"
-                    size="sm"
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Télécharger
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
+            
             <div className="flex justify-between items-center pt-4">
               <Button variant="outline" onClick={handleGoBack}>
                 <ArrowLeft className="w-4 h-4 mr-2" />

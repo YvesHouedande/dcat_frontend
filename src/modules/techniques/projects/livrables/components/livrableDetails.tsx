@@ -366,21 +366,6 @@ const LivrableDetailsPage: React.FC<LivrableDetailsPageProps> = ({ embedded = fa
                     required
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="date_document">Date du document</Label>
-                  <Input
-                    type="date"
-                    value={documentFormData.date_document || ""}
-                    onChange={(e) => {
-                      setDocumentFormData({
-                        ...documentFormData,
-                        date_document: e.target.value,
-                      });
-                    }}
-                    className="w-full"
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="id_nature_document">Nature du document <span className="text-red-500">*</span></Label>
                   <Select

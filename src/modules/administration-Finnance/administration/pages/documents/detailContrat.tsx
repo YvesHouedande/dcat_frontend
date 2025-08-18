@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import {
   Download,
   FileText,
   Calendar,
+  Loader2,
   FolderOpen,
   Tag,
   AlertCircle,
@@ -16,7 +17,8 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-
+import { DossierType } from "../../../dossier/types/dossierType";
+import { useDossier } from "../../../dossier/services/dossier.service";
 import { DemandeDocument } from "../../types/interfaces";
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
@@ -27,6 +29,11 @@ const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
 const DetailContrat: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { getDossierById } = useDossier();
+
+  // États pour les données du dossier
+  const [dossierInfo, setDossierInfo] = useState<DossierType | null>(null);
+  const [loadingDossier, setLoadingDossier] = useState(false);
 
   // Récupération des données du document depuis les paramètres
   // Si les données sont passées en tant que string sérialisée, il faut les parser
@@ -44,6 +51,25 @@ const DetailContrat: React.FC = () => {
       console.error("Erreur lors du parsing des données:", error);
     }
   }
+
+  useEffect(() => {
+    const fetchDossierInfo = async () => {
+      if (!documentData?.id_dossier) return;
+
+      setLoadingDossier(true);
+      try {
+        const dossier = await getDossierById(documentData.id_dossier.toString());
+        setDossierInfo(dossier);
+      } catch (error) {
+        console.error("Erreur lors de la récupération du dossier:", error);
+        toast.error("Impossible de récupérer les informations du dossier");
+      } finally {
+        setLoadingDossier(false);
+      }
+    };
+
+    fetchDossierInfo();
+  }, [documentData?.id_dossier]);
 
   const handleDownload = async () => {
     if (!documentData?.lien_document) {
@@ -67,6 +93,47 @@ const DetailContrat: React.FC = () => {
       document.body.removeChild(link);
 
       toast.success("Téléchargement initié");
+    } catch (error) {
+      console.error("Erreur lors du téléchargement:", error);
+      toast.error("Erreur lors du téléchargement du fichier");
+    }
+  };
+
+  const handleDirectDownload = async () => {
+    if (!documentData?.lien_document) {
+      toast.error("Aucun fichier disponible pour le téléchargement");
+      return;
+    }
+
+    try {
+      // Construire l'URL complète du fichier
+      const fileUrl = documentData.lien_document.startsWith("http")
+        ? documentData.lien_document
+        : `${STATIC_FILES_BASE_URL}/${documentData.lien_document}`;
+
+      // Récupérer le fichier via fetch pour forcer le téléchargement
+      const response = await fetch(fileUrl);
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      // Créer un blob à partir de la réponse
+      const blob = await response.blob();
+      
+      // Créer un lien temporaire pour télécharger
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = documentData.libelle_document || "document";
+      
+      // Supprimer target="_blank" pour éviter l'ouverture dans un nouvel onglet
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Nettoyer l'URL créée
+      URL.revokeObjectURL(link.href);
+
+      toast.success("Téléchargement direct initié");
     } catch (error) {
       console.error("Erreur lors du téléchargement:", error);
       toast.error("Erreur lors du téléchargement du fichier");
@@ -122,26 +189,6 @@ const DetailContrat: React.FC = () => {
   return (
     <div className="bg-gray-50 min-h-screen p-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header avec navigation */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={handleGoBack}
-            className="text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
-          </Button>
-
-          <Button
-            onClick={handleDownload}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Télécharger
-          </Button>
-        </div>
-
         {/* Carte principale */}
         <Card>
           <CardHeader className="pb-4">
@@ -179,31 +226,31 @@ const DetailContrat: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                    <span className="text-sm font-medium text-gray-600">
-                      ID Document
+                  <span className="text-sm font-medium text-gray-600">
+                      Nom du dossier
                     </span>
                     <span className="text-sm text-gray-900">
-                      #{documentData.id_documents}
+                    {loadingDossier ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Chargement...
+                        </div>
+                      ) : dossierInfo?.libelle_dossier ? (
+                        dossierInfo.libelle_dossier
+                      ) : (
+                        `Dossier ID: ${documentData.id_dossier}`
+                      )}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                    <span className="text-sm font-medium text-gray-600">
-                      ID Dossier
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {documentData.id_dossier}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
+                  {/* <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
                       ID Nature
                     </span>
                     <span className="text-sm text-gray-900">
                       {documentData.id_nature_document}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -228,19 +275,6 @@ const DetailContrat: React.FC = () => {
                       )}
                     </span>
                   </div>
-
-                  {documentData.etat_document && (
-                    <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
-                      <span className="text-sm font-medium text-gray-600">
-                        État
-                      </span>
-                      <Badge
-                        className={getStatusColor(documentData.etat_document)}
-                      >
-                        {documentData.etat_document}
-                      </Badge>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -275,7 +309,7 @@ const DetailContrat: React.FC = () => {
                     className="border-blue-300 text-blue-700 hover:bg-blue-100"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Télécharger
+                    Aperçu
                   </Button>
                 </div>
               </div>
@@ -294,7 +328,7 @@ const DetailContrat: React.FC = () => {
                
 
                 <Button
-                  onClick={handleDownload}
+                  onClick={handleDirectDownload}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <Download className="w-4 h-4 mr-2" />

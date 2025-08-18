@@ -76,8 +76,7 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
         interventionId,
         file!,
         {
-          libelle_document: libelle.trim(),
-          date_document: new Date().toISOString().split("T")[0],
+          libelle_document: libelle.trim()
           // La date sera automatiquement gérée par l'API
         }
       );
@@ -138,14 +137,7 @@ export const AddDocumentSheet: React.FC<AddDocumentSheetProps> = ({
               disabled={isSubmitting}
               placeholder="Saisir le libellé du document"
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Date du document</Label>
-            <div className="text-sm text-gray-500 p-2 bg-gray-50 rounded border">
-              La date sera automatiquement définie à la date de création du document
-            </div>
-          </div>
+3          </div>
           
           <div className="flex justify-end space-x-2 mt-6">
             <Button 
