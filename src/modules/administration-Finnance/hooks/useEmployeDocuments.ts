@@ -60,7 +60,7 @@ export const useAddDocumentToEmploye = () => {
         id_dossier?: number;
       };
     }) => addDocumentToEmploye(employeId, documentData),
-    onSuccess: (newDocument, { employeId }) => {
+    onSuccess: (_, { employeId }) => {
       // Invalider la liste des documents de l'employé
       queryClient.invalidateQueries({
         queryKey: employeDocumentKeys.list(employeId),
