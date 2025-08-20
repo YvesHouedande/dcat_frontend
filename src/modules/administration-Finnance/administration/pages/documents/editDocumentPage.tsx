@@ -28,7 +28,7 @@ const EditDocumentPage: React.FC = () => {
     id_documents: 0,
     libelle_document: "",
     lien_document: "",
-    etat_document: "private",
+    etat_document: "actif",
     id_nature_document: 0,
     date_document: new Date().toISOString(),
     id_dossier: 0,
@@ -55,7 +55,7 @@ const EditDocumentPage: React.FC = () => {
 
           lien_document:
             "https://example.com/documents/rapport-annuel-2024.pdf",
-          etat_document: "private",
+          etat_document: "actif",
           id_nature_document: 3,
           date_document: "2024-05-10T14:20:00",
         };

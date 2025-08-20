@@ -18,9 +18,11 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 
-import { DemandeDocument } from "../../administration/types/interfaces";
+import { DemandeDocument, NatureDocument } from "../../administration/types/interfaces";
 import { DossierType } from "../../dossier/types/dossierType";
 import { useDossier } from "../../dossier/services/dossier.service";
+import { useDemandesApi } from "../../services/demandeService";
+
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
 const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
@@ -31,10 +33,14 @@ const DetailDocumentPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { getDossierById } = useDossier();
+  const { fetchNatureDocumentById } = useDemandesApi();
 
   // États pour les données du dossier
   const [dossierInfo, setDossierInfo] = useState<DossierType | null>(null);
   const [loadingDossier, setLoadingDossier] = useState(false);
+
+  const [natures, setNatures] = useState<NatureDocument | null>(null);
+  const [loadingNatures, setLoadingNatures] = useState(false);
 
   // Récupération des données du document depuis les paramètres
   // Si les données sont passées en tant que string sérialisée, il faut les parser
@@ -72,6 +78,25 @@ const DetailDocumentPage: React.FC = () => {
 
     fetchDossierInfo();
   }, [documentData?.id_dossier]);
+
+  useEffect(() => {
+    const fetchNatures = async () => {
+      if (!documentData?.id_nature_document) return;
+
+      setLoadingNatures(true);
+      try {
+        const natures = await fetchNatureDocumentById(documentData.id_nature_document.toString());
+        setNatures(natures);
+      } catch (error) {
+        console.error("Erreur lors de la récupération de la nature:", error);
+        toast.error("Impossible de récupérer les informations de nature");
+      } finally {
+        setLoadingNatures(false);
+      }
+    };
+
+    fetchNatures();
+  }, [documentData?.id_nature_document]);
   
 
   const handleDownload = async () => {
@@ -244,6 +269,24 @@ const DetailDocumentPage: React.FC = () => {
                         dossierInfo.libelle_dossier
                       ) : (
                         `Dossier ID: ${documentData.id_dossier}`
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
+                    <span className="text-sm font-medium text-gray-600">
+                      Nature du document
+                    </span>
+                    <span className="text-sm text-gray-900">
+                    {loadingNatures ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Chargement...
+                        </div>
+                      ) : natures?.libelle ? (
+                        natures.libelle
+                      ) : (
+                        `nature ID: ${documentData.id_nature_document}`
                       )}
                     </span>
                   </div>

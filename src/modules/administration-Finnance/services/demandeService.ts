@@ -195,6 +195,27 @@ export const useDemandesApi = () => {
     [fetchDemandeById]
   );
 
+  // Méthodes CRUD pour les natures de documents
+  const createNature = useCallback(async (libelle: string) => {
+    const response = await api.post(`/administration/natures`, { libelle });
+    return response.data;
+  }, [api]);
+
+  const fetchNatureDocumentById = useCallback(async (id: string): Promise<NatureDocument> => {
+    const response = await api.get(`/administration/natures/${id}`);
+    return response.data;
+  }, [api]);
+
+  const updateNature = useCallback(async (id: number, libelle: string) => {
+    const response = await api.put(`/administration/natures/${id}`, { libelle });
+    return response.data;
+  }, [api]);
+
+  const deleteNature = useCallback(async (id: number) => {
+    const response = await api.delete(`/administration/natures/${id}`);
+    return response.data;
+  }, [api]);
+
   return {
     createDemande,
     fetchDemandes,
@@ -212,5 +233,9 @@ export const useDemandesApi = () => {
     getAllNatureDocuments,
     fetchDocumentsByDemande,
     fetchFilteredDemandes,
+    createNature,
+    fetchNatureDocumentById,
+    updateNature,
+    deleteNature,
   };
 };

@@ -8,6 +8,7 @@ import {
   UpdateContratData,
   ApiResponse,
 } from "@/modules/administration-Finnance/administration/types/interfaces";
+import { NatureDocument } from "../administration/types/interfaces";
 
 /**
  * Hook personnalisé pour la gestion des contrats
@@ -283,6 +284,26 @@ export const useContratsApi = () => {
     return response.data;
   }, [api]);
 
+  const fetchNatureDocumentById = async (id: string): Promise<NatureDocument> => {
+    const response = await api.get(`/administration/natures/${id}`);
+    return response.data;
+  };
+
+  const createNature = useCallback(async (libelle: string) => {
+    const response = await api.post(`/administration/natures`, { libelle });
+    return response.data;
+  }, [api]);
+
+  const updateNature = useCallback(async (id: number, libelle: string) => {
+    const response = await api.put(`/administration/natures/${id}`, { libelle });
+    return response.data;
+  }, [api]);
+
+  const deleteNature = useCallback(async (id: number) => {
+    const response = await api.delete(`/administration/natures/${id}`);
+    return response.data;
+  }, [api]);
+
   // Nouvelle méthode : Récupérer les contrats d'une entité
   const fetchContratsByEntite = useCallback(
     async (idEntite: number) => {
@@ -317,5 +338,9 @@ export const useContratsApi = () => {
     addDocumentToContrat,
     deleteDocumentFromContrat,
     fetchNaturesDocument,
+    fetchNatureDocumentById,
+    createNature,
+    updateNature,
+    deleteNature,
   };
 };

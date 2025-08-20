@@ -6,8 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 import {
-  Download,
-  Upload,
   ExternalLink,
   Edit,
   FileText,
@@ -26,9 +24,10 @@ import {
 } from "../../administration/types/interfaces";
 import { useEmployesApi } from "../../services/employeService";
 import { fetchFonctionById } from "../../services/fonctionService";
-import { useContratsApi } from "../../services/documentService";
+
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import EmployeDocuments from "./EmployeDocuments";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,7 +49,7 @@ const ModernUserProfile: React.FC = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { downloadDocument, downloadDocumentByUrl } = useContratsApi();
+  // const { downloadDocument, downloadDocumentByUrl } = useContratsApi();
   const { fetchEmployeById, uploadEmployePhoto, fetchEmployeDocuments, deleteEmploye } = useEmployesApi();
 
   // Fonction pour construire l'URL de la photo
@@ -75,10 +74,6 @@ const ModernUserProfile: React.FC = () => {
 
   const {
     data: documentsData,
-    isLoading: loadingDocuments,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
   } = useInfiniteQuery<{ data?: EmployeDocument[]; documents?: EmployeDocument[]; pagination?: { page: number; total: number } }>({
     queryKey: ["employe-documents", id],
     queryFn: ({ pageParam = 1 }) =>
@@ -165,18 +160,7 @@ const ModernUserProfile: React.FC = () => {
     loadEmploye();
   }, [id, fetchEmployeById, fetchEmployeDocuments]); // Dépendance unique sur l'ID
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "En cours":
-        return "bg-amber-100 text-amber-800";
-      case "Approuvé":
-        return "bg-green-100 text-green-800";
-      case "Complété":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+
 
   const handleClick = (id: string | number | undefined) => {
     if (!id) {
@@ -184,57 +168,6 @@ const ModernUserProfile: React.FC = () => {
       return;
     }
     navigate(`/resources-humaines/employes/${id}/editer`);
-  };
-
-  const handleDownloadDocument = async (doc: EmployeDocument) => {
-    try {
-      console.log("Tentative de téléchargement du document:", doc);
-      
-      // Vérifier si nous avons un lien direct vers le document
-      if (doc.lien_document) {
-        console.log("Utilisation du lien direct:", doc.lien_document);
-        // Utiliser le lien direct du document
-        const blob = await downloadDocumentByUrl(doc.lien_document);
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        
-        // Extraire le nom de fichier du lien ou utiliser le libellé
-        const fileName = doc.libelle_document || doc.lien_document.split('/').pop() || `document-${doc.id_documents}`;
-        a.download = fileName;
-        
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        toast.success("Document téléchargé avec succès");
-      } else {
-        console.log("Utilisation de l'ID du document:", doc.id_documents);
-        // Fallback vers l'ancienne méthode avec l'ID
-        const docId = doc.id_documents;
-        if (!docId) {
-          toast.error("Aucune méthode de téléchargement disponible");
-          return;
-        }
-
-        const blob = await downloadDocument(docId.toString());
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        
-        const fileName = doc.libelle_document || `document-${docId}`;
-        a.download = fileName;
-        
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        toast.success("Document téléchargé avec succès");
-      }
-    } catch (err) {
-      console.error("Erreur lors du téléchargement:", err);
-      toast.error("Erreur lors du téléchargement du document");
-    }
   };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -510,98 +443,7 @@ const ModernUserProfile: React.FC = () => {
             </div>
           </TabsContent>
           <TabsContent value="documents" className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">Documents</h2>
-              <Button
-                onClick={() =>
-                  navigate(
-                    `/resources-humaines/employes/${id}/ajouter-document`
-                  )
-                }
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Upload size={16} className="mr-2" />
-                Ajouter un document
-              </Button>
-            </div>
-
-            {loadingDocuments ? (
-              <div className="text-center py-8">
-                <p>Chargement des documents...</p>
-              </div>
-            ) : documents.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <FileText size={48} className="mx-auto mb-4 text-gray-300" />
-                <p>Aucun document disponible</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {documents.map((doc) => (
-                  <Card
-                    key={doc.id_documents}
-                    className="overflow-hidden hover:shadow-md transition-shadow"
-                  >
-                    <div className="bg-gray-50 p-4 border-b">
-                                             <div className="flex justify-between">
-                         <Badge
-                           className={getStatusColor(doc.etat_document || "private")}
-                         >
-                           {doc.etat_document || "Privé"}
-                         </Badge>
-                         <span className="text-xs text-gray-500">
-                           {doc.date_document ? new Date(doc.date_document).toLocaleDateString('fr-FR') : "Date inconnue"}
-                         </span>
-                       </div>
-                      <div className="mt-6 mb-4 flex justify-center">
-                        <div className="w-16 h-20 bg-white border shadow-sm flex items-center justify-center">
-                          <FileText size={24} className="text-gray-400" />
-                        </div>
-                      </div>
-                    </div>
-                    <CardContent className="p-4">
-                                             <h3 className="font-medium text-gray-800 mb-1">
-                         {doc.libelle_document || doc.nom_document || "Document sans nom"}
-                       </h3>
-                       <p className="text-sm text-gray-500 mb-4">
-                         {doc.nature_document ? `Type: ${doc.nature_document}` : "Type non spécifié"}
-                       </p>
-                      <div className="flex justify-between">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-gray-600 text-xs"
-                          onClick={() =>
-                            navigate(
-                              `/resources-humaines/employers/documents/${doc.id_documents}/editer`
-                            )
-                          }
-                        >
-                          <Edit size={14} className="mr-1" />
-                          Mettre à jour
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-blue-600 text-xs"
-                          onClick={() => handleDownloadDocument(doc)}
-                        >
-                          <Download size={14} className="mr-1" />
-                          Télécharger
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {hasNextPage && (
-                  <Button
-                    onClick={() => fetchNextPage()}
-                    disabled={isFetchingNextPage}
-                  >
-                    {isFetchingNextPage ? "Chargement..." : "Charger plus"}
-                  </Button>
-                )}
-              </div>
-            )}
+            <EmployeDocuments employeId={Number(id)} />
           </TabsContent>
           <TabsContent value="settings" className="p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-6">

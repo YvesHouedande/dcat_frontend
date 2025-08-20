@@ -349,6 +349,75 @@ export const getAllNatureDocuments = async (): Promise<Nature[]> => {
   }
 };
 
+export const fetchNatureDocumentById = async (id: string): Promise<Nature> => {
+  try {
+    const response = await axios.get(`${API_URL}/administration/natures/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('[API Interventions] Erreur lors de la récupération de la nature:', error);
+    throw error;
+  }
+};
+
+/**
+ * Crée une nouvelle nature de document.
+ * @param libelle - Le libellé de la nature
+ * @returns Promesse résolue avec la nature créée
+ */
+export const createNatureDocument = async (libelle: string): Promise<Nature> => {
+  try {
+    console.log('[API Interventions] Tentative de création de nature:', libelle);
+    const response = await axios.post(`${API_URL}/administration/natures/`, { libelle });
+    console.log('[API Interventions] Nature créée avec succès:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[API Interventions] Erreur lors de la création de la nature:', error);
+    throw error;
+  }
+};
+
+/**
+ * Met à jour une nature de document existante.
+ * @param id - L'ID de la nature à mettre à jour
+ * @param libelle - Le nouveau libellé
+ * @returns Promesse résolue avec la nature mise à jour
+ */
+export const updateNatureDocument = async (id: number, libelle: string): Promise<Nature> => {
+  try {
+    console.log('[API Interventions] Tentative de mise à jour de nature:', { id, libelle });
+    const response = await axios.put(`${API_URL}/administration/natures/${id}`, { libelle });
+    console.log('[API Interventions] Nature mise à jour avec succès:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[API Interventions] Erreur lors de la mise à jour de la nature:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprime une nature de document.
+ * @param id - L'ID de la nature à supprimer
+ * @returns Promesse résolue avec le résultat de la suppression
+ */
+export const deleteNatureDocument = async (id: number): Promise<{ success: boolean; message?: string }> => {
+  try {
+    console.log('[API Interventions] Tentative de suppression de nature:', id);
+    await axios.delete(`${API_URL}/administration/natures/${id}`);
+    console.log('[API Interventions] Nature supprimée avec succès');
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('[API Interventions] Erreur lors de la suppression de la nature:', error);
+    
+    // Vérifier si c'est une erreur de contrainte (nature utilisée)
+    if (axios.isAxiosError(error) && (error.response?.status === 400 || error.response?.status === 409)) {
+      const errorMessage = error.response?.data?.message || "Cette nature ne peut pas être supprimée car elle est utilisée par des documents existants.";
+      return { success: false, message: errorMessage };
+    }
+    
+    throw error;
+  }
+};
+
 /**
  * Récupère tous les documents des interventions avec pagination.
  * @param page - Numéro de page (défaut: 1)

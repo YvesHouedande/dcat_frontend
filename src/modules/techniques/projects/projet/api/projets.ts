@@ -6,6 +6,7 @@ import {
   CreateDocumentTextPayload,
   Livrable,
   Partenaire,
+  Nature,
 } from "../../types/types"; // Assurez-vous que le chemin est correct et que Document et CreateDocumentTextPayload sont importés
 import { omit } from "@/lib/utils";
 import { getOperationsByProjet, deleteOperation } from "../../operation/api/operation";
@@ -787,6 +788,99 @@ export const getLivrablesWithDocumentsByProjetId = async (
       `[API Projets] Erreur lors de la récupération des livrables et documents pour le projet ${projectId}:`,
       error
     );
+    throw error;
+  }
+};
+
+// === FONCTIONS CRUD POUR LES NATURES DE DOCUMENTS ===
+
+/**
+ * Récupère toutes les natures de documents disponibles.
+ * @returns Promesse résolue avec un tableau de Nature.
+ */
+export const getAllNatureDocuments = async (): Promise<Nature[]> => {
+  try {
+    console.log('[API Projets] Tentative de récupération des natures de documents...');
+    const response = await apiClient.get<ApiResponse<Nature[]>>(`${API_URL}/administration/natures`);
+    
+    let naturesToReturn: Nature[] = [];
+    
+    // Gestion des différents formats de réponse possibles
+    if (response.data.data && Array.isArray(response.data.data)) {
+      naturesToReturn = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      naturesToReturn = response.data;
+    }
+    
+    // Vérification et transformation des données si nécessaire
+    naturesToReturn = naturesToReturn.map(nature => ({
+      id_nature_document: nature.id_nature_document,
+      libelle: nature.libelle || ''
+    }));
+    
+    console.log('[API Projets] Natures de documents récupérées:', naturesToReturn);
+    return naturesToReturn;
+  } catch (error) {
+    console.error('[API Projets] Erreur lors de la récupération des natures de documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Crée une nouvelle nature de document.
+ * @param libelle - Le libellé de la nature
+ * @returns Promesse résolue avec la nature créée
+ */
+export const createNatureDocument = async (libelle: string): Promise<Nature> => {
+  try {
+    console.log('[API Projets] Tentative de création de nature:', libelle);
+    const response = await apiClient.post(`${API_URL}/administration/natures/`, { libelle });
+    console.log('[API Projets] Nature créée avec succès:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[API Projets] Erreur lors de la création de la nature:', error);
+    throw error;
+  }
+};
+
+/**
+ * Met à jour une nature de document existante.
+ * @param id - L'ID de la nature à mettre à jour
+ * @param libelle - Le nouveau libellé
+ * @returns Promesse résolue avec la nature mise à jour
+ */
+export const updateNatureDocument = async (id: number, libelle: string): Promise<Nature> => {
+  try {
+    console.log('[API Projets] Tentative de mise à jour de nature:', { id, libelle });
+    const response = await apiClient.put(`${API_URL}/administration/natures/${id}`, { libelle });
+    console.log('[API Projets] Nature mise à jour avec succès:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[API Projets] Erreur lors de la mise à jour de la nature:', error);
+    throw error;
+  }
+};
+
+/**
+ * Supprime une nature de document.
+ * @param id - L'ID de la nature à supprimer
+ * @returns Promesse résolue avec le résultat de la suppression
+ */
+export const deleteNatureDocument = async (id: number): Promise<{ success: boolean; message?: string }> => {
+  try {
+    console.log('[API Projets] Tentative de suppression de nature:', id);
+    await apiClient.delete(`${API_URL}/administration/natures/${id}`);
+    console.log('[API Projets] Nature supprimée avec succès');
+    return { success: true };
+  } catch (error: unknown) {
+    console.error('[API Projets] Erreur lors de la suppression de la nature:', error);
+    
+    // Vérifier si c'est une erreur de contrainte (nature utilisée)
+    if (axios.isAxiosError(error) && (error.response?.status === 400 || error.response?.status === 409)) {
+      const errorMessage = error.response?.data?.message || "Cette nature ne peut pas être supprimée car elle est utilisée par des documents existants.";
+      return { success: false, message: errorMessage };
+    }
+    
     throw error;
   }
 };

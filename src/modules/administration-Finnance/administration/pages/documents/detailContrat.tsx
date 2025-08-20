@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Download,
   FileText,
-  Calendar,
   Loader2,
   FolderOpen,
   Tag,
@@ -18,8 +17,10 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { DossierType } from "../../../dossier/types/dossierType";
+import { NatureDocument } from "../../types/interfaces";
 import { useDossier } from "../../../dossier/services/dossier.service";
 import { DemandeDocument } from "../../types/interfaces";
+import { useContratsApi } from "../../../services/contratService";
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
 const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
@@ -30,11 +31,17 @@ const DetailContrat: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { getDossierById } = useDossier();
+  const { fetchNatureDocumentById } = useContratsApi();
 
   // États pour les données du dossier
   const [dossierInfo, setDossierInfo] = useState<DossierType | null>(null);
   const [loadingDossier, setLoadingDossier] = useState(false);
+  
+  // États pour les natures de documents
+  const [natures, setNatures] = useState<NatureDocument | null>(null);
+  const [loadingNatures, setLoadingNatures] = useState(false);
 
+  
   // Récupération des données du document depuis les paramètres
   // Si les données sont passées en tant que string sérialisée, il faut les parser
   let documentData: DemandeDocument | null = null;
@@ -70,6 +77,26 @@ const DetailContrat: React.FC = () => {
 
     fetchDossierInfo();
   }, [documentData?.id_dossier]);
+
+
+  useEffect(() => {
+    const fetchNatures = async () => {
+      if (!documentData?.id_nature_document) return;
+
+      setLoadingNatures(true);
+      try {
+        const natures = await fetchNatureDocumentById(documentData.id_nature_document.toString());
+        setNatures(natures);
+      } catch (error) {
+        console.error("Erreur lors de la récupération de la nature:", error);
+        toast.error("Impossible de récupérer les informations de nature");
+      } finally {
+        setLoadingNatures(false);
+      }
+    };
+
+    fetchNatures();
+  }, [documentData?.id_nature_document]);
 
   const handleDownload = async () => {
     if (!documentData?.lien_document) {
@@ -243,23 +270,27 @@ const DetailContrat: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
+                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">
-                      ID Nature
+                      Nature du document
                     </span>
                     <span className="text-sm text-gray-900">
-                      {documentData.id_nature_document}
+                    {loadingNatures ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Chargement...
+                        </div>
+                      ) : natures?.libelle ? (
+                        natures.libelle
+                      ) : (
+                        `nature ID: ${documentData.id_nature_document}`
+                      )}
                     </span>
-                  </div> */}
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Informations temporelles
-                </h3>
-
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-600">

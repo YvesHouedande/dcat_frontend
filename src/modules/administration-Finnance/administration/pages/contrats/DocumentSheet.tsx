@@ -17,20 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar as CalendarIcon, Upload, Plus } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { Upload, Plus, Edit, X } from "lucide-react";
 import { ContratDocument, NatureDocument } from "../../types/interfaces";
 import { useContratsApi } from "../../../services/contratService";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DossierCombobox } from "@/components/combobox/DossierCombobox";
 import useDocumentsApi from "@/modules/administration-Finnance/services/finance_comptaService";
 
@@ -42,6 +39,15 @@ interface DocumentSheetProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+// Clés de requête pour TanStack Query
+const natureKeys = {
+  all: ["natures"] as const,
+  lists: () => [...natureKeys.all, "list"] as const,
+  list: () => [...natureKeys.lists()] as const,
+  details: () => [...natureKeys.all, "detail"] as const,
+  detail: (id: number) => [...natureKeys.details(), id] as const,
+};
+
 const DocumentSheet: React.FC<DocumentSheetProps> = ({
   contratId,
   onDocumentAdded,
@@ -50,13 +56,23 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
   onOpenChange,
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
-  const {fetchNaturesDocument } = useContratsApi();
+  const queryClient = useQueryClient();
+  const { fetchNaturesDocument, createNature: createNatureApi, updateNature: updateNatureApi, deleteNature: deleteNatureApi } = useContratsApi();
+  
   // Utiliser les props externes si fournies, sinon utiliser l'état interne
   const open = isOpen !== undefined ? isOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { createDocument } = useDocumentsApi();
+  
+  // États pour la création de nature
+  const [newNatureLibelle, setNewNatureLibelle] = useState("");
+  
+  // États pour la modification de nature
+  const [editingNature, setEditingNature] = useState<{ id: number; libelle: string } | null>(null);
+  const [editNatureLibelle, setEditNatureLibelle] = useState("");
+
   const [formData, setFormData] = useState<
     Omit<ContratDocument, "id_documents" | "id_employes">
   >({
@@ -72,15 +88,130 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Récupérer les natures de document depuis l'API
-  const { data: naturesDocument } = useQuery({
-    queryKey: ["natures-document"],
-    queryFn: fetchNaturesDocument,
+  // Hook pour récupérer les natures
+  const { data: natures, isLoading: naturesLoading, error: naturesError } = useQuery({
+    queryKey: natureKeys.list(),
+    queryFn: async () => {
+      console.log("🔍 Récupération des natures...");
+      const result = await fetchNaturesDocument();
+      console.log("📋 Natures récupérées:", result);
+      return result;
+    },
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    retry: 3,
+    retryDelay: 1000,
   });
 
+  // Hook pour créer une nature
+  const createNature = useMutation({
+    mutationFn: (libelle: string) => createNatureApi(libelle),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: natureKeys.list(),
+      });
+      toast.success("Nature créée avec succès");
+    },
+    onError: (error: Error) => {
+      console.error("Erreur lors de la création de la nature:", error);
+      toast.error(`Erreur lors de la création de la nature: ${error.message}`);
+    },
+  });
 
+  // Hook pour mettre à jour une nature
+  const updateNature = useMutation({
+    mutationFn: ({ id, libelle }: { id: number; libelle: string }) => updateNatureApi(id, libelle),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: natureKeys.list(),
+      });
+      toast.success("Nature mise à jour avec succès");
+    },
+    onError: (error: Error) => {
+      console.error("Erreur lors de la mise à jour de la nature:", error);
+      toast.error(`Erreur lors de la mise à jour de la nature: ${error.message}`);
+    },
+  });
 
-  const etats = ["actif", "inactif", "archivé", "en révision"];
+  // Hook pour supprimer une nature
+  const deleteNature = useMutation({
+    mutationFn: (id: number) => deleteNatureApi(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: natureKeys.list(),
+      });
+      toast.success("Nature supprimée avec succès");
+    },
+    onError: (error: Error) => {
+      console.error("Erreur lors de la suppression de la nature:", error);
+      const errorMessage = error.message;
+      
+      if (errorMessage.includes("utilisée") || errorMessage.includes("utilisé")) {
+        toast.info(errorMessage, {
+          style: {
+            background: '#dbeafe',
+            color: '#1e40af',
+            border: '1px solid #3b82f6',
+          },
+          icon: 'ℹ️',
+        });
+      } else {
+        toast.error(errorMessage);
+      }
+    },
+  });
+
+  // Handler pour créer une nouvelle nature
+  const handleCreateNature = async () => {
+    if (!newNatureLibelle.trim()) return;
+    
+    try {
+      const newNature = await createNature.mutateAsync(newNatureLibelle);
+      // Gérer le cas où l'API retourne id_nature_document
+      const natureId = (newNature as NatureDocument).id_nature_document;
+      if (natureId) {
+        setFormData(prev => ({ ...prev, id_nature_document: natureId }));
+      }
+      setNewNatureLibelle("");
+    } catch (error) {
+      console.error("Erreur lors de la création de la nature:", error);
+    }
+  };
+
+  // Handler pour modifier une nature
+  const handleUpdateNature = async () => {
+    if (!editingNature || !editNatureLibelle.trim()) return;
+    
+    try {
+      await updateNature.mutateAsync({
+        id: editingNature.id,
+        libelle: editNatureLibelle.trim()
+      });
+      setEditingNature(null);
+      setEditNatureLibelle("");
+    } catch (error) {
+      console.error("Erreur lors de la modification de la nature:", error);
+    }
+  };
+
+  // Handler pour supprimer une nature
+  const handleDeleteNature = async (natureId: number) => {
+    try {
+      await deleteNature.mutateAsync(natureId);
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la nature:", error);
+    }
+  };
+
+  // Handler pour commencer l'édition d'une nature
+  const handleStartEdit = (nature: NatureDocument) => {
+    const id = nature.id_nature_document;
+    if (id) {
+      setEditingNature({ id, libelle: nature.libelle });
+      setEditNatureLibelle(nature.libelle);
+    }
+  };
+
+  const etats = ["actif", "archivé"];
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -321,35 +452,181 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
             )}
           </div>
 
-
-
           {/* Nature du document */}
           <div className="space-y-2">
             <Label htmlFor="id_nature_document">
               Nature du document <span className="text-red-500">*</span>
             </Label>
-            <Select
-              value={formData.id_nature_document?.toString()}
-              onValueChange={(value) =>
-                handleSelectChange("id_nature_document", parseInt(value))
-              }
-            >
-              <SelectTrigger
-                className={errors.id_nature_document ? "border-red-500" : ""}
+            <div className="flex gap-2">
+              <Select
+                value={formData.id_nature_document?.toString()}
+                onValueChange={(value) =>
+                  handleSelectChange("id_nature_document", parseInt(value))
+                }
               >
-                <SelectValue placeholder="Sélectionner une nature" />
-              </SelectTrigger>
-              <SelectContent>
-                {naturesDocument?.map((nature: NatureDocument) => (
-                  <SelectItem
-                    key={nature.id_nature_document}
-                    value={nature.id_nature_document.toString()}
+                <SelectTrigger
+                  className={errors.id_nature_document ? "border-red-500" : ""}
+                >
+                  <SelectValue placeholder="Sélectionner une nature" />
+                </SelectTrigger>
+                <SelectContent>
+                  {naturesLoading ? (
+                    <SelectItem value="" disabled>Chargement...</SelectItem>
+                  ) : naturesError ? (
+                    <SelectItem value="" disabled>Erreur: {String(naturesError)}</SelectItem>
+                  ) : natures && Array.isArray(natures) && natures.length > 0 ? (
+                    (natures as NatureDocument[])
+                      .filter(nature => nature && nature.id_nature_document && nature.libelle)
+                      .map((nature) => {
+                        const natureId = nature.id_nature_document!;
+                        const isEditing = editingNature?.id === natureId;
+                        
+                        return (
+                          <div key={natureId} className="relative">
+                            {isEditing ? (
+                              <div className="flex items-center gap-2 p-2">
+                                <Input
+                                  value={editNatureLibelle}
+                                  onChange={(e) => setEditNatureLibelle(e.target.value)}
+                                  className="flex-1 h-8 text-sm"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleUpdateNature();
+                                    } else if (e.key === 'Escape') {
+                                      setEditingNature(null);
+                                      setEditNatureLibelle("");
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={handleUpdateNature}
+                                  disabled={updateNature.isLoading}
+                                  className="h-8 px-2"
+                                >
+                                  {updateNature.isLoading ? "..." : "✓"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingNature(null);
+                                    setEditNatureLibelle("");
+                                  }}
+                                  className="h-8 px-2"
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between p-2 hover:bg-gray-50">
+                                <SelectItem 
+                                  value={natureId.toString()}
+                                  className="flex-1 cursor-pointer"
+                                >
+                                  {nature.libelle}
+                                </SelectItem>
+                                <div className="flex items-center gap-1 ml-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleStartEdit(nature);
+                                    }}
+                                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  >
+                                    <Edit size={12} />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleDeleteNature(natureId);
+                                    }}
+                                    disabled={deleteNature.isLoading}
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    title="Supprimer cette nature"
+                                  >
+                                    <X size={12} />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                  ) : (
+                    <>
+                      <SelectItem value="1">Contrat</SelectItem>
+                      <SelectItem value="2">Facture</SelectItem>
+                      <SelectItem value="3">Rapport</SelectItem>
+                      <SelectItem value="4">CV</SelectItem>
+                      <SelectItem value="5">Procédure</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="px-3"
                   >
-                    {nature.libelle}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    +
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium leading-none">Créer une nouvelle nature</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Créez un nouveau type de document pour l'utiliser immédiatement.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nature-libelle">Libellé de la nature</Label>
+                      <Input
+                        id="nature-libelle"
+                        value={newNatureLibelle}
+                        onChange={(e) => setNewNatureLibelle(e.target.value)}
+                        placeholder="Ex: Contrat de travail"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateNature();
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setNewNatureLibelle("")}
+                        className="flex-1"
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleCreateNature}
+                        disabled={!newNatureLibelle.trim() || createNature.isLoading}
+                        className="flex-1"
+                      >
+                        {createNature.isLoading ? "Création..." : "Créer"}
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             {errors.id_nature_document && (
               <p className="text-red-500 text-sm">
                 {errors.id_nature_document}
@@ -362,44 +639,15 @@ const DocumentSheet: React.FC<DocumentSheetProps> = ({
             <Label htmlFor="date_document">
               Date du document <span className="text-red-500">*</span>
             </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-full justify-start text-left font-normal ${
-                    errors.date_document ? "border-red-500" : ""
-                  }`}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.date_document ? (
-                    format(new Date(formData.date_document), "dd MMMM yyyy", {
-                      locale: fr,
-                    })
-                  ) : (
-                    <span>Sélectionner une date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={
-                    formData.date_document
-                      ? new Date(formData.date_document)
-                      : undefined
-                  }
-                  onSelect={(date) => {
-                    if (date) {
-                      handleSelectChange(
-                        "date_document",
-                        format(date, "yyyy-MM-dd")
-                      );
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Input
+              type="date"
+              value={typeof formData.date_document === 'string' ? formData.date_document : ''}
+              onChange={(e) => {
+                handleSelectChange("date_document", e.target.value);
+              }}
+              className={`w-full ${errors.date_document ? "border-red-500" : ""}`}
+              required
+            />
             {errors.date_document && (
               <p className="text-red-500 text-sm">{errors.date_document}</p>
             )}

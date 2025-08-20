@@ -164,6 +164,7 @@ export interface CreateDocumentTextPayload {
   classification_document?: string; // Optionnel
   date_document?: string; // Optionnel
   id_nature_document: number; // Requis
+  etat_document?: string; // Optionnel
 }
 
 

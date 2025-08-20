@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,8 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-
-import { InterventionDocument as InterventionDocumentType } from "../interface/interface";
+import { fetchNatureDocumentById } from "../api/intervention";
+import { InterventionDocument as InterventionDocumentType, Nature } from "../interface/interface";
 
 const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
 const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
@@ -24,6 +24,10 @@ const STATIC_FILES_BASE_URL = API_BASE_URL.endsWith("/api")
 const InterventionDocumentDetail: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+
+  const [natures, setNatures] = useState<Nature | null>(null);
+  const [loadingNatures, setLoadingNatures] = useState(false);
 
   // Récupération des données du document depuis les paramètres
   let documentData: InterventionDocumentType | null = null;
@@ -40,6 +44,25 @@ const InterventionDocumentDetail: React.FC = () => {
       console.error("Erreur lors du parsing des données:", error);
     }
   }
+
+  useEffect(() => {
+    const fetchNatures = async () => {
+      if (!documentData?.id_nature_document) return;
+
+      setLoadingNatures(true);
+      try {
+        const natures = await fetchNatureDocumentById(documentData.id_nature_document.toString());
+        setNatures(natures);
+      } catch (error) {
+        console.error("Erreur lors de la récupération du dossier:", error);
+        toast.error("Impossible de récupérer les informations du dossier");
+      } finally {
+        setLoadingNatures(false);
+      }
+    };
+
+    fetchNatures();
+  }, [documentData?.id_nature_document]);
 
   const handleDownload = async () => {
     if (!documentData?.lien_document) {
@@ -179,6 +202,22 @@ const InterventionDocumentDetail: React.FC = () => {
                     </span>
                     <span className="text-sm text-gray-900">
                       {documentData.libelle_document}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">
+                    <span className="text-sm font-medium text-gray-600">
+                      Nature du document
+                    </span>
+                    <span className="text-sm text-gray-900">
+                    {loadingNatures ? (
+                        <div className="flex items-center gap-2">
+                        </div>
+                      ) : natures?.libelle ? (
+                        natures.libelle
+                      ) : (
+                        `nature ID: ${documentData.id_nature_document}`
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md">

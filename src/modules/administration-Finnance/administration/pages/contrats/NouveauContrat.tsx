@@ -10,16 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Save, FileText } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { Save, FileText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { MutationError, CreateContratData } from "../../types/interfaces";
 import { useContratsApi } from "../../../services/contratService";
 import { useCommonApi } from "../../../services/commonService";
@@ -572,91 +564,35 @@ const NouveauContrat: React.FC = () => {
                       <Label htmlFor="date_debut">
                         Date de début <span className="text-red-500">*</span>
                       </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formData.date_debut ? (
-                              format(
-                                new Date(formData.date_debut),
-                                "dd MMMM yyyy",
-                                {
-                                  locale: fr,
-                                }
-                              )
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={
-                              formData.date_debut
-                                ? new Date(formData.date_debut)
-                                : undefined
-                            }
-                            onSelect={(date) => {
-                              if (date) {
-                                setFormData({
-                                  ...formData,
-                                  date_debut: format(date, "yyyy-MM-dd"),
-                                });
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={typeof formData.date_debut === 'string' ? formData.date_debut : ''}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            date_debut: e.target.value,
+                          });
+                        }}
+                        className="w-full"
+                        required
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="date_fin">
                         Date de fin <span className="text-red-500">*</span>
                       </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formData.date_fin ? (
-                              format(
-                                new Date(formData.date_fin),
-                                "dd MMMM yyyy",
-                                {
-                                  locale: fr,
-                                }
-                              )
-                            ) : (
-                              <span>Sélectionner une date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={
-                              formData.date_fin
-                                ? new Date(formData.date_fin)
-                                : undefined
-                            }
-                            onSelect={(date) => {
-                              if (date) {
-                                setFormData({
-                                  ...formData,
-                                  date_fin: format(date, "yyyy-MM-dd"),
-                                });
-                              }
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={typeof formData.date_fin === 'string' ? formData.date_fin : ''}
+                        onChange={(e) => {
+                          setFormData({
+                            ...formData,
+                            date_fin: e.target.value,
+                          });
+                        }}
+                        className="w-full"
+                        required
+                      />
                     </div>
                   </div>
 

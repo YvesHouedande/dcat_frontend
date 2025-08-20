@@ -19,6 +19,11 @@ const useDocumentsApi = () => {
     return response.data;
   }, [api]);
 
+  const fetchNatureDocumentById = async (id: string): Promise<NatureDocument> => {
+    const response = await api.get(`/administration/natures/${id}`);
+    return response.data;
+  };
+
   const getDocumentById = useCallback(
     async (id: number): Promise<DemandeDocument> => {
       const response = await api.get(`/administration/documents/${id}`);
@@ -112,6 +117,7 @@ const useDocumentsApi = () => {
   return {
     getAllDocumentss,
     getAllNatureDocument,
+    fetchNatureDocumentById,
     getDocumentById,
     createDocument,
     updateDocument,

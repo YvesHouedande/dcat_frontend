@@ -41,7 +41,7 @@ const AddDocumentPage: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [documentInfo, setDocumentInfo] = useState<Partial<EmployeDocument>>({
     libelle_document: "",
-    etat_document: "private",
+    etat_document: "actif",
     id_nature_document: 0,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,7 +134,7 @@ const AddDocumentPage: React.FC = () => {
     // Ajouter les informations du document
     formData.append('libelle_document', documentInfo.libelle_document || '');
 
-    formData.append('etat_document', documentInfo.etat_document || 'private');
+    formData.append('etat_document', documentInfo.etat_document || 'actif');
     formData.append('id_nature_document', documentInfo.id_nature_document?.toString() || '0');
 
     // Ajouter le fichier
@@ -345,23 +345,19 @@ const AddDocumentPage: React.FC = () => {
                 <div className="grid w-full items-center gap-2">
                   <Label>État du document</Label>
                   <RadioGroup
-                    value={documentInfo.etat_document || "private"}
+                    value={documentInfo.etat_document || "actif"}
                     onValueChange={(value) =>
                       setDocumentInfo((prev) => ({ ...prev, etat_document: value }))
                     }
                     className="flex flex-row space-x-4"
                   >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="public" id="public" />
-                      <Label htmlFor="public">Public</Label>
+                      <RadioGroupItem value="actif" id="actif" />
+                      <Label htmlFor="actif">Actif</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="private" id="private" />
-                      <Label htmlFor="private">Privé</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="draft" id="draft" />
-                      <Label htmlFor="draft">Brouillon</Label>
+                      <RadioGroupItem value="archive" id="archive" />
+                      <Label htmlFor="archive">Archivé</Label>
                     </div>
                   </RadioGroup>
                 </div>

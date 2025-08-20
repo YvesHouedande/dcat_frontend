@@ -29,14 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Calendar as CalendarIcon, Save, X, Loader2 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { format, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useDemande,
@@ -292,29 +285,16 @@ const ModifierDemandePage: React.FC = () => {
             {/* Date d'absence */}
             <div className="space-y-2">
               <Label htmlFor="date_absence">Date d'absence *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date_absence ? (
-                      format(formData.date_absence, "PPP", { locale: fr })
-                    ) : (
-                      <span>Sélectionnez une date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.date_absence}
-                    onSelect={(date) => handleChange("date_absence", date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Input
+                type="date"
+                value={formData.date_absence ? format(formData.date_absence, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const date = e.target.value ? new Date(e.target.value) : undefined;
+                  handleChange("date_absence", date);
+                }}
+                className="w-full"
+                required
+              />
               {formErrors.date_absence && (
                 <p className="text-sm text-red-500">
                   {formErrors.date_absence}
@@ -324,29 +304,15 @@ const ModifierDemandePage: React.FC = () => {
             {/* Date de retour */}
             <div className="space-y-2">
               <Label htmlFor="date_retour">Date de retour</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date_retour ? (
-                      format(formData.date_retour, "PPP", { locale: fr })
-                    ) : (
-                      <span>Sélectionnez une date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.date_retour}
-                    onSelect={(date) => handleChange("date_retour", date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Input
+                type="date"
+                value={formData.date_retour ? format(formData.date_retour, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const date = e.target.value ? new Date(e.target.value) : undefined;
+                  handleChange("date_retour", date);
+                }}
+                className="w-full"
+              />
             </div>
             {/* Heures début/fin */}
             <div className="grid grid-cols-2 gap-4">

@@ -10,7 +10,7 @@ import DemandesAnnuaire from "./demandes/demandes";
 import ModifierDemandePage from "./demandes/modifier_demande";
 import NouvelleDemandePage from "./demandes/nouveau";
 import DemandeDetailPage from "./demandes/info_demandes";
-import AjouterDocument from "./employers/AjouterDocument";
+
 import DossierPage from "./documents/DossierPage";
 import DocumentPage from "./documents/DocumentPage";
 import DetailDocumentPage from "./documents/DetailDocumentPage";
@@ -23,7 +23,7 @@ const ResourcesHumainesRoutes: React.FC = () => {
       <Route path="/employes" element={<AdministrationLayout />}>
         <Route index element={<Employer />} />
         <Route path=":id" element={<UserProfile />} />
-        <Route path=":id/ajouter-document" element={<AjouterDocument />} />
+
         <Route path=":id/editer" element={<EditEmployeForm />} />
       </Route>
       <Route path="/demandes" element={<AdministrationLayout />}>

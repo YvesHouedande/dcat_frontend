@@ -17,6 +17,7 @@ import {
   Home,
   FileText,
   Trash2,
+  Edit,
 } from "lucide-react";
 import { format, addMonths, parseISO } from "date-fns";
 import { CardContent } from "@/components/ui/card";
@@ -32,6 +33,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { getAllNatureDocuments, createNatureDocument, updateNatureDocument, deleteNatureDocument } from "../api/projets";
 
 import {
   Sheet,
@@ -84,7 +92,62 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
   // État pour les documents temporaires (pendant la création)
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
 
+  // États pour la gestion des natures
+  const [newNatureLibelle, setNewNatureLibelle] = useState("");
+  const [editingNature, setEditingNature] = useState<number | null>(null);
+  const [editNatureLibelle, setEditNatureLibelle] = useState("");
+
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Hooks TanStack Query pour les natures
+  const { data: natures = [] } = useQuery({
+    queryKey: ['natures'],
+    queryFn: getAllNatureDocuments,
+  });
+
+  const createNatureMutation = useMutation({
+    mutationFn: createNatureDocument,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['natures'] });
+      toast.success("Nature créée avec succès !");
+      setNewNatureLibelle("");
+    },
+    onError: (error) => {
+      console.error("Erreur lors de la création de la nature:", error);
+      toast.error("Erreur lors de la création de la nature");
+    },
+  });
+
+  const updateNatureMutation = useMutation({
+    mutationFn: ({ id, libelle }: { id: number; libelle: string }) => updateNatureDocument(id, libelle),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['natures'] });
+      toast.success("Nature modifiée avec succès !");
+      setEditingNature(null);
+      setEditNatureLibelle("");
+    },
+    onError: (error) => {
+      console.error("Erreur lors de la modification de la nature:", error);
+      toast.error("Erreur lors de la modification de la nature");
+    },
+  });
+
+  const deleteNatureMutation = useMutation({
+    mutationFn: deleteNatureDocument,
+    onSuccess: (result) => {
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ['natures'] });
+        toast.success("Nature supprimée avec succès !");
+      } else {
+        toast.info(result.message || "Nature non supprimée");
+      }
+    },
+    onError: (error) => {
+      console.error("Erreur lors de la suppression de la nature:", error);
+      // Ne pas afficher de toast d'erreur car la gestion est faite dans le service
+    },
+  });
 
   const dateToString = (date: string | Date | null): string => {
     if (!date) return "";
@@ -120,6 +183,7 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
     libelle_document: "",
     date_document: "",
     id_nature_document: 0,
+    etat_document: "Actif",
     file: null,
   });
 
@@ -379,6 +443,7 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
           libelle_document: documentFormData.libelle_document,
           date_document: documentFormData.date_document,
           id_nature_document: documentFormData.id_nature_document,
+          etat_document: documentFormData.etat_document,
         });
         toast.success("Document ajouté avec succès !");
         setShowDocumentSheet(false);
@@ -387,6 +452,7 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
           libelle_document: "",
           date_document: "",
           id_nature_document: 0,
+          etat_document: "Actif",
           file: null,
         });
       } catch (error) {
@@ -402,6 +468,7 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
           libelle_document: documentFormData.libelle_document,
           date_document: documentFormData.date_document,
           id_nature_document: documentFormData.id_nature_document,
+          etat_document: documentFormData.etat_document,
         }
       };
 
@@ -410,12 +477,13 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
       setShowDocumentSheet(false);
       
       // Reset document form data
-      setDocumentFormData({
-        libelle_document: "",
-        date_document: "",
-        id_nature_document: 0,
-        file: null,
-      });
+              setDocumentFormData({
+          libelle_document: "",
+          date_document: "",
+          id_nature_document: 0,
+          etat_document: "Actif",
+          file: null,
+        });
     }
   };
 
@@ -423,6 +491,35 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
   const removePendingDocument = (documentId: string) => {
     setPendingDocuments(prev => prev.filter(doc => doc.id !== documentId));
     toast.success("Document retiré de la liste temporaire.");
+  };
+
+  // Handlers pour la gestion des natures
+  const handleCreateNature = async () => {
+    if (!newNatureLibelle.trim()) {
+      toast.error("Veuillez entrer un libellé pour la nature.");
+      return;
+    }
+    createNatureMutation.mutate(newNatureLibelle.trim());
+  };
+
+  const handleUpdateNature = async () => {
+    if (!editingNature || !editNatureLibelle.trim()) {
+      toast.error("Veuillez entrer un libellé pour la nature.");
+      return;
+    }
+    updateNatureMutation.mutate({
+      id: editingNature,
+      libelle: editNatureLibelle.trim()
+    });
+  };
+
+  const handleDeleteNature = async (natureId: number) => {
+    deleteNatureMutation.mutate(natureId);
+  };
+
+  const handleStartEdit = (nature: Nature) => {
+    setEditingNature(nature.id_nature_document);
+    setEditNatureLibelle(nature.libelle);
   };
 
   return (
@@ -556,18 +653,180 @@ const ProjetForm: React.FC<ProjetFormProps> = ({
                               <SelectValue placeholder="Sélectionnez une nature" />
                             </SelectTrigger>
                             <SelectContent>
-                              {natureDocumentsDisponibles.map((nature) => (
-                                <SelectItem
-                                  key={nature.id_nature_document}
-                                  value={String(nature.id_nature_document)}
-                                >
-                                  {nature.libelle}
-                                </SelectItem>
-                              ))}
+                              <SelectItem value="0">Sélectionnez une nature</SelectItem>
+                              {natures && natures.length > 0 ? (
+                                natures
+                                  .filter(nature => nature && nature.id_nature_document && nature.libelle)
+                                  .map((nature: Nature) => {
+                                    const natureId = nature.id_nature_document!;
+                                    const isEditing = editingNature === natureId;
+                                    
+                                    return (
+                                      <div key={natureId} className="relative">
+                                        {isEditing ? (
+                                          <div className="flex items-center gap-2 p-2">
+                                            <Input
+                                              value={editNatureLibelle}
+                                              onChange={(e) => setEditNatureLibelle(e.target.value)}
+                                              className="flex-1 h-8 text-sm"
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  handleUpdateNature();
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingNature(null);
+                                                  setEditNatureLibelle("");
+                                                }
+                                              }}
+                                            />
+                                            <Button
+                                              size="sm"
+                                              onClick={handleUpdateNature}
+                                              disabled={updateNatureMutation.isLoading}
+                                              className="h-8 px-2"
+                                            >
+                                              {updateNatureMutation.isLoading ? "..." : "✓"}
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setEditingNature(null);
+                                                setEditNatureLibelle("");
+                                              }}
+                                              className="h-8 px-2"
+                                            >
+                                              ✕
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center justify-between p-2 hover:bg-gray-50">
+                                            <SelectItem 
+                                              value={natureId.toString()}
+                                              className="flex-1 cursor-pointer"
+                                            >
+                                              {nature.libelle}
+                                            </SelectItem>
+                                            <div className="flex items-center gap-1 ml-2">
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  handleStartEdit(nature);
+                                                }}
+                                                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                              >
+                                                <Edit size={12} />
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  handleDeleteNature(nature.id_nature_document);
+                                                }}
+                                                disabled={deleteNatureMutation.isLoading}
+                                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                title="Supprimer cette nature"
+                                              >
+                                                <X size={12} />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })
+                              ) : (
+                                <>
+                                  <SelectItem value="1">Rapport</SelectItem>
+                                  <SelectItem value="2">Photo</SelectItem>
+                                  <SelectItem value="3">Plan</SelectItem>
+                                </>
+                              )}
                             </SelectContent>
                           </Select>
-                        </div>
-                        <SheetFooter>
+                          
+                          {/* Popover pour créer une nouvelle nature */}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="px-3"
+                              >
+                                <Plus size={16} />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80">
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="font-medium leading-none">Créer une nouvelle nature</h4>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    Créez un nouveau type de document pour l'utiliser immédiatement.
+                                  </p>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="nature-libelle">Libellé de la nature</Label>
+                                  <Input
+                                    id="nature-libelle"
+                                    value={newNatureLibelle}
+                                    onChange={(e) => setNewNatureLibelle(e.target.value)}
+                                    placeholder="Ex: Rapport technique"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleCreateNature();
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setNewNatureLibelle("")}
+                                    className="flex-1"
+                                  >
+                                    Annuler
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleCreateNature}
+                                    disabled={!newNatureLibelle.trim() || createNatureMutation.isLoading}
+                                    className="flex-1"
+                                  >
+                                    {createNatureMutation.isLoading ? "Création..." : "Créer"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                                                     </Popover>
+ 
+                         </div>
+                         <div className="space-y-2">
+                           <Label htmlFor="etat_document">
+                             État du document <span className="text-red-500">*</span>
+                           </Label>
+                           <Select
+                             onValueChange={(value) => handleDocumentSelectChange("etat_document", value)}
+                             value={documentFormData.etat_document}
+                             required
+                           >
+                             <SelectTrigger>
+                               <SelectValue placeholder="Sélectionnez un état" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="Actif">Actif</SelectItem>
+                               <SelectItem value="Archivé">Archivé</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+                         <SheetFooter>
                           <Button type="submit" disabled={isSubmitting}>
                             <Save className="mr-2 h-4 w-4" /> Enregistrer
                             Document
